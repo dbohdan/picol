@@ -1,11 +1,12 @@
 /* declarations for Picol - a Tcl-like little scripting language
    Original design: Salvatore Sanfilippo. March 2007, BSD license
    Extended by: Richard Suchenwirth, 2007-..
+   Refactored by: Danyil Bohdan, 2016
 */
 #ifndef PICOL_H
 #define PICOL_H
 
-#define PICOL_PATCHLEVEL "0.1.22"
+#define PICOL_PATCHLEVEL "0.1.23"
 #define MAXSTR 4096
 
 #include <stdio.h>
@@ -58,7 +59,7 @@
 
 #define SCAN_INT(v,x)     {if (picolIsInt(x)) v = atoi(x); else \
                           return picolErr1(i,"expected integer but got \"%s\"", x);}
-                          
+
 #define SCAN_PTR(v,x)     {void*_p; if ((_p=picolIsPtr(x))) v = _p; else \
                           return picolErr1(i,"expected pointer but got \"%s\"", x);}
 
@@ -116,11 +117,123 @@ typedef struct picolArray {
   int       size;
 } picolArray;
 
-/* ------------------- prototypes -- so far only some needed forward decl's */
-picolVar*    picolArrGet1(picolArray *ap, char *key);
-picolVar*    picolArrSet1(picolInterp *i, char *name, char *value);
+/* Ease of use macros. */
+
+#define picolEval(_i,_t)  picolEval2(_i,_t,1)
+#define picolGetGlobalVar(_i,_n) picolGetVar2(_i,_n,1)
+#define picolGetVar(_i,_n)       picolGetVar2(_i,_n,0)
+#define picolSetBoolResult(i,x) picolSetFmtResult(i,"%d",!!x)
+#define picolSetGlobalVar(_i,_n,_v) picolSetVar2(_i,_n,_v,1)
+#define picolSetIntResult(i,x)  picolSetFmtResult(i,"%d",x)
+#define picolSetVar(_i,_n,_v)       picolSetVar2(_i,_n,_v,0)
+#define picolSubst(_i,_t) picolEval2(_i,_t,0)
+
+/* prototypes */
+
+char* picolArrGet(picolArray *ap, char* pat, char* buf, int mode);
+char* picolArrStat(picolArray *ap,char* buf);
+char* picolList(char* buf, int argc, char** argv);
+char* picolParseList(char* start,char* trg);
+char* picolStrRev(char *str);
+char* picolToLower(char *str);
+char* picolToUpper(char *str);
+COMMAND(abs);
+COMMAND(append);
+COMMAND(apply);
+COMMAND(array);
+COMMAND(break);
+COMMAND(catch);
+COMMAND(clock);
+COMMAND(concat);
+COMMAND(continue);
+COMMAND(error);
+COMMAND(eval);
+COMMAND(exec);
+COMMAND(exit);
+COMMAND(expr);
+COMMAND(file);
+COMMAND(for);
+COMMAND(foreach);
+COMMAND(format);
+COMMAND(gets);
+COMMAND(global);
+COMMAND(if);
+COMMAND(incr);
+COMMAND(info);
+COMMAND(interp);
+COMMAND(join);
+COMMAND(lappend);
+COMMAND(lindex);
+COMMAND(linsert);
+COMMAND(list);
+COMMAND(llength);
+COMMAND(lrange);
+COMMAND(lreplace);
+COMMAND(lsearch);
+COMMAND(lsort);
+COMMAND(not);
+COMMAND(open);
+COMMAND(pid);
+COMMAND(proc);
+COMMAND(puts);
+COMMAND(rand);
+COMMAND(read);
+COMMAND(rename);
+COMMAND(return);
+COMMAND(scan);
+COMMAND(set);
+COMMAND(source);
+COMMAND(split);
+COMMAND(string);
+COMMAND(subst);
+COMMAND(switch);
+COMMAND(trace);
+COMMAND(unset);
+COMMAND(uplevel);
+COMMAND(variable);
+COMMAND(while);
+int picolCallProc(picolInterp *i, int argc, char **argv, void *pd);
+int picolCondition(picolInterp *i, char* str);
+int picolErr1(picolInterp *i, char* format, char* arg);
+int picolErr(picolInterp *i, char* str);
+int picolEval2(picolInterp *i, char *t, int mode);
+int picolFileUtil(picolInterp *i, int argc, char **argv, void *pd);
+int picolGetToken(picolInterp *i, picolParser *p);
+int picolHash(char* key, int modul);
+int picol_InNi(picolInterp *i, int argc, char **argv, void *pd);
+int picolIsInt(char* str);
+int picolLsort(picolInterp *i, int argc, char **argv, void *pd);
+int picolMatch(char* pat, char* str);
+int picol_Math(picolInterp *i, int argc, char **argv, void *pd);
+int picolParseBrace(picolParser *p);
+int picolParseCmd(picolParser *p);
+int picolParseComment(picolParser *p);
+int picolParseEol(picolParser *p);
+int picolParseSep(picolParser *p);
+int picolParseString(picolParser *p);
+int picolParseVar(picolParser *p);
+int picolRegisterCmd(picolInterp *i, char *name, picol_Func f, void *pd);
+int picolSetFmtResult(picolInterp* i, char* fmt, int result);
+int picolSetIntVar(picolInterp *i, char *name, int value);
+int picolSetResult(picolInterp *i, char *s);
+int picolSetVar2(picolInterp *i, char *name, char *val, int glob);
+int picolSource(picolInterp *i,char *filename);
+int picolWildEq(char* pat, char* str, int n);
+int qsort_cmp(const void* a, const void *b);
+int qsort_cmp_decr(const void* a, const void *b);
+int qsort_cmp_int(const void* a, const void *b);
+picolArray* picolArrCreate(picolInterp *i, char *name);
+picolCmd *picolGetCmd(picolInterp *i, char *name);
 picolInterp* picolCreateInterp(void);
-void*        picolIsPtr(char* str);
-int          picolSetVar2(picolInterp *i, char *name, char *val,int glob);
+picolVar* picolArrGet1(picolArray* ap, char* key);
+picolVar* picolArrSet1(picolInterp *i, char *name, char *value);
+picolVar* picolArrSet(picolArray* ap, char* key, char* value);
+picolVar *picolGetVar2(picolInterp *i, char *name, int glob);
+void picolDropCallFrame(picolInterp *i);
+void picolEscape(char *str);
+void picolInitInterp(picolInterp *i);
+void picolInitParser(picolParser *p, char *text);
+void* picolIsPtr(char* str);
+void picolRegisterCoreCmds(picolInterp *i);
 
 #endif
