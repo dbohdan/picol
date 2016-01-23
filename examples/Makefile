@@ -1,6 +1,8 @@
-all: hello
+all: command hello
+command: command.o ../picol.o
+	gcc -o $@ ../picol.o $<
 hello: hello.o ../picol.o
-	gcc -o hello ../picol.o hello.o 
+	gcc -o $@ ../picol.o $<
 %.o: %.c
 	gcc -I.. -c -o $@ $<
 clean:

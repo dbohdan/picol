@@ -1,7 +1,7 @@
 /* declarations for Picol - a Tcl-like little scripting language
    Original design: Salvatore Sanfilippo. March 2007, BSD license
    Extended by: Richard Suchenwirth, 2007-..
-   Refactored by: Danyil Bohdan, 2016
+   Refactored by: Danyil Bohdan, 2016.
 */
 #ifndef PICOL_H
 #define PICOL_H
