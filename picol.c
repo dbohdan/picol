@@ -1654,5 +1654,3 @@ picolInterp* picolCreateInterp(void) {
   srand(clock());
   return i;
 } /* ----------------------------------------------------------------- MAIN! */
-
-#ifdef
