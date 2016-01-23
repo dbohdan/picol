@@ -1,0 +1,4 @@
+#-- tclIndex - test for auto-sourcing scripts into Picol
+
+set ::auto_index(parray) [list source [file join $dir parray.pcl]]
+

@@ -1,0 +1,14 @@
+#-- parray.pcl
+proc parray arr {
+   set keys [uplevel 1 array names $arr] ;# can't do upvar yet
+   set maxl 0
+   foreach key $keys {
+        if {[string length $key] > $maxl} {set maxl [string length $key]}
+   }
+   incr maxl [+ 2 [string length $arr]]
+   foreach key [lsort $keys] {
+     puts "[format %-${maxl}s ${arr}(${key})] = [uplevel 1 set ${arr}(${key})]"
+   }
+}
+array set a {foo 1 bar 2 grill 3 a_long_key 4} ;# for testing
+

@@ -1,0 +1,26 @@
+#!/usr/bin/env picol
+#-- help.pcl -- extract usage hints from picol.c
+# Usage notes are marked with the ARITY2 macro in picol.c.
+# This scripts extracts them, and adds commands that don't have a note, with ...
+
+if {$argc == 0} {set file picol.c} else {set file [lindex $argv 0]}
+set f [open $file]
+puts "Picol [info pa] has [llength [info commands]] commands"
+set n 0
+while {[gets $f line] >= 0} {
+    if {[== [string first ARITY2 $line] -1]} continue
+    if [string match #define* $line] continue
+    set first [+ [string first \" $line] 1]
+    set last  [- [string last \" $line] 1]
+    set line  [string range $line $first $last]
+    lappend cmds $line
+    incr n
+}
+close $f
+foreach c [info commands] {
+    if [string match _* $c] continue
+    if {[< [lsearch $cmds $c*] 0]} {lappend cmds "$c xxx"}
+}
+puts "$n annotations:"
+foreach i [lsort -unique $cmds] {puts $i}
+
