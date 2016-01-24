@@ -1046,15 +1046,22 @@ COMMAND(lindex) {
 COMMAND(linsert) {
   char buf[MAXSTR] = "", buf2[MAXSTR]="", *cp;
   int pos = -1, j=0, a, atend=0;
+  int inserted = 0;
   ARITY2(argc >= 3, "linsert list index element ?element ...?")
   if(!EQ(argv[2],"end")) {SCAN_INT(pos,argv[2]);}
   else atend = 1;
   FOREACH(buf,cp,argv[1]) {
-    if(!atend && pos==j) for(a=3; a < argc; a++) LAPPEND(buf2, argv[a]);
+    if(!inserted && !atend && pos==j) {
+      for(a=3; a < argc; a++) {
+        LAPPEND(buf2, argv[a]);
+        inserted = 1;
+      }
+    }
     LAPPEND(buf2,buf);
     j++;
   }
-  if(atend) for(a=3; a<argc; a++) LAPPEND(buf2, argv[a]);
+  if (!inserted) atend = 1; 
+  if (atend) for(a=3; a<argc; a++) LAPPEND(buf2, argv[a]);
   return picolSetResult(i, buf2);
 }
 COMMAND(list) {
@@ -1073,12 +1080,13 @@ COMMAND(llength) {
 }
 COMMAND(lrange) {
   char buf[MAXSTR] = "", buf2[MAXSTR] = "", *cp;
-  int from, to = LONG_MAX, a = 0;
+  int from, to, a = 0, toend = 0;
   ARITY2(argc == 4, "lrange list first last")
   SCAN_INT(from,argv[2]);
-  if(!EQ(argv[3],"end")) SCAN_INT(to,argv[3]);
+  if(EQ(argv[3],"end")) toend = 1;
+  else SCAN_INT(to,argv[3]);
   FOREACH(buf,cp,argv[1]) {
-    if(a>=from && a<=to) LAPPEND(buf2,buf);
+    if(a>=from && (toend || a<=to)) LAPPEND(buf2,buf);
     a++;
   }
   return picolSetResult(i,buf2);
@@ -1086,13 +1094,14 @@ COMMAND(lrange) {
 COMMAND(lreplace) {
   char buf[MAXSTR] = "", *what = "", *cp;
   char buf2[MAXSTR]="";
-  int from, to = LONG_MAX, a = 0, done = 0, j;
+  int from, to = LONG_MAX, a = 0, done = 0, j, toend = 0;
   if(argc == 5) what = argv[4];
   ARITY2(argc >= 4, "lreplace list first last ?element element ...?")
   SCAN_INT(from,argv[2]);
-  if(!EQ(argv[3],"end")) SCAN_INT(to,argv[3]);
+  if(EQ(argv[3],"end")) toend = 1;
+  else SCAN_INT(to,argv[3]);
   FOREACH(buf,cp,argv[1]) {
-    if(a<from || a>to) {LAPPEND(buf2,buf);}
+    if(a<from || (a>to && !toend)) {LAPPEND(buf2,buf);}
     else if(!done) {
       for(j=4; j<argc; j++) LAPPEND(buf2,argv[j]);
       done = 1;
@@ -1426,9 +1435,9 @@ COMMAND(string) {
       picolSetBoolResult(i, picolIsInt(argv[3]));
 
     } else if(SUBCMD("range")) {
-      int from, to, maxi = strlen(argv[2])-1;
-      ARITY2(argc == 5, "string range string first last")
-        SCAN_INT(from, argv[3]);
+      int from, to, maxi = strlen(argv[2]);
+      ARITY2(argc == 5, "string range string first last");
+      SCAN_INT(from, argv[3]);
       if(EQ(argv[4],"end")) to = maxi; else SCAN_INT(to,argv[4]);
       if(from < 0) from = 0; else if(from > maxi) from = maxi;
       if(to < 0)   to = 0;   else if(to > maxi)   to   = maxi;

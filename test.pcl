@@ -2,7 +2,7 @@
 # test.pcl - test suite for the Picol interpreter
 # with many extensions by suchenwi. Call with "-l" to display all test cases \
 this comment extended? yes
-set patchlevel 0.1.22
+set patchlevel 0.1.23
 set thisfile [info script]
 
 # lappend argv -l
@@ -73,7 +73,8 @@ test <=.3       {<= 3 2} -> 0
 test abs.1      {abs -47} -> 47
 test abs.2      {abs 0}   -> 0
 test abs.3      {abs 48}  -> 48
-test append.0   append -> {wrong # args: should be "append varName ?value value ...?"}
+
+test append.0   {catch append res; lrange $res 0 2} -> {wrong # args:}
 test append.1   {set foo hello; append foo world} -> helloworld
 test append.2   {set foo 47;append foo 11;set foo} -> 4711
 test append.3   {append bar grill} -> grill
@@ -106,8 +107,10 @@ test catch.2    {catch {/ 1 0}} -> 1
 test catch.3    {/ 1 0} -> "divide by zero"
 if !$t {test catch.4 {catch {+ a b} res;set res} -> {expected integer but got "a"}}
 
-if !$t {test clock.1 {clock format 0} -> "Thu Jan 01 01:00:00 1970"}
-test clock.2    {clock format 0 -format %H:%M:%S} -> 01:00:00
+set hour [string range [clock format 0 -format %z] 1 2]
+if !$t {test clock.1 {clock format 0} -> "Thu Jan 01 $hour:00:00 1970"}
+test clock.2    {clock format 0 -format %H:%M:%S} -> $hour:00:00
+unset hour
 
 test concat.1   concat      -> ""
 test concat.2   {concat it} -> it
@@ -158,16 +161,18 @@ test fac.2      {fac 12} ->  479001600
 test file.ex.1  {file exists test.pcl} -> 1
 test file.ex.2  {file exists does.not} -> 0
 test file.3     {set f [open t.t w];puts $f hello;set x [tell $f];close $f; set x
-                    } -> 7
+                    } -> 6
 test file.4     {set f [open t.t]; gets $f l; close $f; set l} -> hello
-test file.5     {file size t.t} -> 7 ;# on *n*x may be 6
+test file.5     {file size t.t} -> 6 ;# on *n*x may be 6
 test file.6     {set f [open t.t]; set l [read $f]; close $f; set l} -> hello\n
 test file.7     {file dirname /foo/bar/grill.txt} -> /foo/bar
 test file.8     {file tail /foo/bar/grill.txt}    -> grill.txt
 test file.9     {file join foo}              -> foo
 test file.10    {file join foo bar}          -> foo/bar
 test file.11    {file join foo /bar}         -> /bar
-test file.12    {file join foo C:/bar grill} -> C:/bar/grill
+if {[file exists C:/Windows]} {
+    test file.12    {file join foo C:/bar grill} -> C:/bar/grill
+}
 
 test for.1      {for {set i 0} {[< $i 4]} {incr i} {append r -$i}; set r
                 } -> -0-1-2-3
@@ -257,6 +262,9 @@ test lindex.2    {lindex {a b c d e} 0} -> a
 test linsert.1   {linsert {a b} 1 c}    -> {a c b}
 test linsert.2   {linsert {a b} 1 c d}  -> {a c d b}
 test linsert.3   {linsert {a b} end c}  -> {a b c}
+test linsert.4   {linsert {a b} end c d e}  -> {a b c d e}
+test linsert.5   {linsert {a b} 3 c d e}  -> {a b c d e}
+test linsert.6   {linsert {a b} 0 c d e}  -> {c d e a b}
 test list.0      list -> {}
 test list.1      {list a "b c" d}       -> {a {b c} d}
 test list.2      {list "" a} -> {{} a}
@@ -266,10 +274,15 @@ test llength.0   {llength {}} -> 0
 test llength.1   {llength {a b c d e}} -> 5
 test lrange.1    {lrange {a b c d e f g} 1 3} -> {b c d}
 test lrange.2    {lrange {a b c d e f g} 3 end} -> {d e f g}
-test lrange.3    {lrange {do re mi fa so la si} 0 2} -> {do re mi}
+test lrange.3    {lrange {a b c d e f g} 3 99} -> {d e f g}
+test lrange.4    {lrange {do re mi fa so la si} 0 2} -> {do re mi}
 test lreplace.1  {lreplace {a b c d} 2 2 x} -> {a b x d}
 test lreplace.2  {lreplace {a b c d} 2 2 x y} -> {a b x y d}
 test lreplace.3  {lreplace {a b c d} 0 0}   -> {b c d}
+test lreplace.4  {lreplace {a b c d} 0 99}   -> {}
+test lreplace.5  {lreplace {a b c d} 0 end}   -> {}
+test lreplace.6  {lreplace {a b c d} 1 2 B C}   -> {a B C d}
+test lreplace.7  {lreplace {a b c d} 1 end B C D}   -> {a B C D}
 
 test lsearch.1   {lsearch {a b c d e} c} -> 2
 test lsearch.2   {lsearch {a b c d e} x} -> -1
@@ -315,7 +328,7 @@ test scan.3      {scan fe %x foo; set foo} -> 254
 test scan.4      {scan fe %x foo}          -> 1
 test scan.5      {scan [format %c 196] %c}  -> 196
 
-test tell.1      {set ::f [open t.t];gets $::f line; tell $::f} -> 7
+test tell.1      {set ::f [open t.t];gets $::f line; tell $::f} -> 6
 test seek.1      {seek $::f 0; tell $::f} -> 0
 test seek.2      {seek $::f 2; gets $::f} -> llo
 
@@ -364,6 +377,7 @@ test str.match.15 {string match "" ""} -> 1
 
 test str.range.1 {string range abcde 1 3} -> bcd
 test str.range.2 {string range abcde 1 0} -> ""
+test str.range.2 {string range abcdefg 0 end} -> "abcdefg"
 test str.rep.1   {string repeat foo 3}    -> foofoofoo
 test str.rep.2   {string repeat foo 0}    -> ""
 if !$t {test str.rep.3  {string repeat foo 10000} -> "string too long"}
