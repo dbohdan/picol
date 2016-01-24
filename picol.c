@@ -461,7 +461,7 @@ int picolIsInt(char* str) {
 void* picolIsPtr(char* str) {
   void* p = NULL;
   sscanf(str,"%p",&p);
-  return (p && strlen(str)>=8? p: NULL);
+  return (p && strlen(str) >= 3 ? p : NULL);
 }
 void picolDropCallFrame(picolInterp *i) {
   picolCallFrame *cf = i->callframe;
