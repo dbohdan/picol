@@ -115,7 +115,7 @@ test catch.2    {catch {/ 1 0}} -> 1
 test catch.3    {/ 1 0} -> "divide by zero"
 if $test_config(picol) {test catch.4 {catch {+ a b} res;set res} -> {expected integer but got "a"}}
 
-if {$::test_config(unix)} {
+if {$test_config(unix)} {
     set hour [string range [clock format 0 -format %z] 1 2]
 } else {
     set hour [clock format 0 -format %H]
@@ -253,7 +253,7 @@ test info.level.0 {set ::F} -> 0
 test info.level.1 {info level} -> 1
 test info.level.2 {proc f {} {info level}; f} -> 2
 test info.level.3 {proc f {x y} {info level 0}; f foo bar} -> {f foo bar}
-if $test_config(picol) {test info.procs.1 {info procs} -> {g3 fac f test unknown pwd glob exec2}}
+if $test_config(picol) {test info.procs.1 {info procs} -> {g3 fac f test unknown glob exec2}}
 
 test interp.1    {interp alias {} ll {} llength; ll {a b c}} -> 3
 test interp.2    {set ::F [interp create]; list} -> ""
@@ -335,7 +335,17 @@ test parser.7    {set x $%} -> $%
 test proc.1      {proc h x {* $x $x}; h 5} -> 25
 test proc.2      {proc f args {set args}; f foo bar grill} -> {foo bar grill}
 test proc.3      {proc f {args x} {set x}; f foo bar} -> bar
-if $test_config(picol) {test puts.x {puts hello world} -> {expected pointer but got "hello"}}
+if $test_config(picol) {
+    test puts.x  {puts hello world} -> {expected pointer but got "hello"}
+}
+
+if {$test_config(windows)} {
+    set root C:\\
+} else {
+    set root /
+}
+test pwd.1       {set old_path [pwd]; cd $::root; set result [pwd]; cd $old_path; set result} -> $root
+unset root
 
 test rename.1    {rename h gg; gg 6} -> 36
 test rename.2    {rename gg ""; info commands gg} -> {}

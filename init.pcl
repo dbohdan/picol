@@ -13,13 +13,6 @@ proc glob pattern {#-- implicit -nocomplain
     if {[string first * $res] >= 0} {set res ""}
     set res
 }
-proc pwd {} {
-    if {[info exists ::env(PWD)]} {
-        return $::env(PWD)
-    } else {
-        return .
-    }
-}
 lappend auto_path [file dirname [file join [pwd] [info script]]]
 
 proc unknown args {

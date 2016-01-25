@@ -1010,6 +1010,13 @@ COMMAND(catch) {
     }
     return picolSetIntResult(i,rc);
 }
+COMMAND(cd) {
+    ARITY2(argc == 2, "cd dirName")
+    if (chdir(argv[1])) {
+        return PICOL_ERR;
+    }
+    return PICOL_OK;
+}
 COMMAND(clock) {
     time_t t;
     ARITY2(argc > 1, "clock clicks|format|seconds ?arg..?")
@@ -1813,6 +1820,11 @@ COMMAND(puts) {
     }
     return picolSetResult(i,"");
 }
+COMMAND(pwd) {
+    ARITY(argc == 1);
+    char buf[MAXSTR] = "\0";
+    return picolSetResult(i,getcwd(buf, MAXSTR));
+}
 COMMAND(rand) {
     int n;
     ARITY2(argc == 2, "rand n (returns a random integer 0..<n)");
@@ -2248,6 +2260,7 @@ void picolRegisterCoreCmds(picolInterp* i) {
     picolRegisterCmd(i,"array",  picol_array,NULL);
     picolRegisterCmd(i,"break",  picol_break,NULL);
     picolRegisterCmd(i,"catch",  picol_catch,NULL);
+    picolRegisterCmd(i,"cd",     picol_cd,NULL);
     picolRegisterCmd(i,"clock",  picol_clock,NULL);
     picolRegisterCmd(i,"close",  picolFileUtil,NULL);
     picolRegisterCmd(i,"concat", picol_concat,NULL);
@@ -2288,6 +2301,7 @@ void picolRegisterCoreCmds(picolInterp* i) {
     picolRegisterCmd(i,"pid",    picol_pid,NULL);
     picolRegisterCmd(i,"proc",   picol_proc,NULL);
     picolRegisterCmd(i,"puts",   picol_puts,NULL);
+    picolRegisterCmd(i,"pwd",    picol_pwd,NULL);
     picolRegisterCmd(i,"rand",   picol_rand,NULL);
     picolRegisterCmd(i,"read",   picol_read,NULL);
     picolRegisterCmd(i,"rename", picol_rename,NULL);
