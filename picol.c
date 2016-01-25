@@ -386,6 +386,15 @@ char* picolParseList(char* start,char* trg) {
     if (!cp || *cp == '\0') {
         return NULL;
     }
+
+    /* Skip initial whitespace. */
+    while (*cp == ' ') {
+        cp++;
+    }
+    if (!*cp) {
+        return NULL;
+    }
+
     for (done=0; 1; cp++) {
         if (*cp == '{') {
             bracelevel++;
@@ -1204,7 +1213,7 @@ COMMAND(foreach) {
             }
             done = 1;
         } else {
-            done=0;
+            done = 0;
         }
         if (cp) {
             cp = picolParseList(cp,buf);
@@ -1505,7 +1514,9 @@ COMMAND(llength) {
     char buf[MAXSTR], *cp;
     int n = 0;
     ARITY2(argc == 2, "llength list")
-    FOREACH(buf,cp,argv[1])  n++;
+    FOREACH(buf,cp,argv[1]) {
+        n++;
+    }
     return picolSetIntResult(i,n);
 }
 COMMAND(lrange) {
