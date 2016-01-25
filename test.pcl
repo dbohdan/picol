@@ -12,8 +12,16 @@ set pos [lsearch $argv -m]
 if {$pos >= 0} {set match [lindex $argv [incr pos]];puts match:$match}
 unset pos
 
-set t [info exists tcl_version]
-if $t {#----------------------------------------- compatibility mode for tclsh
+set test_config(picol) [if {[info exists tcl_version]} { lindex 0 0 } else { lindex 1 0 }]
+set test_config(unix) [expr {$tcl_platform(platform) eq {unix}}]
+set test_config(windows) [expr {$tcl_platform(platform) eq {windows}}]
+if {$test_config(windows)} {
+    set test_config(hello_file_length) 7
+} else {
+    set test_config(hello_file_length) 6
+}
+
+if !$test_config(picol) { #----------------------- compatibility mode for tclsh
     foreach i {/ % == != > < >= <=} {proc $i {a b} "expr {\$a $i \$b}"}
     foreach i {+ * && ||} {proc $i args "expr \[join \$args $i\]+0"}
     proc - {a1 args} {
@@ -38,7 +46,7 @@ proc test {name cmd -> expected} {
         incr ::r
     }
 }
-if !$t {test version {info pa} -> $patchlevel}
+if $test_config(picol) {test version {info pa} -> $patchlevel}
 puts "[info script] [info patchlevel], $argv0, argv:<$argv>,argc:$argc"
 
 test +.1        {+ 3 4}   -> 7
@@ -47,18 +55,18 @@ test +.3        {+ 3}     -> 3
 test +.4         +        -> 0
 test *.1        {* 3 4}   -> 12
 test *.2        {* 3 4 5} -> 60
-if !$t {
+if $test_config(picol) {
     test **.1 {** 2 4}  -> 16
     test **.2 {** 47 0} ->  1
 }
 test -.1        {- 42 20} -> 22
 test -.2        {- 42 0}  -> 42
 test -.3        {set x 5; - $x} -> -5
-if !$t {test &&.1  {&&} -> 1}
+if $test_config(picol) {test &&.1  {&&} -> 1}
 test &&.2       {&& 1 1 1} -> 1
 test &&.3       {&& 1 0 1 1} -> 0
 test &&.4       {&& 0 0 0} -> 0
-if !$t {test ||.1 {||} -> 0}
+if $test_config(picol) {test ||.1 {||} -> 0}
 test ||.2       {|| 1 1} -> 1
 test ||.3       {|| 1 0} -> 1
 test ||.4       {|| 0 0} -> 0
@@ -79,7 +87,7 @@ test append.1   {set foo hello; append foo world} -> helloworld
 test append.2   {set foo 47;append foo 11;set foo} -> 4711
 test append.3   {append bar grill} -> grill
 
-if !$t {
+if $test_config(picol) {
    test apply.1    {apply {{a b} {* $a $b}} 6 7} -> 42
    test apply.2    {apply {{} {return hello}}} -> hello
    test apply.3    {set sum {{a b} {+ $a $b}}; apply $sum 17 18} -> 35
@@ -105,10 +113,14 @@ test array.15   {set (1) b; set k 1; set (2) [set ($k)]; set (2)} -> b
 test catch.1    {catch {* 6 7}} -> 0
 test catch.2    {catch {/ 1 0}} -> 1
 test catch.3    {/ 1 0} -> "divide by zero"
-if !$t {test catch.4 {catch {+ a b} res;set res} -> {expected integer but got "a"}}
+if $test_config(picol) {test catch.4 {catch {+ a b} res;set res} -> {expected integer but got "a"}}
 
-set hour [string range [clock format 0 -format %z] 1 2]
-if !$t {test clock.1 {clock format 0} -> "Thu Jan 01 $hour:00:00 1970"}
+if {$::test_config(unix)} {
+    set hour [string range [clock format 0 -format %z] 1 2]
+} else {
+    set hour [clock format 0 -format %H]
+}
+if $test_config(picol) {test clock.1 {clock format 0} -> "Thu Jan 01 $hour:00:00 1970"}
 test clock.2    {clock format 0 -format %H:%M:%S} -> $hour:00:00
 unset hour
 
@@ -132,7 +144,7 @@ test escape.2    {set f {hello\x41world}} -> hello\\x41world
 test eval_mul.1  {eval * 8 7} -> 56
 test eval_mul.2  {eval {* 4 5}} -> 20
 
-if !$t { ;#-- would need 8.5 :^)
+if $test_config(picol) { ;#-- would need 8.5 :^)
     test expand.0 {{*}{}} -> {} ;# empty command
     test expand.1 {list a {*}[list b c d] e} -> {a b c d e}
     test expand.2 {list a {*}[list b c d]}   -> {a b c d}
@@ -161,16 +173,16 @@ test fac.2      {fac 12} ->  479001600
 test file.ex.1  {file exists test.pcl} -> 1
 test file.ex.2  {file exists does.not} -> 0
 test file.3     {set f [open t.t w];puts $f hello;set x [tell $f];close $f; set x
-                    } -> 6
+                    } -> $test_config(hello_file_length)
 test file.4     {set f [open t.t]; gets $f l; close $f; set l} -> hello
-test file.5     {file size t.t} -> 6 ;# on *n*x may be 6
+test file.5     {file size t.t} -> $test_config(hello_file_length)
 test file.6     {set f [open t.t]; set l [read $f]; close $f; set l} -> hello\n
 test file.7     {file dirname /foo/bar/grill.txt} -> /foo/bar
 test file.8     {file tail /foo/bar/grill.txt}    -> grill.txt
 test file.9     {file join foo}              -> foo
 test file.10    {file join foo bar}          -> foo/bar
 test file.11    {file join foo /bar}         -> /bar
-if {$::tcl_platform(platform) eq "windows"} {
+if {$::tcl_platform(platform) eq {windows}} {
     test file.12    {file join foo C:/bar grill} -> C:/bar/grill
 }
 
@@ -204,8 +216,8 @@ test global.4   {proc f x {global glo; lsort [info vars]}; f x} -> {glo x}
 test global.5   {proc f x {global glo; set glo}; f x} -> 44
 test global.6   {proc f x {global glo; set glo $x}; f 56} -> 56
 test global.7   {proc f x {global a b; set a 1; lsort [info vars]};f y} -> {a b x}
-if !$t {test global.8   {proc g3 {} {info globals}; g3
-                } -> {a x glo t match r n thisfile patchlevel _script_ env auto_path argc argv argv0 tcl_platform errorInfo}}
+if $test_config(picol) {test global.8   {proc g3 {} {info globals}; g3
+                } -> {a x glo test_config match r n thisfile patchlevel _script_ env auto_path argc argv argv0 tcl_platform errorInfo}}
 test global.9   {proc f x {global glo; return $glo}; f y} -> 56
 
 test if.1       {set a no; if [> 1 0] {set a yes}; set a} -> yes
@@ -223,7 +235,7 @@ test if.12      {set a 1; if $a {set a 2}; set a} -> 2
 test if.13      {set a 1; if !$a {set a 3}; set a} -> 1
 test if.14      {set a 2; if !$a {set a 3}; set a} -> 2
 test if.15      {set a 0; if !$a {set a 3}; set a} -> 3
-if !$t {
+if $test_config(picol) {
     test in.1   {set a 0; if {"c" in "a b c d"} {set a 1}} -> 1
     test in.2   {expr {"x" in "a b c d"}} -> 0
     test ni.1   {expr {"c" ni "a b c d"}} -> 0
@@ -235,13 +247,13 @@ test incr.2     {incr i x} -> {expected integer but got "x"}
 proc f {a b} {+ $a $b}
 test info.args.1 {info args f} -> {a b}
 test info.body.1 {info body f} -> {+ $a $b}
-if !$t {test info.cmd.1  {lsort [info commands a*]} -> {abs append apply array}}
+if $test_config(picol) {test info.cmd.1  {lsort [info commands a*]} -> {abs append apply array}}
 set F [info level]
 test info.level.0 {set ::F} -> 0
 test info.level.1 {info level} -> 1
 test info.level.2 {proc f {} {info level}; f} -> 2
 test info.level.3 {proc f {x y} {info level 0}; f foo bar} -> {f foo bar}
-if !$t {test info.procs.1 {info procs} -> {g3 fac f test unknown pwd glob exec2}}
+if $test_config(picol) {test info.procs.1 {info procs} -> {g3 fac f test unknown pwd glob exec2}}
 
 test interp.1    {interp alias {} ll {} llength; ll {a b c}} -> 3
 test interp.2    {set ::F [interp create]; list} -> ""
@@ -323,7 +335,7 @@ test parser.7    {set x $%} -> $%
 test proc.1      {proc h x {* $x $x}; h 5} -> 25
 test proc.2      {proc f args {set args}; f foo bar grill} -> {foo bar grill}
 test proc.3      {proc f {args x} {set x}; f foo bar} -> bar
-if !$t {test puts.x {puts hello world} -> {expected pointer but got "hello"}}
+if $test_config(picol) {test puts.x {puts hello world} -> {expected pointer but got "hello"}}
 
 test rename.1    {rename h gg; gg 6} -> 36
 test rename.2    {rename gg ""; info commands gg} -> {}
@@ -334,7 +346,7 @@ test scan.3      {scan fe %x foo; set foo} -> 254
 test scan.4      {scan fe %x foo}          -> 1
 test scan.5      {scan [format %c 196] %c}  -> 196
 
-test tell.1      {set ::f [open t.t];gets $::f line; tell $::f} -> 6
+test tell.1      {set ::f [open t.t];gets $::f line; tell $::f} -> $test_config(hello_file_length)
 test seek.1      {seek $::f 0; tell $::f} -> 0
 test seek.2      {seek $::f 2; gets $::f} -> llo
 
@@ -386,8 +398,8 @@ test str.range.2 {string range abcde 1 0} -> ""
 test str.range.2 {string range abcdefg 0 end} -> "abcdefg"
 test str.rep.1   {string repeat foo 3}    -> foofoofoo
 test str.rep.2   {string repeat foo 0}    -> ""
-if !$t {test str.rep.3  {string repeat foo 10000} -> "string too long"}
-if !$t {test str.rev {string reverse picol} -> locip ;# 8.5 :)}
+if $test_config(picol) {test str.rep.3  {string repeat foo 10000} -> "string too long"}
+if $test_config(picol) {test str.rev {string reverse picol} -> locip ;# 8.5 :)}
 test str.trim.1  {string trim "  abc\t\t"}     -> abc
 test str.trim.2  {string trim ::def::: :}      -> def
 test str.trim.3  {string trim ghi xkl}         -> ghi
@@ -431,7 +443,7 @@ test while.2     {set i 10; while {$i} {incr i -1}; set i} -> 0
 test while.3     {set i 10; while {$i > 5} {incr i -1}; set i} -> 5
 
 #-- These tests for Picol only, tclsh please skip
-if {!$t} { 
+if {$test_config(picol)} { 
     puts "exec tclsh $thisfile -m \\$match"
     exec tclsh $thisfile -m \\$match
     #-|- testing the test suite for Tcl compliance :)

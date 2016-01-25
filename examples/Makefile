@@ -1,10 +1,10 @@
 all: command hello
 command: command.o ../picol.o
-	cc -o $@ ../picol.o $<
+	$(CC) -o $@ ../picol.o $<
 hello: hello.o ../picol.o
-	cc -o $@ ../picol.o $<
+	$(CC) -o $@ ../picol.o $<
 %.o: %.c
-	cc -I.. -c -o $@ $<
+	$(CC) -I.. -c -o $@ $<
 clean:
-	rm hello *.o
+	rm command command.exe hello hello.exe *.o || true
 .PHONY: clean

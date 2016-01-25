@@ -16,22 +16,23 @@
 #include <time.h>
 #include <limits.h>
 
-#ifndef _MSC_VER
-#   include <unistd.h>
-#   define MAXRECURSION 160
-#else
+#ifdef _MSC_VER
 #   include <windows.h>
 #   define MAXRECURSION 75
 #   define getpid GetCurrentProcessId
+#else
+#   include <unistd.h>
+#   define MAXRECURSION 160
 #endif
 
 /* The value for ::tcl_platform(platform). */
-#if defined(_WIN32) || defined(_WIN64) || defined(__WIN32__)
-#define TCL_PLATFORM_PLATFORM "windows"
+#if defined(_WIN32) || defined(_WIN64) || defined(__WIN32__) || \
+        defined(_MSC_VER)
+#    define TCL_PLATFORM_PLATFORM "windows"
 #elif defined(_POSIX_VERSION)
-#define TCL_PLATFORM_PLATFORM "unix"
+#    define TCL_PLATFORM_PLATFORM "unix"
 #else
-#define TCL_PLATFORM_PLATFORM "unknown"
+#    define TCL_PLATFORM_PLATFORM "unknown"
 #endif
 
 /* -------------------------- Macros mostly need picol_ environment (argv,i) */

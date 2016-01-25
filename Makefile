@@ -1,7 +1,9 @@
 picol: interp.o picol.o
-	cc picol.o interp.o -o picol
+	$(CC) picol.o interp.o -o picol
 %.o: %.c
-	cc -c -o $@ $<
+	$(CC) -c -o $@ $<
 clean:
-	rm picol *.o
-.PHONY: clean
+	rm picol picol.exe *.o || true
+test: picol
+	./picol test.pcl
+.PHONY: clean test
