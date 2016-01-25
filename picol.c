@@ -1320,7 +1320,9 @@ COMMAND(glob) {
         getcwd(old_wd, MAXSTR);
         new_wd = argv[2];
         pattern = argv[3];
-        chdir(new_wd);
+        if (chdir(new_wd)) {
+            return picolErr1(i, "can't change directory to \"%s\"", new_wd);
+        }
         append_slash = new_wd[strlen(new_wd) - 1] != '/';
     }
 
@@ -1339,7 +1341,9 @@ COMMAND(glob) {
     globfree(&pglob);
 
     if (argc == 4) {
-        chdir(old_wd);
+        if (chdir(old_wd)) {
+            return picolErr1(i, "can't change directory to \"%s\"", old_wd);
+        }
     }
 
     picolSetResult(i, buf);
