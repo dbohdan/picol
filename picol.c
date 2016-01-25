@@ -528,7 +528,7 @@ int picolEval2(picolInterp* i, char* t, int mode) { /*----------- EVAL! */
             picolCmd* c;
             free(t);
             if (mode == 0) { /* do a quasi-subst only */
-                rc = picolSetResult(i,strdup(picolList(buf,argc,argv)));
+                rc = picolSetResult(i,picolList(buf,argc,argv));
                 goto err; /* not an error, if rc == PICOL_OK */
             }
             prevtype = p.type;
@@ -627,7 +627,9 @@ int picolCondition(picolInterp* i, char* str) {
             return rc;
         }
         if (EQ(i->result,"3")) {
-            FOREACH(buf,cp,buf2) argv[a++] = strdup(buf);
+            FOREACH(buf,cp,buf2) {
+                argv[a++] = strdup(buf);
+            }
             if (picolGetCmd(i,argv[1])) { /* defined operator in center */
                 strcpy(buf,argv[1]); /* translate to Polish :) */
                 LAPPEND(buf,argv[0]); /* e.g. {1 > 2} -> {> 1 2} */
