@@ -1,18 +1,6 @@
 #-- init.pcl -- optional startup code for Picol
 #-- This file is sourced first if it is in current directory
 
-proc exec2 args {
-    exec [join $args] > t.t
-    set f [open t.t]
-    set res [gets $f]
-    close $f; exec rm t.t
-    set res
-}
-proc glob pattern {#-- implicit -nocomplain
-    set res [exec2 echo $pattern]
-    if {[string first * $res] >= 0} {set res ""}
-    set res
-}
 lappend auto_path [file dirname [file join [pwd] [info script]]]
 
 proc unknown args {
@@ -29,4 +17,3 @@ proc unknown args {
 }
 
 #proc K {a b} {set a}
-

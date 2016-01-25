@@ -185,6 +185,11 @@ test file.11    {file join foo /bar}         -> /bar
 if {$::tcl_platform(platform) eq {windows}} {
     test file.12    {file join foo C:/bar grill} -> C:/bar/grill
 }
+test file.13    {file split {/foo/space station/bar}} -> {/ foo {space station} bar}
+test file.14    {file split {/foo/space station/bar/}} -> {/ foo {space station} bar}
+test file.15    {file split {foo/space station/bar}} -> {foo {space station} bar}
+test file.16    {file split foo///bar} -> {foo bar}
+test file.17    {file split foo} -> foo
 
 test for.1      {for {set i 0} {[< $i 4]} {incr i} {append r -$i}; set r
                 } -> -0-1-2-3
@@ -206,7 +211,14 @@ test format.0   {format hello} -> hello
 test format.1   {format %c 65} -> A
 test format.2   {format %o 4711} -> 11147
 test format.3   {format 0x%X 255} -> 0xFF
-                set glo 42
+
+test glob.1     {lsort [glob globtest/*]} -> {globtest/Makefile {globtest/foo bar} globtest/test1 globtest/test2}
+test glob.2     {lsort [glob -directory globtest *]} -> {globtest/Makefile {globtest/foo bar} globtest/test1 globtest/test2}
+test glob.3     {lsort [glob -directory globtest test*]} -> {globtest/test1 globtest/test2}
+test glob.4     {lsort [glob */test*]} -> {globtest/test1 globtest/test2}
+test glob.5     {lsort [glob -directory globtest *foo*]} -> {{globtest/foo bar}}
+
+set glo 42
 test global.1   {proc f x {set ::glo}; f x} -> 42
 test global.2   {proc f x {incr ::glo}; f x} -> 43
 test global.2a  {proc f x {global glo; incr glo}; f x} -> 44
@@ -253,7 +265,7 @@ test info.level.0 {set ::F} -> 0
 test info.level.1 {info level} -> 1
 test info.level.2 {proc f {} {info level}; f} -> 2
 test info.level.3 {proc f {x y} {info level 0}; f foo bar} -> {f foo bar}
-if $test_config(picol) {test info.procs.1 {info procs} -> {g3 fac f test unknown glob exec2}}
+if $test_config(picol) {test info.procs.1 {info procs} -> {g3 fac f test unknown}}
 
 test interp.1    {interp alias {} ll {} llength; ll {a b c}} -> 3
 test interp.2    {set ::F [interp create]; list} -> ""

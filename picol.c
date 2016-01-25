@@ -1100,7 +1100,7 @@ COMMAND(expr) {
     return picolEval(i, buf);
 }
 COMMAND(file) {
-    char buf[MAXSTR], *cp;
+    char buf[MAXSTR] = "\0", *cp;
     FILE* fp = NULL;
     int a;
     ARITY2(argc >= 3, "file option ?arg ...?");
@@ -1128,20 +1128,46 @@ COMMAND(file) {
     } else if (SUBCMD("join")) {
         strcpy(buf,argv[2]);
         for (a=3; a<argc; a++) {
-            if (picolMatch("/*",argv[a]) || picolMatch("?:/*",argv[a]))
+            if (EQ(argv[a], "")) {
+                continue;
+            }
+            if ((picolMatch("/*",argv[a]) || picolMatch("?:/*",argv[a]))) {
                 strcpy(buf,argv[a]);
-            else {
-                APPEND(buf,"/");
+            } else {
+                if (!EQ(buf, "") && !picolMatch("*/", buf)) {
+                    APPEND(buf,"/");
+                }
                 APPEND(buf,argv[a]);
             }
         }
         picolSetResult(i,buf);
+    } else if (SUBCMD("split")) {
+        char fragment[MAXSTR];
+        char* start = argv[2];
+        if (*start == '/') {
+            APPEND(buf, "/")
+            start++;
+        }
+        while (cp = strchr(start, '/')) {
+            memcpy(fragment, start, cp - start);
+            fragment[cp - start] = '\0';
+            LAPPEND(buf, fragment);
+            start = cp + 1;
+            while (*start == '/') {
+                start++;
+            }
+        }
+        if (strlen(start) > 0) {
+            LAPPEND(buf, start)
+        }
+        picolSetResult(i, buf);
     } else if (SUBCMD("tail")) {
         cp = strrchr(argv[2],'/');
         if (!cp) cp = argv[2]-1;
         picolSetResult(i,cp+1);
     } else {
-        return picolErr(i,"usage: file dirname|exists|size|tail $filename");
+        return picolErr(i,"usage: file dirname|exists|size|split|tail "
+                "filename");
     }
     return PICOL_OK;
 }
@@ -1270,6 +1296,53 @@ COMMAND(gets) {
             picolSetIntResult(i,strlen(buf));
         }
     }
+    return PICOL_OK;
+}
+COMMAND(glob) {
+    /* implicit -nocomplain. */
+    char buf[MAXSTR] = "\0";
+    char file_path[MAXSTR] = "\0";
+    char old_wd[MAXSTR] = "\0";
+    char* new_wd;
+    char* pattern;
+    int append_slash = 0;
+    glob_t pglob;
+    size_t j;
+
+    ARITY2(argc == 2 || argc == 4, "glob ?-directory dir? dirName")
+    if (argc == 2) {
+        pattern = argv[1];
+    } else {
+        if (!EQ(argv[1], "-directory")) {
+            return picolErr1(i, "bad option \"%s\", must be: -directory",
+                    argv[1]);
+        }
+        getcwd(old_wd, MAXSTR);
+        new_wd = argv[2];
+        pattern = argv[3];
+        chdir(new_wd);
+        append_slash = new_wd[strlen(new_wd) - 1] != '/';
+    }
+
+    glob(pattern, 0, NULL, &pglob);
+    for (j = 0; j < pglob.gl_pathc; j++) {
+        file_path[0] = '\0';
+        if (argc == 4) {
+            APPEND(file_path, new_wd);
+            if (append_slash) {
+                APPEND(file_path, "/");
+            }
+        }
+        APPEND(file_path, pglob.gl_pathv[j]);
+        LAPPEND(buf, file_path)
+    }
+    globfree(&pglob);
+
+    if (argc == 4) {
+        chdir(old_wd);
+    }
+
+    picolSetResult(i, buf);
     return PICOL_OK;
 }
 COMMAND(global) {
@@ -2279,6 +2352,7 @@ void picolRegisterCoreCmds(picolInterp* i) {
     picolRegisterCmd(i,"format", picol_format,NULL);
     picolRegisterCmd(i,"gets",   picol_gets,NULL);
     picolRegisterCmd(i,"global", picol_global,NULL);
+    picolRegisterCmd(i,"glob",   picol_glob,NULL);
     picolRegisterCmd(i,"if",     picol_if,NULL);
     picolRegisterCmd(i,"in",     picol_InNi,NULL);
     picolRegisterCmd(i,"incr",   picol_incr,NULL);

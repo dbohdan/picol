@@ -9,12 +9,14 @@
 #define PICOL_PATCHLEVEL "0.1.23"
 #define MAXSTR 4096
 
+#include <ctype.h>
+#include <dirent.h>
+#include <glob.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 #include <time.h>
-#include <limits.h>
 
 #ifdef _MSC_VER
 #   include <windows.h>
@@ -167,6 +169,7 @@ COMMAND(for);
 COMMAND(foreach);
 COMMAND(format);
 COMMAND(gets);
+COMMAND(glob);
 COMMAND(global);
 COMMAND(if);
 COMMAND(incr);
