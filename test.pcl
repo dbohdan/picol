@@ -170,7 +170,7 @@ test file.8     {file tail /foo/bar/grill.txt}    -> grill.txt
 test file.9     {file join foo}              -> foo
 test file.10    {file join foo bar}          -> foo/bar
 test file.11    {file join foo /bar}         -> /bar
-if {[file exists C:/Windows]} {
+if {$::tcl_platform(platform) eq "windows"} {
     test file.12    {file join foo C:/bar grill} -> C:/bar/grill
 }
 
@@ -205,7 +205,7 @@ test global.5   {proc f x {global glo; set glo}; f x} -> 44
 test global.6   {proc f x {global glo; set glo $x}; f 56} -> 56
 test global.7   {proc f x {global a b; set a 1; lsort [info vars]};f y} -> {a b x}
 if !$t {test global.8   {proc g3 {} {info globals}; g3
-                } -> {a x glo t match r n thisfile patchlevel _script_ env auto_path argc argv argv0 errorInfo}}
+                } -> {a x glo t match r n thisfile patchlevel _script_ env auto_path argc argv argv0 tcl_platform errorInfo}}
 test global.9   {proc f x {global glo; return $glo}; f y} -> 56
 
 test if.1       {set a no; if [> 1 0] {set a yes}; set a} -> yes
@@ -408,6 +408,8 @@ test switch.3    {set x 6;switch $x {4 - 5 {set y k} default {set y df}}} -> df
 test switch.4    {set x 5;switch $x 4 - 5 {set y k} default {set y 0}} -> k
 test switch.5    {set x 4;switch $x 4 - 5 {set y K} default {set y 0}} -> K
 test switch.6    {set x 6;switch $x 4 - 5 {set y k} default {set y df}} -> df
+
+test tcl_platform.1 {info exists ::tcl_platform(platform)} -> 1
 
 test unset.1     {set foo 1;unset foo;info exists foo} -> 0
 test unknown.1   bogus -> {invalid command name "bogus"}

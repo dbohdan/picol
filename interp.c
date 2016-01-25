@@ -35,10 +35,13 @@ int main(int argc, char** argv) {
         while (1) {
             printf("picol> ");
             fflush(stdout);
-            if (fgets(buf, sizeof(buf), stdin) == NULL) return 0;
+            if (fgets(buf, sizeof(buf), stdin) == NULL) {
+                return 0;
+            }
             rc = picolEval(pi, buf);
-            if (pi->result[0] != '\0' || rc != PICOL_OK)
+            if (pi->result[0] != '\0' || rc != PICOL_OK) {
                 printf("[%d] %s\n", rc, pi->result);
+            }
         }
     } else if (EQ(argv[1], "-e")) { /* script in argv[2] */
         set_interp_argv(pi, 1, argc, argv);
@@ -48,7 +51,9 @@ int main(int argc, char** argv) {
             if (v) {
                 puts(v->val);
             }
-        } else puts(pi->result);
+        } else {
+            puts(pi->result);
+        }
     } else { /* first arg is file to source, rest goes to argv */
         picolSetVar(pi, "argv0", argv[1]);
         set_interp_argv(pi, 2, argc, argv);

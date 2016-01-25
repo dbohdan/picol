@@ -25,6 +25,15 @@
 #   define getpid GetCurrentProcessId
 #endif
 
+/* The value for ::tcl_platform(platform). */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WIN32__)
+#define TCL_PLATFORM_PLATFORM "windows"
+#elif defined(_POSIX_VERSION)
+#define TCL_PLATFORM_PLATFORM "unix"
+#else
+#define TCL_PLATFORM_PLATFORM "unknown"
+#endif
+
 /* -------------------------- Macros mostly need picol_ environment (argv,i) */
 #define APPEND(dst,src) {if((strlen(dst)+strlen(src))>=sizeof(dst)-1) \
                         return picolErr(i, "string too long"); \

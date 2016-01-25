@@ -2316,5 +2316,6 @@ picolInterp* picolCreateInterp(void) {
     picolRegisterCoreCmds(i);
     picolSetVar(i,"::errorInfo","");
     srand(clock());
+    picolArrSet1(i,"::tcl_platform(platform)", TCL_PLATFORM_PLATFORM);
     return i;
 }
