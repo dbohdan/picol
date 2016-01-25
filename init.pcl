@@ -15,5 +15,3 @@ proc unknown args {
         return [uplevel 1 $args]
     } else {error "invalid command name \"$cmd\""}
 }
-
-#proc K {a b} {set a}

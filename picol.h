@@ -10,7 +10,6 @@
 #define MAXSTR 4096
 
 #include <ctype.h>
-#include <dirent.h>
 #include <glob.h>
 #include <limits.h>
 #include <stdio.h>

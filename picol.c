@@ -1339,6 +1339,9 @@ COMMAND(glob) {
         LAPPEND(buf, file_path)
     }
     globfree(&pglob);
+    /* Fix result corruption on MinGW 20130722. */
+    pglob.gl_pathc = 0;
+    pglob.gl_pathv = NULL;
 
     if (argc == 4) {
         if (chdir(old_wd)) {
