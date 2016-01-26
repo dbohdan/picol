@@ -857,9 +857,10 @@ int picolQuoteForShell(char* dest, int argc, char** argv) {
     memcpy(command_unquoted, command, offset);
     length = offset;
     offset = 0;
-    for (j = 0; j < length; j++) {
-        ADDCHAR(command_unquoted[j])
+    /* Skip the first character, which is a space. */
+    for (j = 1; j < length; j++) {
         ADDCHAR('^')
+        ADDCHAR(command_unquoted[j])
     }
     ADDCHAR('\0')
 #else
