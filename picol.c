@@ -1787,17 +1787,30 @@ COMMAND(lreplace) {
     } else {
         SCAN_INT(to,argv[3]);
     }
+
+    if (from < 0 && to < 0) {
+        for (j=4; j<argc; j++) {
+            LAPPEND(buf2,argv[j]);
+        }
+        done = 1;
+    }
     FOREACH(buf,cp,argv[1]) {
-        if (a<from || (a>to && !toend)) {
-            LAPPEND(buf2,buf);
+        if (a < from || (a > to && !toend)) {
+            LAPPEND(buf2, buf);
         } else if (!done) {
-            for (j=4; j<argc; j++) {
-                LAPPEND(buf2,argv[j]);
+            for (j = 4; j < argc; j++) {
+                LAPPEND(buf2, argv[j]);
             }
             done = 1;
         }
         a++;
     }
+    if (!done) {
+        for (j = 4; j < argc; j++) {
+            LAPPEND(buf2, argv[j]);
+        }
+    }
+
     return picolSetResult(i,buf2);
 }
 COMMAND(lsearch) {
