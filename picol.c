@@ -1,6 +1,6 @@
 /* Tcl in ~ 500 lines of code by Salvatore antirez Sanfilippo. BSD licensed */
-/* 2007-04-01 Added by suchenwi: many more commands, see below */
-/* 2016-01 Various fixes and improvements by dbohdan. See repository timeline. */
+/* 2007-04-01 Added by suchenwi: many more commands, see below. */
+/* 2016-01    Misc. fixes and improvements by dbohdan. See Fossil timeline. */
 
 #include "picol.h"
 
@@ -396,12 +396,13 @@ char* picolParseList(char* start,char* trg) {
     }
 
     /* Skip initial whitespace. */
-    while (*cp == ' ') {
+    while (isspace(*cp)) {
         cp++;
     }
     if (!*cp) {
         return NULL;
     }
+    start = cp;
 
     for (done=0; 1; cp++) {
         if (*cp == '{') {
@@ -411,11 +412,11 @@ char* picolParseList(char* start,char* trg) {
         } else if (bracelevel==0 && *cp == '\"') {
             if (quoted) {
                 done = 1;
-                quoted=0;
+                quoted = 0;
             } else {
                 quoted = 1;
             }
-        } else if (bracelevel==0 &&!quoted && (*cp == ' ' || *cp=='\0')) {
+        } else if (bracelevel==0 &&!quoted && (isspace(*cp) || *cp=='\0')) {
             done = 1;
         }
         if (done && !quoted) {
@@ -430,7 +431,7 @@ char* picolParseList(char* start,char* trg) {
             }
             strncpy(trg, start, cp-start-offset);
             trg[cp-start-offset] = '\0';
-            while (*cp == ' ') {
+            while (isspace(*cp)) {
                 cp++;
             }
             break;
@@ -715,7 +716,7 @@ int picolCallProc(picolInterp* i, int argc, char** argv, void* pd) {
     tofree = p;
     while (1) {
         char* start = p;
-        while (*p != ' ' && *p != '\0') p++;
+        while (!isspace(*p) && *p != '\0') p++;
         if (*p != '\0' && p == start) {
             p++;
             continue;
