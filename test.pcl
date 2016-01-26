@@ -404,6 +404,8 @@ test split.4     {split {a  b}}             -> {a {} b}
 test split.5     {split hello ""}           -> {h e l l o}
 test split.6     {split a+b-c+d +-}         -> {a b c d}
 test split.7     {split "a;b;cc;d" ";"}     -> {a b cc d}
+test split.8     {split abcdef\nghi\nj \n}  -> {abcdef ghi j}
+test split.9     {split abcdefXghiXj X}     -> {abcdef ghi j}
 
 test str.first.1 {string first a abcdefg}   -> 0
 test str.first.2 {string first x abcdefg}   -> -1

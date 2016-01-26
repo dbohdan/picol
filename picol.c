@@ -2178,7 +2178,7 @@ COMMAND(split) {
         for (cp = argv[1], start=cp; *cp; cp++) {
             if (strchr(split,*cp)) {
                 strncpy(buf2,start,cp-start);
-                buf2[strlen(buf2)] = '\0';
+                buf2[cp-start] = '\0';
                 LAPPEND(buf,buf2);
                 buf2[0] = '\0';
                 start = cp+1;
