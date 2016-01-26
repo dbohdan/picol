@@ -1,0 +1,12 @@
+all: picol.exe examples\hello.exe examples\command.exe
+
+.c.obj:
+    cl /c $<
+{examples\}.c{examples\}.obj::
+    cl /c /I. /Foexamples\ $<
+picol.exe: picol.obj interp.obj
+    link /out:picol.exe picol.obj interp.obj
+examples\hello.exe: picol.obj examples\hello.obj
+    link /out:examples\hello.exe picol.obj examples\hello.obj
+examples\command.exe: picol.obj examples\command.obj
+    link /out:examples\command.exe picol.obj examples\command.obj

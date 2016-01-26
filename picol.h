@@ -10,22 +10,30 @@
 #define MAXSTR 4096
 
 #include <ctype.h>
-#include <glob.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
+/* MSVC compatibility. */
 #ifdef _MSC_VER
 #   include <windows.h>
 #   define MAXRECURSION 75
-#   define getpid GetCurrentProcessId
+#   define PICOL_GETPID GetCurrentProcessId
+#   define PICOL_POPEN  _popen
+#   define PICOL_PCLOSE _pclose
 #else
+#   include <glob.h>
 #   include <unistd.h>
+#   define PICOL_FEATURE_GLOB
 #   define MAXRECURSION 160
+#   define PICOL_GETPID getpid
+#   define PICOL_POPEN  popen
+#   define PICOL_PCLOSE pclose
 #endif
 
+/* The value for ::tcl_platform(engine). */
 #define TCL_PLATFORM_ENGINE        Picol
 #define TCL_PLATFORM_ENGINE_STRING "Picol"
 
@@ -176,7 +184,9 @@ COMMAND(for);
 COMMAND(foreach);
 COMMAND(format);
 COMMAND(gets);
+#ifdef PICOL_FEATURE_GLOB
 COMMAND(glob);
+#endif
 COMMAND(global);
 COMMAND(if);
 COMMAND(incr);

@@ -1196,7 +1196,7 @@ COMMAND(exec) {
 		return PICOL_ERR;
     }
 
-    fd = popen(command, "r");
+    fd = PICOL_POPEN(command, "r");
     if (fd == NULL) {
         return picolErr1(i, "couldn't execute command \"%s\"", command);
     }
@@ -1204,7 +1204,7 @@ COMMAND(exec) {
     while (fgets(buf, 256, fd)) {
         APPEND(output, buf);
     }
-    status = pclose(fd);
+    status = PICOL_PCLOSE(fd);
 
     length = strlen(output);
     if (output[length - 1] == '\r') {
@@ -1448,6 +1448,7 @@ COMMAND(gets) {
     }
     return PICOL_OK;
 }
+#ifdef PICOL_FEATURE_GLOB
 COMMAND(glob) {
     /* implicit -nocomplain. */
     char buf[MAXSTR] = "\0";
@@ -1502,6 +1503,7 @@ COMMAND(glob) {
     picolSetResult(i, buf);
     return PICOL_OK;
 }
+#endif
 COMMAND(global) {
     ARITY2(argc > 1, "global varName ?varName ...?");
     if (i->level > 0) {
@@ -2006,7 +2008,7 @@ COMMAND(open) {
 }
 COMMAND(pid) {
     ARITY2(argc == 1, "pid")
-    return picolSetIntResult(i,getpid());
+    return picolSetIntResult(i,PICOL_GETPID());
 }
 COMMAND(proc) {
     char** procdata = NULL;
@@ -2522,7 +2524,9 @@ void picolRegisterCoreCmds(picolInterp* i) {
     picolRegisterCmd(i,"format", picol_format,NULL);
     picolRegisterCmd(i,"gets",   picol_gets,NULL);
     picolRegisterCmd(i,"global", picol_global,NULL);
+#ifdef PICOL_FEATURE_GLOB
     picolRegisterCmd(i,"glob",   picol_glob,NULL);
+#endif
     picolRegisterCmd(i,"if",     picol_if,NULL);
     picolRegisterCmd(i,"in",     picol_InNi,NULL);
     picolRegisterCmd(i,"incr",   picol_incr,NULL);
