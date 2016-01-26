@@ -12,7 +12,11 @@ set pos [lsearch $argv -m]
 if {$pos >= 0} {set match [lindex $argv [incr pos]];puts match:$match}
 unset pos
 
-set test_config(picol) [if {[info exists tcl_version]} { lindex 0 0 } else { lindex 1 0 }]
+set test_config(picol) 0
+if {[info exists tcl_platform(engine)] \
+        && [expr {$tcl_platform(engine) eq {Picol}}]} {
+    set test_config(picol) 1
+}
 set test_config(unix) [expr {$tcl_platform(platform) eq {unix}}]
 set test_config(windows) [expr {$tcl_platform(platform) eq {windows}}]
 if {$test_config(windows)} {

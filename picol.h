@@ -26,6 +26,9 @@
 #   define MAXRECURSION 160
 #endif
 
+#define TCL_PLATFORM_ENGINE        Picol
+#define TCL_PLATFORM_ENGINE_STRING "Picol"
+
 /* The value for ::tcl_platform(platform). */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WIN32__) || \
         defined(_MSC_VER)
