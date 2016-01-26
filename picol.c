@@ -1,5 +1,6 @@
 /* Tcl in ~ 500 lines of code by Salvatore antirez Sanfilippo. BSD licensed */
 /* 2007-04-01 Added by suchenwi: many more commands, see below */
+/* 2016-01 Various fixes and improvements by dbohdan. See repository timeline. */
 
 #include "picol.h"
 
@@ -45,7 +46,7 @@ int picolParseCmd(picolParser* p) {
             p->len--;
         } else if (*p->p == '{') {
             blevel++;
-        } else if (*p->p == '}')                {
+        } else if (*p->p == '}') {
             if (blevel != 0) {
                 blevel--;
             }
@@ -74,7 +75,7 @@ int picolParseBrace(picolParser* p) {
             if (level == 0 || p->len == 0) {
                 p->end = p->p-1;
                 if (p->len) {
-                    p->p++;    /* Skip final closed brace */
+                    p->p++; /* Skip final closed brace */
                     p->len--;
                 }
                 p->type = PT_STR;
@@ -146,7 +147,7 @@ int picolParseVar(picolParser* p) {
         p->p += 2;
         p->len -= 2;
     }
-    /*  while (isalnum(*p->p) || strchr("()_",*p->p)) { p->p++; p->len--; }*/
+
     while (isalnum(*p->p) || *p->p == '_' || *p->p == '(' || *p->p == ')') {
         if (*p->p=='(') {
             parened = 1;
@@ -158,7 +159,8 @@ int picolParseVar(picolParser* p) {
         p->p--;
         p->len++;
     }
-    if (p->start == p->p) { /* It's just a single char string "$" */
+    if (p->start == p->p) {
+        /* It's just a single char string "$" */
         picolParseString(p);
         p->start--;
         p->len++; /* back to the $ sign */
@@ -227,7 +229,8 @@ picolVar* picolGetVar2(picolInterp* i, char* name, int glob) {
             name += 2; /* skip the "::" */
         }
     }
-    if ((cp = strchr(name,'('))) { /* array element syntax? */
+    /* array element syntax? */
+    if ((cp = strchr(name,'('))) {
         picolArray* ap;
         int found = 0;
         strncpy(buf,name,cp-name);
@@ -244,11 +247,13 @@ picolVar* picolGetVar2(picolInterp* i, char* name, int glob) {
         if (!((ap = picolIsPtr(v->val)))) {
             return NULL;
         }
-        strcpy(buf2,cp+1); /* copy the key from after the opening paren*/
+        /* copy the key from after the opening paren */
+        strcpy(buf2,cp+1);
         if (!((cp = strchr(buf2,')')))) {
             return NULL;
         }
-        *cp = '\0';     /* overwrite closing paren */
+        /* overwrite closing paren */
+        *cp = '\0';
         v = picolArrGet1(ap,buf2);
         if (!v) {
             if (!((cp2 = getenv(buf2)))) {
@@ -273,15 +278,17 @@ int picolSetVar2(picolInterp* i, char* name, char* val,int glob) {
     picolCallFrame* c = i->callframe, *localc = c;
     int global = COLONED(name);
     if (glob||global) v = picolGetGlobalVar(i,name);
-    /*printf("SetVar (%s) (%s) %d @ %p\n", name,val,glob,v);*/
-    if (v) {         /* existing variable case */
-        if (v->val) { /* local value */
+
+    if (v) {
+        /* existing variable case */
+        if (v->val) {
+            /* local value */
             free(v->val);
         } else {
             return picolSetGlobalVar(i,name,val);
         }
-    }
-    if (!v) {         /* non-existing variable */
+    } else {
+        /* nonexistent variable */
         if (strchr(name,'(')) {
             picolArrSet1(i,name,val);
             return PICOL_OK;
@@ -374,7 +381,8 @@ int picolRegisterCmd(picolInterp* i, char* name, picol_Func f, void* pd) {
 }
 char* picolList(char* buf, int argc, char** argv) {
     int a;
-    buf[0] = '\0'; /* caller responsible for supplying large enough buffer */
+    /* caller responsible for supplying large enough buffer */
+    buf[0] = '\0';
     for (a=0; a<argc; a++) {
         LAPPEND_X(buf,argv[a]);
     }
@@ -493,7 +501,7 @@ int picolEval2(picolInterp* i, char* t, int mode) { /*----------- EVAL! */
         t = malloc(tlen+1);
         memcpy(t, p.start, tlen);
         t[tlen] = '\0';
-        /*printf("token (%s)\n", t);*/
+
         if (p.type == PT_VAR) {
             picolVar* v = picolGetVar(i,t);
             if (v && !v->val) {
@@ -523,13 +531,16 @@ int picolEval2(picolInterp* i, char* t, int mode) { /*----------- EVAL! */
             free(t);
             continue;
         }
+
         /* We have a complete command + args. Call it! */
         if (p.type == PT_EOL) {
             picolCmd* c;
             free(t);
-            if (mode == 0) { /* do a quasi-subst only */
+            if (mode == 0) {
+                /* do a quasi-subst only */
                 rc = picolSetResult(i,picolList(buf,argc,argv));
-                goto err; /* not an error, if rc == PICOL_OK */
+                /* not an error if rc == PICOL_OK */
+                goto err;
             }
             prevtype = p.type;
             if (argc) {
@@ -540,7 +551,8 @@ int picolEval2(picolInterp* i, char* t, int mode) { /*----------- EVAL! */
                     if ((c = picolGetCmd(i,"unknown"))) {
                         argv = realloc(argv, sizeof(char*)*(argc+1));
                         for (j = argc; j > 0; j--) {
-                            argv[j] = argv[j-1]; /* copy up */
+                            /* copy up */
+                            argv[j] = argv[j-1];
                         }
                         argv[0] = strdup("unknown");
                         argc++;
@@ -576,7 +588,6 @@ int picolEval2(picolInterp* i, char* t, int mode) { /*----------- EVAL! */
             continue;
         }
         /* We have a new token, append to the previous or as new arg? */
-    /* printf("new token (%s), prevtype %d, expand %d\n",t,prevtype,p.expand);*/
         if (prevtype == PT_SEP || prevtype == PT_EOL) {
             if (!p.expand || strlen(t)) {
                 argv       = realloc(argv, sizeof(char*)*(argc+1));
@@ -584,7 +595,8 @@ int picolEval2(picolInterp* i, char* t, int mode) { /*----------- EVAL! */
                 argc++;
                 p.expand = 0;
             }
-        } else if (p.expand) { /* slice in the words separately */
+        } else if (p.expand) {
+            /* slice in the words separately */
             char buf[MAXSTR], *cp;
             FOREACH(buf,cp,t) {
                 argv       = realloc(argv, sizeof(char*)*(argc+1));
@@ -593,7 +605,8 @@ int picolEval2(picolInterp* i, char* t, int mode) { /*----------- EVAL! */
             }
             free(t);
             p.expand = 0;
-        } else { /* Interpolation */
+        } else {
+            /* Interpolation */
             size_t oldlen = strlen(argv[argc-1]), tlen = strlen(t);
             argv[argc-1]  = realloc(argv[argc-1], oldlen+tlen+1);
             memcpy(argv[argc-1]+oldlen, t, tlen);
@@ -617,7 +630,6 @@ int picolCondition(picolInterp* i, char* str) {
         if (rc != PICOL_OK) {
             return rc;
         }
-        /*printf("Condi: (%s) ->(%s)\n",str,i->result);*/
         strcpy(buf2,i->result);
         /* ------- try whether the format suits [expr]... */
         strcpy(buf,"llength ");
@@ -640,9 +652,10 @@ int picolCondition(picolInterp* i, char* str) {
                 rc = picolEval(i, buf);
                 return rc;
             }
-        } /* .. otherwise, check for inequality to zero */
+        } /* ... otherwise, check for inequality to zero */
         if (*str == '!') {
-            strcpy(buf,"== 0 ");    /* allow !$x */
+            /* allow !$x */
+            strcpy(buf,"== 0 ");
             str++;
         } else {
             strcpy(buf,"!= 0 ");
@@ -655,7 +668,8 @@ int picolCondition(picolInterp* i, char* str) {
 }
 int picolIsInt(char* str) {
     char* cp = str;
-    if (*cp == '-') cp++; /* allow leading minus */
+    /* allow leading minus */
+    if (*cp == '-') cp++;
     for (; *cp; cp++) {
         if (!isdigit(*cp)) {
             return 0;
@@ -737,15 +751,18 @@ int picolCallProc(picolInterp* i, int argc, char** argv, void* pd) {
     if (errcode == PICOL_RETURN) {
         errcode = PICOL_OK;
     }
-    picolDropCallFrame(i); /* remove the called proc callframe */
+    /* remove the called proc callframe */
+    picolDropCallFrame(i);
     i->level--;
     return errcode;
 arityerr:
-    picolDropCallFrame(i); /* remove the called proc callframe */
+    /* remove the called proc callframe */
+    picolDropCallFrame(i);
     i->level--;
     return picolErr1(i,"wrong # args for '%s'",argv[0]);
 }
-int picolWildEq(char* pat, char* str, int n) { /* allow '?' in pattern */
+int picolWildEq(char* pat, char* str, int n) {
+    /* allow '?' in pattern */
     for (; *pat && *str && n; pat++, str++, n--) {
         if (!(*pat==*str || *pat=='?')) {
             return 0;
@@ -759,24 +776,118 @@ int picolMatch(char* pat, char* str) {
     if (*pat=='\0' && *str=='\0') {
         return 1;
     }
-    mypat[lpat] = '\0'; /* strip last char */
+    /* strip last char */
+    mypat[lpat] = '\0';
     if (*pat == '*') {
-        if (pat[lpat] == '*') {            /* <*>,<*xx*> case */
-            res = (size_t)strstr(str,mypat+1); /* TODO: WildEq */
-        } else {                              /* <*xx> case */
+        if (pat[lpat] == '*') {
+            /* <*>,<*xx*> case */
+            res = (size_t)strstr(str,mypat+1);
+            /* TODO: WildEq */
+        } else {
+            /* <*xx> case */
             res = picolWildEq(pat+1, str+strlen(str)-lpat,-1);
         }
-    } else if (pat[lpat] == '*') {            /* <xx*> case */
+    } else if (pat[lpat] == '*') {
+        /* <xx*> case */
         res = picolWildEq(mypat,str,lpat);
     } else {
-        res = picolWildEq(pat,str,-1);      /* <xx> case */
+        /* <xx> case */
+        res = picolWildEq(pat,str,-1);
     }
     free(mypat);
     return res;
 }
+int picolQuoteForShell(char* dest, int argc, char** argv) {
+    char command[MAXSTR] = "\0";
+    int j;
+    int k;
+    int offset = 0;
+#define ADDCHAR(c) {command[offset] = c; offset++; \
+                   if (offset >= sizeof(command) - 1) {return -1;}}
+#if TCL_PLATFORM_PLATFORM == windows
+    /* See http://blogs.msdn.com/b/twistylittlepassagesallalike/archive/2011/
+            04/23/everyone-quotes-arguments-the-wrong-way.aspx */
+    int backslashes = 0;
+    int m;
+    int length;
+    char command_unquoted[MAXSTR] = "\0";
+    for (j = 1; j < argc; j++) {
+        ADDCHAR(' ')
+        length = strlen(argv[j]);
+        if (strchr(argv[j], ' ') == NULL && \
+                strchr(argv[j], '\t') == NULL && \
+                strchr(argv[j], '\n') == NULL && \
+                strchr(argv[j], '\v') == NULL && \
+                strchr(argv[j], '"') == NULL) {
+            if (offset + length >= sizeof(command) - 1) {
+                return -1;
+            }
+            strcat(command, argv[j]);
+            offset += length;
+        } else {
+            ADDCHAR('"')
+            for (k = 0; k < length; k++) {
+                backslashes = 0;
+                while (argv[j][k] == '\\') {
+                    backslashes++;
+                    k++;
+                }
+                if (k == length) {
+                    for (m = 0; m < backslashes * 2; m++) {
+                        ADDCHAR('\\')
+                    }
+                    ADDCHAR(argv[j][k])
+                } else if (argv[j][k] == '"') {
+                    for (m = 0; m < backslashes * 2 + 1; m++) {
+                        ADDCHAR('\\')
+                    }
+                    ADDCHAR('"')
+                } else {
+                    for (m = 0; m < backslashes; m++) {
+                        ADDCHAR('\\')
+                    }
+                    ADDCHAR(argv[j][k])
+                }
+            }
+            ADDCHAR('"')
+        }
+    }
+    ADDCHAR('\0')
+    memcpy(command_unquoted, command, offset);
+    length = offset;
+    offset = 0;
+    for (j = 0; j < length; j++) {
+        ADDCHAR(command_unquoted[j])
+        ADDCHAR('^')
+    }
+    ADDCHAR('\0')
+#else
+    /* Assume a POSIXy platform. */
+    for (j = 1; j < argc; j++) {
+        ADDCHAR(' ')
+        ADDCHAR('\'')
+        for (k = 0; k < strlen(argv[j]); k++) {
+            if (argv[j][k] == '\'') {
+                ADDCHAR('\'')
+                ADDCHAR('\\')
+                ADDCHAR('\'')
+                ADDCHAR('\'')
+            } else {
+                ADDCHAR(argv[j][k])
+            }
+        }
+        ADDCHAR('\'')
+    }
+    ADDCHAR('\0')
+#endif
+#undef ADDCHAR
+    memcpy(dest, command, strlen(command));
+    return 0;
+}
 /* ------------------------------------------------ Commands in ABC.. order */
 COMMAND(abs) {
-    int x;   /* ---------- example for wrapping int functions */
+    /* ---------- example for wrapping int functions */
+    int x;
     ARITY2(argc == 2, "abs int");
     SCAN_INT(x,argv[1]);
     return picolSetIntResult(i,abs(x));
@@ -827,10 +938,12 @@ char* picolArrGet(picolArray* ap, char* pat, char* buf, int mode) {
     picolVar* v;
     for (j = 0; j < DEFAULT_ARRSIZE; j++) {
         for (v = ap->table[j]; v; v = v->next) {
-            if (picolMatch(pat, v->name)) { /* mode==1: array names */
+            if (picolMatch(pat, v->name)) {
+                /* mode==1: array names */
                 LAPPEND_X(buf,v->name);
                 if (mode==2) {
-                    LAPPEND_X(buf,v->val); /* array get */
+                    /* array get */
+                    LAPPEND_X(buf,v->val);
                 }
             }
         }
@@ -858,8 +971,10 @@ picolVar* picolArrSet(picolArray* ap, char* key, char* value) {
         pos = v;
     }
     if (v) {
-        free(v->val); /* found exact key match */
-    } else {     /* create a new variable instance */
+        /* found exact key match */
+        free(v->val);
+    } else {
+        /* create a new variable instance */
         v       = malloc(sizeof(*v));
         v->name = strdup(key);
         v->next = pos;
@@ -890,7 +1005,8 @@ picolVar* picolArrSet1(picolInterp* i, char* name, char* value) {
     if (!cp) {
         return NULL; /*picolErr1(i, "bad array syntax %x", name);*/
     }
-    *cp = '\0'; /* overwrite closing paren */
+    /* overwrite closing paren */
+    *cp = '\0';
     return picolArrSet(ap, buf, value);
 }
 char* picolArrStat(picolArray* ap,char* buf) {
@@ -925,7 +1041,8 @@ COMMAND(array) {
     picolVar*   v;
     picolArray* ap = NULL;
     char buf[MAXSTR] = "", buf2[MAXSTR], *cp;
-    int mode = 0; /*default: array size */
+    /* default: array size */
+    int mode = 0;
     ARITY2(argc > 2,
             "array exists|get|names|set|size|statistics arrayName ?arg ...?");
     v = picolGetVar(i,argv[2]);
@@ -985,7 +1102,8 @@ COMMAND(break)    {
 }
 char* picolConcat(char* buf, int argc, char** argv) {
     int a;
-    buf[0] = '\0'; /* caller responsible for supplying large enough buffer */
+    /* caller responsible for supplying large enough buffer */
+    buf[0] = '\0';
     for (a = 1; a < argc; a++) {
         strcat(buf,argv[a]);
         if (*argv[a] && a < argc-1) {
@@ -1055,7 +1173,6 @@ COMMAND(eval) {
 int picol_EqNe(picolInterp* i, int argc, char** argv, void* pd) {
     int res;
     ARITY2(argc == 3, "eq|ne str1 str2")
-    /* ARITY2(argc == 3, "ne str1 str2") */
     res = EQ(argv[1],argv[2]);
     return picolSetBoolResult(i, EQ(argv[0],"ne") ? !res : res);
 }
@@ -1064,11 +1181,40 @@ COMMAND(error) {
     return picolErr(i,argv[1]);
 }
 COMMAND(exec) {
-    char buf[MAXSTR]; /* This is far from the real thing, but may be useful */
-    ARITY2(argc > 1, "exec command ?arg...?")
-    fflush(stdout);
-    system(picolConcat(buf,argc,argv));
-    return picolSetResult(i,"");
+    /* This is far from the real thing, but may be useful */
+    char command[MAXSTR] = "\0";
+    char buf[256] = "\0";
+    char output[MAXSTR] = "\0";
+    FILE* fd;
+    int status;
+    int length;
+
+    if (picolQuoteForShell(command, argc, argv) == -1) {
+        picolSetResult(i, "string too long");
+		return PICOL_ERR;
+    }
+
+    fd = popen(command, "r");
+    if (fd == NULL) {
+        return picolErr1(i, "couldn't execute command \"%s\"", command);
+    }
+
+    while (fgets(buf, 256, fd)) {
+        APPEND(output, buf);
+    }
+    status = pclose(fd);
+
+    length = strlen(output);
+    if (output[length - 1] == '\r') {
+        length--;
+    }
+    if (output[length - 1] == '\n') {
+        length--;
+    }
+    output[length] = '\0';
+
+    picolSetResult(i, output);
+    return status == 0 ? PICOL_OK : PICOL_ERR;
 }
 COMMAND(exit) {
     int rc = 0;
@@ -1311,7 +1457,7 @@ COMMAND(glob) {
     glob_t pglob;
     size_t j;
 
-    ARITY2(argc == 2 || argc == 4, "glob ?-directory dir? dirName")
+    ARITY2(argc == 2 || argc == 4, "glob ?-directory directory? pattern")
     if (argc == 2) {
         pattern = argv[1];
     } else {
@@ -1476,7 +1622,7 @@ COMMAND(info) {
             picolSetResult(i,v->val);
         }
     } else {
-        return picolErr1(i, "bad option %s, must be: args, body, commands,"
+        return picolErr1(i, "bad option %s, must be: args, body, commands, "
             "exists, globals, level, patchlevel, procs, script, or vars",
             argv[1]);
     }
@@ -1629,7 +1775,7 @@ COMMAND(lrange) {
 COMMAND(lreplace) {
     char buf[MAXSTR] = "", *what = "", *cp;
     char buf2[MAXSTR]="";
-    int from, to = LONG_MAX, a = 0, done = 0, j, toend = 0;
+    int from, to = INT_MAX, a = 0, done = 0, j, toend = 0;
     if (argc == 5) {
         what = argv[4];
     }
@@ -2413,6 +2559,6 @@ picolInterp* picolCreateInterp(void) {
     picolRegisterCoreCmds(i);
     picolSetVar(i,"::errorInfo","");
     srand(clock());
-    picolArrSet1(i,"::tcl_platform(platform)", TCL_PLATFORM_PLATFORM);
+    picolArrSet1(i,"::tcl_platform(platform)", TCL_PLATFORM_PLATFORM_STRING);
     return i;
 }

@@ -29,11 +29,14 @@
 /* The value for ::tcl_platform(platform). */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WIN32__) || \
         defined(_MSC_VER)
-#    define TCL_PLATFORM_PLATFORM "windows"
+#    define TCL_PLATFORM_PLATFORM         windows
+#    define TCL_PLATFORM_PLATFORM_STRING  "windows"
 #elif defined(_POSIX_VERSION)
-#    define TCL_PLATFORM_PLATFORM "unix"
+#    define TCL_PLATFORM_PLATFORM         unix
+#    define TCL_PLATFORM_PLATFORM_STRING  "unix"
 #else
-#    define TCL_PLATFORM_PLATFORM "unknown"
+#    define TCL_PLATFORM_PLATFORM         unknown
+#    define TCL_PLATFORM_PLATFORM_STRING  "unknown"
 #endif
 
 /* -------------------------- Macros mostly need picol_ environment (argv,i) */
@@ -75,6 +78,8 @@
                           return picolErr1(i,"expected pointer but got \"%s\"", x);}
 
 #define SUBCMD(x)         (EQ(argv[1],x))
+#define QUOTE2(x)         #x
+#define QUOTE(x)          QUOTE2(x)
 
 enum {PICOL_OK, PICOL_ERR, PICOL_RETURN, PICOL_BREAK, PICOL_CONTINUE};
 enum {PT_ESC,PT_STR,PT_CMD,PT_VAR,PT_SEP,PT_EOL,PT_EOF, PT_XPND};
@@ -232,6 +237,7 @@ int picolSetIntVar(picolInterp *i, char *name, int value);
 int picolSetResult(picolInterp *i, char *s);
 int picolSetVar2(picolInterp *i, char *name, char *val, int glob);
 int picolSource(picolInterp *i,char *filename);
+int picolQuoteForShell(char* dest, int argc, char** argv);
 int picolWildEq(char* pat, char* str, int n);
 int qsort_cmp(const void* a, const void *b);
 int qsort_cmp_decr(const void* a, const void *b);
