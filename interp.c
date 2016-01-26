@@ -2,21 +2,20 @@
 
 #include "picol.h"
 
-void set_interp_argv(picolInterp* pi, int offset, int argc, char** argv) {
+int set_interp_argv(picolInterp* i, int offset, int argc, char** argv) {
     char buf[MAXSTR] = "";
-    int i;
-    picolSetIntVar(pi, "argc", argc - offset);
-    for (i = offset; i < argc; i++) {
-        LAPPEND(buf, argv[i]);
+    int j;
+    picolSetIntVar(i, "argc", argc - offset);
+    for (j = offset; j < argc; j++) {
+        LAPPEND(buf, argv[j]);
     }
-    picolSetVar(pi, "argv", buf);
+    picolSetVar(i, "argv", buf);
 }
 
 int main(int argc, char** argv) {
     picolInterp* pi = picolCreateInterp();
     char buf[MAXSTR] = "";
     int rc = 0;
-    int i = 0;
     FILE* fp = fopen("init.pcl", "r");
     picolSetVar(pi, "argv0", argv[0]);
     picolSetVar(pi, "argv",  "");
