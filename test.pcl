@@ -2,7 +2,7 @@
 # test.pcl - test suite for the Picol interpreter
 # with many extensions by suchenwi. Call with "-l" to display all test cases \
 this comment extended? yes
-set patchlevel 0.1.23
+set patchlevel 0.1.24
 set thisfile [info script]
 
 # lappend argv -l
@@ -236,11 +236,13 @@ test format.1   {format %c 65} -> A
 test format.2   {format %o 4711} -> 11147
 test format.3   {format 0x%X 255} -> 0xFF
 
-test glob.1     {lsort [glob globtest/*]} -> {globtest/Makefile {globtest/foo bar} globtest/test1 globtest/test2}
-test glob.2     {lsort [glob -directory globtest *]} -> {globtest/Makefile {globtest/foo bar} globtest/test1 globtest/test2}
-test glob.3     {lsort [glob -directory globtest test*]} -> {globtest/test1 globtest/test2}
-test glob.4     {lsort [glob */test*]} -> {globtest/test1 globtest/test2}
-test glob.5     {lsort [glob -directory globtest *foo*]} -> {{globtest/foo bar}}
+if {[info commands glob] eq {glob}} {
+    test glob.1 {lsort [glob globtest/*]} -> {globtest/Makefile {globtest/foo bar} globtest/test1 globtest/test2}
+    test glob.2 {lsort [glob -directory globtest *]} -> {globtest/Makefile {globtest/foo bar} globtest/test1 globtest/test2}
+    test glob.3 {lsort [glob -directory globtest test*]} -> {globtest/test1 globtest/test2}
+    test glob.4 {lsort [glob */test*]} -> {globtest/test1 globtest/test2}
+    test glob.5 {lsort [glob -directory globtest *foo*]} -> {{globtest/foo bar}}
+}
 
 set glo 42
 test global.1   {proc f x {set ::glo}; f x} -> 42

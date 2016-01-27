@@ -6,7 +6,7 @@
 #ifndef PICOL_H
 #define PICOL_H
 
-#define PICOL_PATCHLEVEL "0.1.23"
+#define PICOL_PATCHLEVEL "0.1.24"
 #define MAXSTR 4096
 
 #include <ctype.h>
@@ -16,9 +16,13 @@
 #include <string.h>
 #include <time.h>
 
+/* Optional features. */
+#define PICOL_FEATURE_GLOB
+
 /* MSVC compatibility. */
 #ifdef _MSC_VER
 #   include <windows.h>
+#   undef  PICOL_FEATURE_GLOB
 #   define MAXRECURSION 75
 #   define PICOL_GETPID GetCurrentProcessId
 #   define PICOL_POPEN  _popen
@@ -26,7 +30,6 @@
 #else
 #   include <glob.h>
 #   include <unistd.h>
-#   define PICOL_FEATURE_GLOB
 #   define MAXRECURSION 160
 #   define PICOL_GETPID getpid
 #   define PICOL_POPEN  popen
