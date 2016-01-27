@@ -496,6 +496,7 @@ test unknown.1   bogus -> {invalid command name "bogus"}
 test unknown.2   {info commands unknown} -> unknown
 test unknown.3   {proc unknown args {return "? $args"}; bogus} -> "? bogus"
 test unknown.4   {info commands unknown} -> unknown
+rename unknown {}
 
 test uplevel.1   {uplevel 1 set glo} -> 56
 test uplevel.2   {proc f x {uplevel 1 set gg $x}; f 55; set gg} -> 55

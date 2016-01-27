@@ -9,15 +9,17 @@
 #define PICOL_PATCHLEVEL "0.1.24"
 #define MAXSTR 4096
 
+/* Optional features. */
+#define PICOL_FEATURE_GLOB
+#define PICOL_FEATURE_IO
+#define PICOL_FEATURE_PUTS
+
 #include <ctype.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
-/* Optional features. */
-#define PICOL_FEATURE_GLOB
 
 /* MSVC compatibility. */
 #ifdef _MSC_VER
@@ -28,12 +30,15 @@
 #   define PICOL_POPEN  _popen
 #   define PICOL_PCLOSE _pclose
 #else
-#   include <glob.h>
 #   include <unistd.h>
 #   define MAXRECURSION 160
 #   define PICOL_GETPID getpid
 #   define PICOL_POPEN  popen
 #   define PICOL_PCLOSE pclose
+#endif
+
+#ifdef PICOL_FEATURE_GLOB
+#   include <glob.h>
 #endif
 
 /* The value for ::tcl_platform(engine). */
@@ -58,11 +63,14 @@
                         return picolErr(i, "string too long"); \
                         strcat(dst,src);}
 
-#define ARITY(x)        if (!(x)) return picolErr1(i,"wrong # args for '%s'",argv[0]);
-#define ARITY2(x,s)     if (!(x)) return picolErr1(i,"wrong # args: should be \"%s\"",s);
+#define ARITY(x)        if (!(x)) return picolErr1(i, "wrong # args for '%s'", \
+                        argv[0]);
+#define ARITY2(x,s)     if (!(x)) return picolErr1(i, "wrong # args: " \
+                        "should be \"%s\"",s);
 
 #define COLONED(_p)     (*(_p) == ':' && *(_p+1) == ':') /* global indicator */
-#define COMMAND(c)      int picol_##c(picolInterp* i, int argc, char** argv, void* pd)
+#define COMMAND(c)      int picol_##c(picolInterp* i, int argc, char** argv, \
+                        void* pd)
 #define EQ(a,b)         ((*a)==(*b) && !strcmp(a,b))
 
 #define FOLD(init,step,n) {init;for(p=n;p<argc;p++) {SCAN_INT(a,argv[p]);step;}}
@@ -70,30 +78,33 @@
 #define FOREACH(_v,_p,_s) \
                  for(_p = picolParseList(_s,_v); _p; _p = picolParseList(_p,_v))
 
-#define LAPPEND(dst,src) {int needbraces = (strchr(src,' ') || strlen(src)==0); \
-                        if(*dst!='\0') APPEND(dst," "); if(needbraces) APPEND(dst,"{");\
+#define LAPPEND(dst,src) {int needbraces = (strchr(src,' ') || strlen(src)==0);\
+                        if(*dst!='\0') APPEND(dst," "); \
+                        if(needbraces) APPEND(dst,"{"); \
                         APPEND(dst,src); if(needbraces) APPEND(dst,"}");}
 
 /* this is the unchecked version, for functions without access to 'i' */
-#define LAPPEND_X(dst,src) {int needbraces = (strchr(src,' ')!=NULL)||strlen(src)==0; \
-                if(*dst!='\0') strcat(dst," "); if(needbraces) strcat(dst,"{"); \
-                strcat(dst,src); if(needbraces) strcat(dst,"}");}
+#define LAPPEND_X(dst,src) {int needbraces = (strchr(src,' ')!=NULL) || \
+                            strlen(src)==0; if(*dst!='\0') strcat(dst," "); \
+                            if(needbraces) strcat(dst,"{"); \
+                            strcat(dst,src); if(needbraces) strcat(dst,"}");}
 
-#define GET_VAR(_v,_n) _v = picolGetVar(i,_n); \
-        if(!_v) return picolErr1(i,"can't read \"%s\": no such variable", _n);
+#define GET_VAR(_v,_n)    _v = picolGetVar(i,_n); \
+                          if(!_v) return picolErr1(i, "can't read \"%s\": " \
+                          "no such variable", _n);
 
 #define PARSED(_t)        {p->end = p->p-1; p->type = _t;}
 #define RETURN_PARSED(_t) {PARSED(_t);return PICOL_OK;}
 
 #define SCAN_INT(v,x)     {if (picolIsInt(x)) v = atoi(x); else \
-                          return picolErr1(i,"expected integer but got \"%s\"", x);}
+                          return picolErr1(i,"expected integer " \
+                          "but got \"%s\"", x);}
 
 #define SCAN_PTR(v,x)     {void*_p; if ((_p=picolIsPtr(x))) v = _p; else \
-                          return picolErr1(i,"expected pointer but got \"%s\"", x);}
+                          return picolErr1(i,"expected pointer " \
+                          "but got \"%s\"", x);}
 
 #define SUBCMD(x)         (EQ(argv[1],x))
-#define QUOTE2(x)         #x
-#define QUOTE(x)          QUOTE2(x)
 
 enum {PICOL_OK, PICOL_ERR, PICOL_RETURN, PICOL_BREAK, PICOL_CONTINUE};
 enum {PT_ESC,PT_STR,PT_CMD,PT_VAR,PT_SEP,PT_EOL,PT_EOF, PT_XPND};
@@ -116,7 +127,8 @@ typedef struct picolVar {
 } picolVar;
 
 struct picolInterp; /* forward declaration */
-typedef int (*picol_Func)(struct picolInterp *i, int argc, char **argv, void *pd);
+typedef int (*picol_Func)(struct picolInterp *i, int argc, char **argv, \
+                          void *pd);
 
 typedef struct picolCmd {
   char            *name;
@@ -173,23 +185,17 @@ COMMAND(apply);
 COMMAND(array);
 COMMAND(break);
 COMMAND(catch);
-COMMAND(cd);
 COMMAND(clock);
 COMMAND(concat);
 COMMAND(continue);
 COMMAND(error);
 COMMAND(eval);
-COMMAND(exec);
-COMMAND(exit);
 COMMAND(expr);
+/* [file exists] and [file size] are enabled by PICOL_FEATURE_IO. */
 COMMAND(file);
 COMMAND(for);
 COMMAND(foreach);
 COMMAND(format);
-COMMAND(gets);
-#ifdef PICOL_FEATURE_GLOB
-COMMAND(glob);
-#endif
 COMMAND(global);
 COMMAND(if);
 COMMAND(incr);
@@ -206,18 +212,13 @@ COMMAND(lreplace);
 COMMAND(lsearch);
 COMMAND(lsort);
 COMMAND(not);
-COMMAND(open);
 COMMAND(pid);
 COMMAND(proc);
-COMMAND(puts);
-COMMAND(pwd);
 COMMAND(rand);
-COMMAND(read);
 COMMAND(rename);
 COMMAND(return);
 COMMAND(scan);
 COMMAND(set);
-COMMAND(source);
 COMMAND(split);
 COMMAND(string);
 COMMAND(subst);
@@ -227,12 +228,30 @@ COMMAND(unset);
 COMMAND(uplevel);
 COMMAND(variable);
 COMMAND(while);
+#ifdef PICOL_FEATURE_GLOB
+    COMMAND(glob);
+#endif
+#ifdef PICOL_FEATURE_IO
+    COMMAND(cd);
+    COMMAND(exec);
+    COMMAND(exit);
+    COMMAND(gets);
+    COMMAND(open);
+    COMMAND(pwd);
+    COMMAND(read);
+    COMMAND(source);
+#endif
+#ifdef PICOL_FEATURE_PUTS
+        COMMAND(puts);
+# endif
 int picolCallProc(picolInterp *i, int argc, char **argv, void *pd);
 int picolCondition(picolInterp *i, char* str);
 int picolErr1(picolInterp *i, char* format, char* arg);
 int picolErr(picolInterp *i, char* str);
 int picolEval2(picolInterp *i, char *t, int mode);
+#ifdef PICOL_FEATURE_IO
 int picolFileUtil(picolInterp *i, int argc, char **argv, void *pd);
+#endif
 int picolGetToken(picolInterp *i, picolParser *p);
 int picolHash(char* key, int modul);
 int picol_InNi(picolInterp *i, int argc, char **argv, void *pd);
