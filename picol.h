@@ -17,9 +17,11 @@
 
 #define MAXSTR 4096
 /* Optional features. Define as zero to disable. */
-#define PICOL_FEATURE_GLOB  1
-#define PICOL_FEATURE_IO    1
-#define PICOL_FEATURE_PUTS  1
+#define PICOL_FEATURE_ARRAYS  1
+#define PICOL_FEATURE_GLOB    1
+#define PICOL_FEATURE_INTERP  1
+#define PICOL_FEATURE_IO      1
+#define PICOL_FEATURE_PUTS    1
 
 #endif /* PICOL_CONFIGURATION */
 
@@ -199,7 +201,6 @@ char* picolToUpper(char *str);
 COMMAND(abs);
 COMMAND(append);
 COMMAND(apply);
-COMMAND(array);
 COMMAND(break);
 COMMAND(catch);
 COMMAND(clock);
@@ -217,7 +218,6 @@ COMMAND(global);
 COMMAND(if);
 COMMAND(incr);
 COMMAND(info);
-COMMAND(interp);
 COMMAND(join);
 COMMAND(lappend);
 COMMAND(lindex);
@@ -245,8 +245,20 @@ COMMAND(unset);
 COMMAND(uplevel);
 COMMAND(variable);
 COMMAND(while);
+#if PICOL_FEATURE_ARRAYS
+    COMMAND(array);
+
+    int picolHash(char* key, int modul);
+    picolArray* picolArrCreate(picolInterp *i, char *name);
+    picolVar* picolArrGet1(picolArray* ap, char* key);
+    picolVar* picolArrSet1(picolInterp *i, char *name, char *value);
+    picolVar* picolArrSet(picolArray* ap, char* key, char* value);
+#endif
 #if PICOL_FEATURE_GLOB
     COMMAND(glob);
+#endif
+#if PICOL_FEATURE_INTERP
+    COMMAND(interp);
 #endif
 #if PICOL_FEATURE_IO
     COMMAND(cd);
@@ -257,6 +269,8 @@ COMMAND(while);
     COMMAND(pwd);
     COMMAND(read);
     COMMAND(source);
+
+    int picolFileUtil(picolInterp *i, int argc, char **argv, void *pd);
 #endif
 #if PICOL_FEATURE_PUTS
     COMMAND(puts);
@@ -266,11 +280,7 @@ int picolCondition(picolInterp *i, char* str);
 int picolErr1(picolInterp *i, char* format, char* arg);
 int picolErr(picolInterp *i, char* str);
 int picolEval2(picolInterp *i, char *t, int mode);
-#if PICOL_FEATURE_IO
-int picolFileUtil(picolInterp *i, int argc, char **argv, void *pd);
-#endif
 int picolGetToken(picolInterp *i, picolParser *p);
-int picolHash(char* key, int modul);
 int picol_InNi(picolInterp *i, int argc, char **argv, void *pd);
 int picolIsInt(char* str);
 int picolLsort(picolInterp *i, int argc, char **argv, void *pd);
@@ -294,12 +304,8 @@ int picolWildEq(char* pat, char* str, int n);
 int qsort_cmp(const void* a, const void *b);
 int qsort_cmp_decr(const void* a, const void *b);
 int qsort_cmp_int(const void* a, const void *b);
-picolArray* picolArrCreate(picolInterp *i, char *name);
 picolCmd *picolGetCmd(picolInterp *i, char *name);
 picolInterp* picolCreateInterp(void);
-picolVar* picolArrGet1(picolArray* ap, char* key);
-picolVar* picolArrSet1(picolInterp *i, char *name, char *value);
-picolVar* picolArrSet(picolArray* ap, char* key, char* value);
 picolVar *picolGetVar2(picolInterp *i, char *name, int glob);
 void picolDropCallFrame(picolInterp *i);
 void picolEscape(char *str);
@@ -541,6 +547,7 @@ picolVar* picolGetVar2(picolInterp* i, char* name, int glob) {
             name += 2; /* skip the "::" */
         }
     }
+#if PICOL_FEATURE_ARRAYS
     /* array element syntax? */
     if ((cp = strchr(name,'('))) {
         picolArray* ap;
@@ -578,6 +585,7 @@ picolVar* picolGetVar2(picolInterp* i, char* name, int glob) {
         }
         return v;
     }
+#endif /* PICOL_FEATURE_ARRAYS */
     for (; v; v = v->next) {
         if (EQ(v->name,name)) {
             return v;
@@ -585,7 +593,7 @@ picolVar* picolGetVar2(picolInterp* i, char* name, int glob) {
     }
     return NULL;
 }
-int picolSetVar2(picolInterp* i, char* name, char* val,int glob) {
+int picolSetVar2(picolInterp* i, char* name, char* val, int glob) {
     picolVar*       v = picolGetVar(i,name);
     picolCallFrame* c = i->callframe, *localc = c;
     int global = COLONED(name);
@@ -601,10 +609,12 @@ int picolSetVar2(picolInterp* i, char* name, char* val,int glob) {
         }
     } else {
         /* nonexistent variable */
+#if PICOL_FEATURE_ARRAYS
         if (strchr(name,'(')) {
             picolArrSet1(i,name,val);
             return PICOL_OK;
         }
+#endif
         if (glob || global) {
             if (global) name += 2;
             while (c->parent) c = c->parent;
@@ -1232,6 +1242,7 @@ COMMAND(apply) {
     return picolCallProc(i, argc-1, argv+1, (void*)procdata);
 }
 /*---------------------------------------------------- Array stuff */
+#if PICOL_FEATURE_ARRAYS
 int picolHash(char* key, int modul) {
     char* cp;
     int hash = 0;
@@ -1410,6 +1421,7 @@ COMMAND(array) {
     }
     return PICOL_OK;
 }
+#endif /* PICOL_FEATURE_ARRAYS */
 COMMAND(break)    {
     ARITY(argc == 1);
     return PICOL_BREAK;
@@ -1961,6 +1973,7 @@ COMMAND(info) {
     }
     return PICOL_OK;
 }
+#if PICOL_FEATURE_INTERP
 COMMAND(interp) {
     picolInterp* src = i, *trg = i;
     if (SUBCMD("alias")) {
@@ -1995,6 +2008,7 @@ COMMAND(interp) {
         return picolErr(i,"usage: interp alias|create|eval ...");
     }
 }
+#endif
 COMMAND(join) {
     char buf[MAXSTR] = "", buf2[MAXSTR]="", *with = " ", *cp, *cp2 = NULL;
     ARITY2(argc == 2 || argc == 3, "join list ?joinString?")
@@ -2847,7 +2861,6 @@ void picolRegisterCoreCmds(picolInterp* i) {
     picolRegisterCmd(i,"abs",    picol_abs,NULL);
     picolRegisterCmd(i,"append", picol_append,NULL);
     picolRegisterCmd(i,"apply",  picol_apply,NULL);
-    picolRegisterCmd(i,"array",  picol_array,NULL);
     picolRegisterCmd(i,"break",  picol_break,NULL);
     picolRegisterCmd(i,"catch",  picol_catch,NULL);
     picolRegisterCmd(i,"clock",  picol_clock,NULL);
@@ -2866,7 +2879,6 @@ void picolRegisterCoreCmds(picolInterp* i) {
     picolRegisterCmd(i,"in",     picol_InNi,NULL);
     picolRegisterCmd(i,"incr",   picol_incr,NULL);
     picolRegisterCmd(i,"info",   picol_info,NULL);
-    picolRegisterCmd(i,"interp", picol_interp,NULL);
     picolRegisterCmd(i,"join",   picol_join,NULL);
     picolRegisterCmd(i,"lappend",picol_lappend,NULL);
     picolRegisterCmd(i,"lindex", picol_lindex,NULL);
@@ -2899,8 +2911,14 @@ void picolRegisterCoreCmds(picolInterp* i) {
     picolRegisterCmd(i,"while",  picol_while,NULL);
     picolRegisterCmd(i,"!",      picol_not,NULL);
     picolRegisterCmd(i,"_l",     picolLsort,NULL);
+#if PICOL_FEATURE_ARRAYS
+    picolRegisterCmd(i,"array",  picol_array,NULL);
+#endif
 #if PICOL_FEATURE_GLOB
-        picolRegisterCmd(i,"glob",picol_glob,NULL);
+    picolRegisterCmd(i,"glob",   picol_glob,NULL);
+#endif
+#if PICOL_FEATURE_INTERP
+    picolRegisterCmd(i,"interp", picol_interp,NULL);
 #endif
 #if PICOL_FEATURE_IO
     picolRegisterCmd(i,"cd",     picol_cd,NULL);
@@ -2927,8 +2945,8 @@ picolInterp* picolCreateInterp(void) {
     picolRegisterCoreCmds(i);
     picolSetVar(i,"::errorInfo","");
     srand(clock());
-    picolArrSet1(i,"::tcl_platform(platform)", TCL_PLATFORM_PLATFORM_STRING);
-    picolArrSet1(i,"::tcl_platform(engine)", TCL_PLATFORM_ENGINE_STRING);
+    picolSetVar2(i, "tcl_platform(platform)", TCL_PLATFORM_PLATFORM_STRING, 1);
+    picolSetVar2(i, "tcl_platform(engine)", TCL_PLATFORM_ENGINE_STRING, 1);
     return i;
 }
 
