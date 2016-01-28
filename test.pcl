@@ -492,6 +492,7 @@ test switch.6    {set x 6;switch $x 4 - 5 {set y k} default {set y df}} -> df
 test tcl_platform.1 {info exists ::tcl_platform(platform)} -> 1
 
 test unset.1     {set foo 1;unset foo;info exists foo} -> 0
+
 test unknown.1   bogus -> {invalid command name "bogus"}
 test unknown.2   {info commands unknown} -> unknown
 test unknown.3   {proc unknown args {return "? $args"}; bogus} -> "? bogus"
@@ -533,7 +534,7 @@ if {$test_config(picol)} {
     set nc  [llength [info commands]]
     set now [clock format [clock seconds] -format %H:%M:%S]
     puts -nonewline "Picol [info pa] at $now has $nc commands. "
-    puts "Lines of code: [exec wc -l picol.c]"
+    puts "Lines of code: [exec wc -l picol.h]"
     puts "Still missing [llength $miss] commands: $miss"
     test exec       {exec rm temp.tcl} -> ""
 }
