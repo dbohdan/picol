@@ -78,50 +78,54 @@
 #endif
 
 /* -------------------------- Macros mostly need picol_ environment (argv,i) */
-#define APPEND(dst,src) {if((strlen(dst)+strlen(src))>=sizeof(dst)-1) \
-                        return picolErr(i, "string too long"); \
-                        strcat(dst,src);}
+#define APPEND(dst,src) do {if((strlen(dst)+strlen(src))>=sizeof(dst)-1) {\
+                        return picolErr(i, "string too long");} \
+                        strcat(dst,src);} while (0)
 
-#define ARITY(x)        if (!(x)) return picolErr1(i, "wrong # args for '%s'", \
-                        argv[0]);
-#define ARITY2(x,s)     if (!(x)) return picolErr1(i, "wrong # args: " \
-                        "should be \"%s\"",s);
+#define ARITY(x)        do {if (!(x)) {return picolErr1(i, \
+                        "wrong # args for '%s'", argv[0]);}} while (0);
+#define ARITY2(x,s)     do {if (!(x)) {return picolErr1(i, "wrong # args: " \
+                        "should be \"%s\"",s);}} while (0)
 
 #define COLONED(_p)     (*(_p) == ':' && *(_p+1) == ':') /* global indicator */
 #define COMMAND(c)      int picol_##c(picolInterp* i, int argc, char** argv, \
                         void* pd)
 #define EQ(a,b)         ((*a)==(*b) && !strcmp(a,b))
 
-#define FOLD(init,step,n) {init;for(p=n;p<argc;p++) {SCAN_INT(a,argv[p]);step;}}
+#define FOLD(init,step,n) do {init; for(p=n;p<argc;p++) { \
+                          SCAN_INT(a,argv[p]);step;}} while (0)
 
 #define FOREACH(_v,_p,_s) \
                  for(_p = picolParseList(_s,_v); _p; _p = picolParseList(_p,_v))
 
-#define LAPPEND(dst,src) {int needbraces = (strchr(src,' ') || strlen(src)==0);\
-                        if(*dst!='\0') APPEND(dst," "); \
-                        if(needbraces) APPEND(dst,"{"); \
-                        APPEND(dst,src); if(needbraces) APPEND(dst,"}");}
+#define LAPPEND(dst,src) do {\
+                        int needbraces = (strchr(src,' ') || strlen(src)==0); \
+                        if(*dst!='\0') {APPEND(dst," ");} \
+                        if(needbraces) {APPEND(dst,"{");} \
+                        APPEND(dst,src); \
+                        if(needbraces) {APPEND(dst,"}");}} while (0)
 
 /* this is the unchecked version, for functions without access to 'i' */
-#define LAPPEND_X(dst,src) {int needbraces = (strchr(src,' ')!=NULL) || \
+#define LAPPEND_X(dst,src) do {int needbraces = (strchr(src,' ')!=NULL) || \
                             strlen(src)==0; if(*dst!='\0') strcat(dst," "); \
-                            if(needbraces) strcat(dst,"{"); \
-                            strcat(dst,src); if(needbraces) strcat(dst,"}");}
+                            if(needbraces) {strcat(dst,"{");} \
+                            strcat(dst,src); \
+                            if(needbraces) {strcat(dst,"}");}} while (0)
 
 #define GET_VAR(_v,_n)    _v = picolGetVar(i,_n); \
                           if(!_v) return picolErr1(i, "can't read \"%s\": " \
                           "no such variable", _n);
 
-#define PARSED(_t)        {p->end = p->p-1; p->type = _t;}
-#define RETURN_PARSED(_t) {PARSED(_t);return PICOL_OK;}
+#define PARSED(_t)        do {p->end = p->p-1; p->type = _t;} while (0)
+#define RETURN_PARSED(_t) do {PARSED(_t);return PICOL_OK;} while (0)
 
-#define SCAN_INT(v,x)     {if (picolIsInt(x)) v = atoi(x); else \
+#define SCAN_INT(v,x)     do {if (picolIsInt(x)) {v = atoi(x);} else {\
                           return picolErr1(i,"expected integer " \
-                          "but got \"%s\"", x);}
+                          "but got \"%s\"", x);}} while (0)
 
-#define SCAN_PTR(v,x)     {void*_p; if ((_p=picolIsPtr(x))) v = _p; else \
-                          return picolErr1(i,"expected pointer " \
-                          "but got \"%s\"", x);}
+#define SCAN_PTR(v,x)     do {void*_p; if ((_p=picolIsPtr(x))) {v = _p;} else \
+                          {return picolErr1(i,"expected pointer " \
+                          "but got \"%s\"", x);}} while (0)
 
 #define SUBCMD(x)         (EQ(argv[1],x))
 
@@ -420,7 +424,7 @@ int picolParseString(picolParser* p) {
     }
     for (p->start = p->p; 1; p->p++, p->len--) {
         if (p->len == 0) {
-            RETURN_PARSED(PT_ESC)
+            RETURN_PARSED(PT_ESC);
         }
         switch(*p->p) {
         case '\\':
@@ -437,7 +441,9 @@ int picolParseString(picolParser* p) {
         case '\n':
         case '\r':
         case ';':
-            if (!p->insidequote) RETURN_PARSED(PT_ESC);
+            if (!p->insidequote) {
+                RETURN_PARSED(PT_ESC);
+            }
             break;
         case '"':
             if (p->insidequote) {
@@ -1397,7 +1403,7 @@ COMMAND(array) {
         }
         picolSetResult(i,picolArrGet(ap,pat,buf,mode));
     } else if (SUBCMD("set")) {
-        ARITY2(argc == 4, "array set arrayName list")
+        ARITY2(argc == 4, "array set arrayName list");
         if (!v) {
             ap = picolArrCreate(i,argv[2]);
         }
@@ -1440,7 +1446,7 @@ char* picolConcat(char* buf, int argc, char** argv) {
 }
 COMMAND(concat) {
     char buf[MAXSTR];
-    ARITY2(argc > 0, "concat ?arg...?")
+    ARITY2(argc > 0, "concat ?arg...?");
     return picolSetResult(i,picolConcat(buf,argc,argv));
 }
 COMMAND(continue) {
@@ -1458,7 +1464,7 @@ COMMAND(catch) {
 }
 #if PICOL_FEATURE_IO
 COMMAND(cd) {
-    ARITY2(argc == 2, "cd dirName")
+    ARITY2(argc == 2, "cd dirName");
     if (chdir(argv[1])) {
         return PICOL_ERR;
     }
@@ -1467,7 +1473,7 @@ COMMAND(cd) {
 #endif
 COMMAND(clock) {
     time_t t;
-    ARITY2(argc > 1, "clock clicks|format|seconds ?arg..?")
+    ARITY2(argc > 1, "clock clicks|format|seconds ?arg..?");
     if (SUBCMD("clicks")) {
         picolSetIntResult(i,clock());
     } else if (SUBCMD("format")) {
@@ -1500,12 +1506,12 @@ COMMAND(eval) {
 }
 int picol_EqNe(picolInterp* i, int argc, char** argv, void* pd) {
     int res;
-    ARITY2(argc == 3, "eq|ne str1 str2")
+    ARITY2(argc == 3, "eq|ne str1 str2");
     res = EQ(argv[1],argv[2]);
     return picolSetBoolResult(i, EQ(argv[0],"ne") ? !res : res);
 }
 COMMAND(error) {
-    ARITY2(argc == 2, "error message")
+    ARITY2(argc == 2, "error message");
     return picolErr(i,argv[1]);
 }
 #if PICOL_FEATURE_IO
@@ -1627,7 +1633,7 @@ COMMAND(file) {
         char fragment[MAXSTR];
         char* start = argv[2];
         if (*start == '/') {
-            APPEND(buf, "/")
+            APPEND(buf, "/");
             start++;
         }
         while (cp = strchr(start, '/')) {
@@ -1640,7 +1646,7 @@ COMMAND(file) {
             }
         }
         if (strlen(start) > 0) {
-            LAPPEND(buf, start)
+            LAPPEND(buf, start);
         }
         picolSetResult(i, buf);
     } else if (SUBCMD("tail")) {
@@ -1690,7 +1696,7 @@ int picolFileUtil(picolInterp* i, int argc, char** argv, void* pd) {
 #endif
 COMMAND(for) {
     int rc;
-    ARITY2(argc == 5, "for start test next command")
+    ARITY2(argc == 5, "for start test next command");
     if ((rc = picolEval(i,argv[1])) != PICOL_OK) return rc; /* init */
     while (1) {
         rc = picolEval(i,argv[4]);            /* body */
@@ -1751,7 +1757,7 @@ COMMAND(foreach) {
 }
 COMMAND(format) {
     int value;   /* limited to single integer or string argument so far */
-    ARITY2(argc == 2 || argc == 3, "format formatString ?arg?")
+    ARITY2(argc == 2 || argc == 3, "format formatString ?arg?");
     if (argc==2) {
         return picolSetResult(i, argv[1]); /* identity */
     }
@@ -1767,7 +1773,7 @@ COMMAND(format) {
 COMMAND(gets) {
     char buf[MAXSTR], *getsrc;
     FILE* fp = stdin;
-    ARITY2(argc == 2 || argc == 3, "gets channelId ?varName?")
+    ARITY2(argc == 2 || argc == 3, "gets channelId ?varName?");
     picolSetResult(i,"-1");
     if (!EQ(argv[1],"stdin")) {
         SCAN_PTR(fp,argv[1]); /* caveat usor */
@@ -1801,7 +1807,7 @@ COMMAND(glob) {
     glob_t pglob;
     size_t j;
 
-    ARITY2(argc == 2 || argc == 4, "glob ?-directory directory? pattern")
+    ARITY2(argc == 2 || argc == 4, "glob ?-directory directory? pattern");
     if (argc == 2) {
         pattern = argv[1];
     } else {
@@ -1828,7 +1834,7 @@ COMMAND(glob) {
             }
         }
         APPEND(file_path, pglob.gl_pathv[j]);
-        LAPPEND(buf, file_path)
+        LAPPEND(buf, file_path);
     }
     globfree(&pglob);
     /* Fix result corruption on MinGW 20130722. */
@@ -1861,7 +1867,7 @@ COMMAND(global) {
 }
 COMMAND(if) {
     int rc;
-    ARITY2(argc==3 || argc==5, "if test script1 ?else script2?")
+    ARITY2(argc==3 || argc==5, "if test script1 ?else script2?");
     if ((rc = picolCondition(i,argv[1])) != PICOL_OK) {
         return rc;
     }
@@ -1886,13 +1892,13 @@ int picol_InNi(picolInterp* i, int argc, char** argv, void* pd) {
 COMMAND(incr) {
     int value = 0, increment = 1;
     picolVar* v;
-    ARITY2(argc == 2 || argc == 3,"incr varName ?increment?")
+    ARITY2(argc == 2 || argc == 3,"incr varName ?increment?");
     v = picolGetVar(i,argv[1]);
     if (v && !v->val) {
         v = picolGetGlobalVar(i,argv[1]);
     }
     if (v) {
-        SCAN_INT(value,     v->val);       /* creates if not exists */
+        SCAN_INT(value, v->val);       /* creates if not exists */
     }
     if (argc == 3) {
         SCAN_INT(increment, argv[2]);
@@ -1906,7 +1912,7 @@ COMMAND(info) {
     int procs = SUBCMD("procs");
     ARITY2(argc == 2 || argc == 3,
             "info args|body|commands|exists|globals|level|patchlevel|procs|"
-            "script|vars")
+            "script|vars");
     if (argc == 3) {
         pat = argv[2];
     }
@@ -1978,7 +1984,7 @@ COMMAND(interp) {
     picolInterp* src = i, *trg = i;
     if (SUBCMD("alias")) {
         picolCmd* c = NULL;
-        ARITY2(argc==6,"interp alias slavePath slaveCmd masterPath masterCmd")
+        ARITY2(argc==6,"interp alias slavePath slaveCmd masterPath masterCmd");
         if (!EQ(argv[2],"")) {
             SCAN_PTR(trg,argv[2]);
         }
@@ -1993,13 +1999,13 @@ COMMAND(interp) {
         return picolSetResult(i,argv[3]);
     } else if (SUBCMD("create")) {
         char buf[32];
-        ARITY(argc == 2)
+        ARITY(argc == 2);
         trg = picolCreateInterp();
         sprintf(buf,"%p", trg);
         return picolSetResult(i,buf);
     } else if (SUBCMD("eval")) {
         int rc;
-        ARITY(argc == 4)
+        ARITY(argc == 4);
         SCAN_PTR(trg, argv[2]);
         rc = picolEval(trg, argv[3]);
         picolSetResult(i, trg->result);
@@ -2011,7 +2017,7 @@ COMMAND(interp) {
 #endif
 COMMAND(join) {
     char buf[MAXSTR] = "", buf2[MAXSTR]="", *with = " ", *cp, *cp2 = NULL;
-    ARITY2(argc == 2 || argc == 3, "join list ?joinString?")
+    ARITY2(argc == 2 || argc == 3, "join list ?joinString?");
     if (argc == 3) {
         with = argv[2];
     }
@@ -2044,7 +2050,7 @@ COMMAND(lappend) {
 COMMAND(lindex) {
     char buf[MAXSTR] = "", *cp;
     int n = 0, idx;
-    ARITY2(argc == 3, "lindex list index")
+    ARITY2(argc == 3, "lindex list index");
     SCAN_INT(idx,argv[2]);
     for (cp=picolParseList(argv[1],buf); cp; cp=picolParseList(cp,buf), n++) {
         if (n==idx) {
@@ -2057,7 +2063,7 @@ COMMAND(linsert) {
     char buf[MAXSTR] = "", buf2[MAXSTR]="", *cp;
     int pos = -1, j=0, a, atend=0;
     int inserted = 0;
-    ARITY2(argc >= 3, "linsert list index element ?element ...?")
+    ARITY2(argc >= 3, "linsert list index element ?element ...?");
     if (!EQ(argv[2],"end")) {
         SCAN_INT(pos,argv[2]);
     } else {
@@ -2095,7 +2101,7 @@ COMMAND(list) {
 COMMAND(llength) {
     char buf[MAXSTR], *cp;
     int n = 0;
-    ARITY2(argc == 2, "llength list")
+    ARITY2(argc == 2, "llength list");
     FOREACH(buf,cp,argv[1]) {
         n++;
     }
@@ -2104,7 +2110,7 @@ COMMAND(llength) {
 COMMAND(lrange) {
     char buf[MAXSTR] = "", buf2[MAXSTR] = "", *cp;
     int from, to, a = 0, toend = 0;
-    ARITY2(argc == 4, "lrange list first last")
+    ARITY2(argc == 4, "lrange list first last");
     SCAN_INT(from,argv[2]);
     if (EQ(argv[3],"end")) {
         toend = 1;
@@ -2126,7 +2132,7 @@ COMMAND(lreplace) {
     if (argc == 5) {
         what = argv[4];
     }
-    ARITY2(argc >= 4, "lreplace list first last ?element element ...?")
+    ARITY2(argc >= 4, "lreplace list first last ?element element ...?");
     SCAN_INT(from,argv[2]);
     if (EQ(argv[3],"end")) {
         toend = 1;
@@ -2162,7 +2168,7 @@ COMMAND(lreplace) {
 COMMAND(lsearch) {
     char buf[MAXSTR] = "", *cp;
     int j = 0;
-    ARITY2(argc == 3, "lsearch list pattern")
+    ARITY2(argc == 3, "lsearch list pattern");
     FOREACH(buf,cp,argv[1]) {
         if (picolMatch(argv[2],buf)) {
             return picolSetIntResult(i,j);
@@ -2175,7 +2181,7 @@ COMMAND(lset) {
     char buf[MAXSTR] = "", buf2[MAXSTR]="", *cp;
     picolVar* var;
     int pos, a=0;
-    ARITY2(argc == 4, "lset listVar index value")
+    ARITY2(argc == 4, "lset listVar index value");
     GET_VAR(var,argv[1]);
     if (!var->val) {
         var = picolGetGlobalVar(i,argv[1]);
@@ -2212,7 +2218,7 @@ int qsort_cmp_int(const void* a, const void* b) {
 
 COMMAND(lsort) {
     char buf[MAXSTR] = "_l "; /* dispatch to helper function picolLsort */
-    ARITY2(argc == 2 || argc == 3, "lsort ?-decreasing|-integer|-unique? list")
+    ARITY2(argc == 2 || argc == 3, "lsort ?-decreasing|-integer|-unique? list");
     APPEND(buf,argv[1]);
     if (argc==3) {
         APPEND(buf," ");
@@ -2258,23 +2264,23 @@ int picol_Math(picolInterp* i, int argc, char** argv, void* pd) {
     }
     /*ARITY2 "+ ?arg..." */
     if (EQ(argv[0],"+" )) {
-        FOLD(c=0,c += a,1)
+        FOLD(c=0,c += a,1);
     }
     /*ARITY2 "- arg ?apicolParseCmdrg...?" */
     else if (EQ(argv[0],"-" )) {
         if (argc==2) {
             c= -a;
         } else {
-            FOLD(c=a,c -= a,2)
+            FOLD(c=a,c -= a,2);
         }
     }
     /*ARITY2"* ?arg...?" */
     else if (EQ(argv[0],"*" )) {
-        FOLD(c=1,c *= a,1)
+        FOLD(c=1,c *= a,1);
     }
     /*ARITY2 "** a b" */
     else if (EQ(argv[0],"**" )) {
-        ARITY(argc==3)
+        ARITY(argc==3);
         c = 1;
         while (b-- > 0) {
             c = c*a;
@@ -2282,57 +2288,57 @@ int picol_Math(picolInterp* i, int argc, char** argv, void* pd) {
     }
     /*ARITY2 "/ a b" */
     else if (EQ(argv[0],"/" )) {
-        ARITY(argc==3)
+        ARITY(argc==3);
         c = a / b;
     }
     /*ARITY2"% a b" */
     else if (EQ(argv[0],"%" )) {
-        ARITY(argc==3)
+        ARITY(argc==3);
         c = a % b;
     }
     /*ARITY2"&& ?arg...?"*/
     else if (EQ(argv[0],"&&")) {
-        FOLD(c=1,c = c && a,1)
+        FOLD(c=1,c = c && a,1);
     }
     /*ARITY2"|| ?arg...?"*/
     else if (EQ(argv[0],"||")) {
-        FOLD(c=0,c = c || a,1)
+        FOLD(c=0,c = c || a,1);
     }
     /*ARITY2"> a b" */
     else if (EQ(argv[0],">" )) {
-        ARITY(argc==3)
+        ARITY(argc==3);
         c = a > b;
     }
     /*ARITY2">= a b"*/
     else if (EQ(argv[0],">=")) {
-        ARITY(argc==3)
+        ARITY(argc==3);
         c = a >= b;
     }
     /*ARITY2"< a b" */
     else if (EQ(argv[0],"<" )) {
-        ARITY(argc==3)
+        ARITY(argc==3);
         c = a < b;
     }
     /*ARITY2"<= a b"*/
     else if (EQ(argv[0],"<=")) {
-        ARITY(argc==3)
+        ARITY(argc==3);
         c = a <= b;
     }
     /*ARITY2"== a b"*/
     else if (EQ(argv[0],"==")) {
-        ARITY(argc==3)
+        ARITY(argc==3);
         c = a == b;
     }
     /*ARITY2"!= a b"*/
     else if (EQ(argv[0],"!=")) {
-        ARITY(argc==3)
+        ARITY(argc==3);
         c = a != b;
     }
     return picolSetIntResult(i,c);
 }
 COMMAND(not) {
     int res;            /* implements the [! int] command */
-    ARITY2(argc == 2,"! expression")
+    ARITY2(argc == 2,"! expression");
     SCAN_INT(res, argv[1]);
     return picolSetBoolResult(i, !res);
 }
@@ -2340,7 +2346,7 @@ COMMAND(not) {
 COMMAND(open) {
     char* mode = "r";
     FILE* fp = NULL;
-    ARITY2(argc == 2 || argc == 3, "open fileName ?access?")
+    ARITY2(argc == 2 || argc == 3, "open fileName ?access?");
     if (argc == 3) {
         mode = argv[2];
     }
@@ -2352,7 +2358,7 @@ COMMAND(open) {
 }
 #endif
 COMMAND(pid) {
-    ARITY2(argc == 1, "pid")
+    ARITY2(argc == 1, "pid");
     return picolSetIntResult(i,PICOL_GETPID());
 }
 COMMAND(proc) {
@@ -2381,7 +2387,7 @@ COMMAND(puts) {
     FILE* fp = stdout;
     char* chan=NULL, *str="", *fmt = "%s\n";
     int rc;
-    ARITY2(argc >= 2 && argc <= 4, "puts ?-nonewline? ?channelId? string")
+    ARITY2(argc >= 2 && argc <= 4, "puts ?-nonewline? ?channelId? string");
     if (argc==2) {
         str = argv[1];
     } else if (argc==3) {
@@ -2435,7 +2441,7 @@ COMMAND(read) {
     char buf[MAXSTR*64];
     int size = sizeof(buf)-1;
     FILE* fp = NULL;
-    ARITY2(argc == 2 || argc == 3, "read channelId ?size?")
+    ARITY2(argc == 2 || argc == 3, "read channelId ?size?");
     SCAN_PTR(fp, argv[1]); /* caveat usor */
     if (argc==3) {
         SCAN_INT(size,argv[2]);
@@ -2447,7 +2453,7 @@ COMMAND(read) {
 COMMAND(rename) {
     int found = 0;
     picolCmd* c, *last = NULL;
-    ARITY2(argc == 3, "rename oldName newName")
+    ARITY2(argc == 3, "rename oldName newName");
     for (c = i->commands; c; last = c, c=c->next) {
         if (EQ(c->name,argv[1])) {
             if (!last && EQ(argv[2],"")) {
@@ -2467,13 +2473,13 @@ COMMAND(rename) {
     return PICOL_OK;
 }
 COMMAND(return ) {
-    ARITY2(argc == 1 || argc == 2, "return ?result?")
+    ARITY2(argc == 1 || argc == 2, "return ?result?");
     picolSetResult(i, (argc == 2) ? argv[1] : "");
     return PICOL_RETURN;
 }
 COMMAND(scan) {
     int result, rc = 1; /* limited to one integer so far */
-    ARITY2(argc == 3 || argc == 4, "scan string formatString ?varName?")
+    ARITY2(argc == 3 || argc == 4, "scan string formatString ?varName?");
     if (strlen(argv[2])!=2 || argv[2][0]!='%') {
         return picolErr1(i,"bad format %s",argv[2]);
     }
@@ -2500,7 +2506,7 @@ COMMAND(scan) {
 }
 COMMAND(set) {
     picolVar* pv;
-    ARITY2(argc == 2 || argc == 3, "set varName ?newValue?")
+    ARITY2(argc == 2 || argc == 3, "set varName ?newValue?");
     if (argc == 2) {
         GET_VAR(pv,argv[1]);
         if (pv && pv->val) {
@@ -2533,7 +2539,7 @@ int picolSource(picolInterp* i,char* filename) {
 }
 #if PICOL_FEATURE_IO
 COMMAND(source) {
-    ARITY2(argc == 2, "source filename")
+    ARITY2(argc == 2, "source filename");
     return picolSource(i, argv[1]);
 }
 #endif
@@ -2590,7 +2596,7 @@ char* picolToUpper(char* str) {
 }
 COMMAND(string) {
     char buf[MAXSTR] = "\0";
-    ARITY2(argc >= 3, "string option string ?arg..?")
+    ARITY2(argc >= 3, "string option string ?arg..?");
     if (SUBCMD("length")) {
         picolSetIntResult(i,strlen(argv[2]));
     } else if (SUBCMD("compare")) {
@@ -2623,7 +2629,7 @@ COMMAND(string) {
 
     } else if (SUBCMD("index")) {
         int maxi = strlen(argv[2])-1, from;
-        ARITY2(argc == 4, "string index string charIndex")
+        ARITY2(argc == 4, "string index string charIndex");
         SCAN_INT(from, argv[3]);
         if (from < 0) {
             from = 0;
@@ -2672,14 +2678,14 @@ COMMAND(string) {
     } else if (SUBCMD("repeat")) {
         int j, n;
         SCAN_INT(n,argv[3]);
-        ARITY2(argc == 4, "string repeat string count")
+        ARITY2(argc == 4, "string repeat string count");
         for (j=0; j<n; j++) {
             APPEND(buf,argv[2]);
         }
         picolSetResult(i,buf);
 
     } else if (SUBCMD("reverse")) {
-        ARITY2(argc == 3, "string reverse str")
+        ARITY2(argc == 3, "string reverse str");
         picolSetResult(i,picolStrRev(argv[2]));
     } else if (SUBCMD("tolower") && argc==3) {
         picolSetResult(i, picolToLower(argv[2]));
@@ -2721,13 +2727,13 @@ COMMAND(string) {
     return PICOL_OK;
 }
 COMMAND(subst) {
-    ARITY2(argc == 2, "subst string")
+    ARITY2(argc == 2, "subst string");
     return picolSubst(i,argv[1]);
 }
 COMMAND(switch) {
     char* cp, buf[MAXSTR] = "";
     int fallthrough = 0, a;
-    ARITY2(argc > 2, "switch string pattern body ... ?default body?")
+    ARITY2(argc > 2, "switch string pattern body ... ?default body?");
     if (argc==3) { /* braced body variant */
         FOREACH(buf,cp,argv[2]) {
             if (fallthrough || EQ(buf,argv[1]) || EQ(buf,"default")) {
@@ -2784,7 +2790,7 @@ COMMAND(trace) {
 }
 COMMAND(unset) {
     picolVar* v, *lastv = NULL;
-    ARITY2(argc == 2, "unset varName")
+    ARITY2(argc == 2, "unset varName");
     for (v = i->callframe->vars; v; lastv = v, v = v->next) {
         if (EQ(v->name,argv[1])) {
             if (!lastv) {
@@ -2817,7 +2823,7 @@ COMMAND(uplevel) {
 COMMAND(variable) {
     char buf[MAXSTR]; /* limited to :: namespace so far */
     int a, rc = PICOL_OK;
-    ARITY2(argc>1, "variable ?name value...? name ?value?")
+    ARITY2(argc>1, "variable ?name value...? name ?value?");
     for (a = 1; a < argc && rc == PICOL_OK; a++) {
         strcpy(buf,"global ");
         strcat(buf,argv[a]);
@@ -2830,7 +2836,7 @@ COMMAND(variable) {
     return rc;
 }
 COMMAND(while) {
-    ARITY2(argc == 3, "while test command")
+    ARITY2(argc == 3, "while test command");
     while (1) {
         int rc = picolCondition(i,argv[1]);
         if (rc != PICOL_OK) {

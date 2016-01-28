@@ -15,7 +15,7 @@
 COMMAND(square) {
     ARITY2(argc == 2, "square number"); 
     int n;
-    SCAN_INT(n, argv[1])
+    SCAN_INT(n, argv[1]);
     picolSetIntResult(i, n * n);
     return PICOL_OK;
 }
