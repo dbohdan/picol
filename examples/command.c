@@ -2,7 +2,8 @@
 
 #define PICOL_CONFIGURATION
 #define MAXSTR 4096
-/* A minimal Picol configuration: no I/O, no [glob] command. */
+/* A minimal Picol configuration: no arrays, no I/O, no [interp] or [glob]
+command. */
 #define PICOL_FEATURE_ARRAYS  0
 #define PICOL_FEATURE_GLOB    0
 #define PICOL_FEATURE_INTERP  0

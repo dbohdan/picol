@@ -1131,8 +1131,8 @@ int picolQuoteForShell(char* dest, int argc, char** argv) {
     int j;
     int k;
     int offset = 0;
-#define ADDCHAR(c) {command[offset] = c; offset++; \
-                   if (offset >= sizeof(command) - 1) {return -1;}}
+#define ADDCHAR(c) do {command[offset] = c; offset++; \
+                   if (offset >= sizeof(command) - 1) {return -1;}} while (0)
 #if TCL_PLATFORM_PLATFORM == windows
     /* See http://blogs.msdn.com/b/twistylittlepassagesallalike/archive/2011/
             04/23/everyone-quotes-arguments-the-wrong-way.aspx */
@@ -1141,7 +1141,7 @@ int picolQuoteForShell(char* dest, int argc, char** argv) {
     int length;
     char command_unquoted[MAXSTR] = "\0";
     for (j = 1; j < argc; j++) {
-        ADDCHAR(' ')
+        ADDCHAR(' ');
         length = strlen(argv[j]);
         if (strchr(argv[j], ' ') == NULL && \
                 strchr(argv[j], '\t') == NULL && \
@@ -1154,7 +1154,7 @@ int picolQuoteForShell(char* dest, int argc, char** argv) {
             strcat(command, argv[j]);
             offset += length;
         } else {
-            ADDCHAR('"')
+            ADDCHAR('"');
             for (k = 0; k < length; k++) {
                 backslashes = 0;
                 while (argv[j][k] == '\\') {
@@ -1163,52 +1163,52 @@ int picolQuoteForShell(char* dest, int argc, char** argv) {
                 }
                 if (k == length) {
                     for (m = 0; m < backslashes * 2; m++) {
-                        ADDCHAR('\\')
+                        ADDCHAR('\\');
                     }
                     ADDCHAR(argv[j][k])
                 } else if (argv[j][k] == '"') {
                     for (m = 0; m < backslashes * 2 + 1; m++) {
-                        ADDCHAR('\\')
+                        ADDCHAR('\\');
                     }
                     ADDCHAR('"')
                 } else {
                     for (m = 0; m < backslashes; m++) {
-                        ADDCHAR('\\')
+                        ADDCHAR('\\');
                     }
-                    ADDCHAR(argv[j][k])
+                    ADDCHAR(argv[j][k]);
                 }
             }
-            ADDCHAR('"')
+            ADDCHAR('"');
         }
     }
-    ADDCHAR('\0')
+    ADDCHAR('\0');
     memcpy(command_unquoted, command, offset);
     length = offset;
     offset = 0;
     /* Skip the first character, which is a space. */
     for (j = 1; j < length; j++) {
-        ADDCHAR('^')
-        ADDCHAR(command_unquoted[j])
+        ADDCHAR('^');
+        ADDCHAR(command_unquoted[j]);
     }
-    ADDCHAR('\0')
+    ADDCHAR('\0');
 #else
     /* Assume a POSIXy platform. */
     for (j = 1; j < argc; j++) {
-        ADDCHAR(' ')
-        ADDCHAR('\'')
+        ADDCHAR(' ');
+        ADDCHAR('\'');
         for (k = 0; k < strlen(argv[j]); k++) {
             if (argv[j][k] == '\'') {
-                ADDCHAR('\'')
-                ADDCHAR('\\')
-                ADDCHAR('\'')
-                ADDCHAR('\'')
+                ADDCHAR('\'');
+                ADDCHAR('\\');
+                ADDCHAR('\'');
+                ADDCHAR('\'');
             } else {
-                ADDCHAR(argv[j][k])
+                ADDCHAR(argv[j][k]);
             }
         }
-        ADDCHAR('\'')
+        ADDCHAR('\'');
     }
-    ADDCHAR('\0')
+    ADDCHAR('\0');
 #endif
 #undef ADDCHAR
     memcpy(dest, command, strlen(command));
@@ -1757,17 +1757,47 @@ COMMAND(foreach) {
 }
 COMMAND(format) {
     int value;   /* limited to single integer or string argument so far */
+    int j = 0;
+    int length = 0;
+    char buf[MAXSTR];
     ARITY2(argc == 2 || argc == 3, "format formatString ?arg?");
-    if (argc==2) {
+    if (argc == 2) {
         return picolSetResult(i, argv[1]); /* identity */
     }
-    if (strchr(argv[1],'s')) {
-        char buf[MAXSTR];
-        sprintf(buf,argv[1],argv[2]);
-        return picolSetResult(i, buf);
+    length = strlen(argv[1]);
+    if (length == 0) {
+        return picolSetResult(i, "");
     }
-    SCAN_INT(value, argv[2]);
-    return picolSetFmtResult(i, argv[1], value);
+    if (argv[1][0] != '%') {
+        return picolErr1(i, "bad format string \"%s\"", argv[1]);
+    }
+    for (j = 1; j < strlen(argv[1]) - 1; j++) {
+        switch (argv[1][j]) {
+        case '#':
+        case '-':
+        case '0': case '1': case '2': case '3': case '4':
+        case '5': case '6': case '7': case '8': case '9':
+        case ' ':
+        case '+':
+        case '\'':
+            break;
+        default:
+            return picolErr1(i, "bad format string \"%s\"", argv[1]);
+        }
+    }
+    switch (argv[1][j]) {
+    case '%':
+        return picolSetResult(i, "%");
+    case 'd': case 'i': case 'o': case 'u': case 'x': case 'X':
+    case 'c':
+        SCAN_INT(value, argv[2]);
+        return picolSetFmtResult(i, argv[1], value);
+    case 's':
+        sprintf(buf, argv[1], argv[2]);
+        return picolSetResult(i, buf);
+    default:
+        return picolErr1(i, "bad format string \"%s\"", argv[1]);
+    }   
 }
 #if PICOL_FEATURE_IO
 COMMAND(gets) {
@@ -2215,7 +2245,6 @@ int qsort_cmp_int(const void* a, const void* b) {
     int diff = atoi(*(const char**)a)-atoi(*(const char**)b);
     return (diff > 0 ? 1 : diff < 0 ? -1 : 0);
 }
-
 COMMAND(lsort) {
     char buf[MAXSTR] = "_l "; /* dispatch to helper function picolLsort */
     ARITY2(argc == 2 || argc == 3, "lsort ?-decreasing|-integer|-unique? list");
@@ -2480,23 +2509,23 @@ COMMAND(return ) {
 COMMAND(scan) {
     int result, rc = 1; /* limited to one integer so far */
     ARITY2(argc == 3 || argc == 4, "scan string formatString ?varName?");
-    if (strlen(argv[2])!=2 || argv[2][0]!='%') {
-        return picolErr1(i,"bad format %s",argv[2]);
+    if (strlen(argv[2]) != 2 || argv[2][0] != '%') {
+        return picolErr1(i, "bad format \"%s\"", argv[2]);
     }
     switch(argv[2][1]) {
     case 'c':
-        result = (int)(argv[1][0]&0xFF);
+        result = (int)(argv[1][0] & 0xFF);
         break;
     case 'd':
     case 'x':
     case 'o':
-        rc = sscanf(argv[1],argv[2],&result);
+        rc = sscanf(argv[1], argv[2], &result);
         break;
     default:
-        return picolErr1(i,"bad format %s", argv[2]);
+        return picolErr1(i, "bad scan conversion character \"%s\"", argv[2]);
     }
     if (rc != 1) {
-        return picolErr1(i,"bad format %s",argv[2]);
+        result = 0; /* This is what Tcl 8.6 does. */
     }
     if (argc==4) {
         picolSetIntVar(i, argv[3], result);
@@ -2650,7 +2679,7 @@ COMMAND(string) {
             return picolErr(i,"usage: string match pat str");
         }
     } else if (SUBCMD("is")) {
-        ARITY2(argc == 4  && EQ(argv[2],"int"), "string is int str");
+        ARITY2(argc == 4 && EQ(argv[2],"int"), "string is int str");
         picolSetBoolResult(i, picolIsInt(argv[3]));
     } else if (SUBCMD("range")) {
         int from, to, maxi = strlen(argv[2]);
