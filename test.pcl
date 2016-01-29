@@ -186,14 +186,14 @@ if {$test_config(io)} {
 test expand.0 {{*}{}} -> {} ;# empty command
 test expand.1 {list a {*}[list b c d] e} -> {a b c d e}
 test expand.2 {list a {*}[list b c d]}   -> {a b c d}
-# test expand.2a {list a {*}{b c d} e}    -> {a b c d e}
+test expand.2a {list a {*}{b c d} e}    -> {a b c d e}
 test expand.3 {list {*}[list b c d] e}   -> {b c d e}
 test expand.4 {list a {*}[list b {c x y} d] e} -> {a b {c x y} d e}
 test expand.5 {set x {f g h}; list a {*}$x i}  -> {a f g h i}
 test expand.6 {list a {*}{} b}     -> {a b}
 test expand.7 {list a {*}[list] b} -> {a b}
 test expand.8 {list a {*}b c}      -> {a b c}
-# test expand.9 {{*}{set x 45}} -> 45
+test expand.9 {{*}{set x 45}} -> 45
 test expand.10 {{*}[list set x 47]} -> 47
 
 test expr.1     {expr 3 + 4}           -> 7

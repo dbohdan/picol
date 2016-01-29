@@ -917,11 +917,21 @@ int picolEval2(picolInterp* i, char* t, int mode) { /*----------- EVAL! */
             continue;
         }
         /* We have a new token, append to the previous or as new arg? */
+        
         if (prevtype == PT_SEP || prevtype == PT_EOL) {
-            if (!p.expand || strlen(t)) {
+            if (!p.expand) {
                 argv       = realloc(argv, sizeof(char*)*(argc+1));
                 argv[argc] = t;
                 argc++;
+                p.expand = 0;
+            } else if (strlen(t)) {
+                char buf[MAXSTR], *cp;
+                FOREACH(buf,cp,t) {
+                    argv       = realloc(argv, sizeof(char*)*(argc+1));
+                    argv[argc] = strdup(buf);
+                    argc++;
+                }
+                free(t);
                 p.expand = 0;
             }
         } else if (p.expand) {
