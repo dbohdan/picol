@@ -917,7 +917,6 @@ int picolEval2(picolInterp* i, char* t, int mode) { /*----------- EVAL! */
             continue;
         }
         /* We have a new token, append to the previous or as new arg? */
-        
         if (prevtype == PT_SEP || prevtype == PT_EOL) {
             if (!p.expand) {
                 argv       = realloc(argv, sizeof(char*)*(argc+1));
@@ -1175,12 +1174,12 @@ int picolQuoteForShell(char* dest, int argc, char** argv) {
                     for (m = 0; m < backslashes * 2; m++) {
                         ADDCHAR('\\');
                     }
-                    ADDCHAR(argv[j][k])
+                    ADDCHAR(argv[j][k]);
                 } else if (argv[j][k] == '"') {
                     for (m = 0; m < backslashes * 2 + 1; m++) {
                         ADDCHAR('\\');
                     }
-                    ADDCHAR('"')
+                    ADDCHAR('"');
                 } else {
                     for (m = 0; m < backslashes; m++) {
                         ADDCHAR('\\');
