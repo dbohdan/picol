@@ -1,6 +1,6 @@
 /* Tcl in ~ 500 lines of code by Salvatore antirez Sanfilippo. BSD licensed
  * 2007-04-01 Added by suchenwi: many more commands, see below.
- * 2016-01    Misc. fixes and improvements by dbohdan. See Fossil timeline. 
+ * 2016-01    Misc. fixes and improvements by dbohdan. See Fossil timeline.
  *
  * This file provides both the interface and the implementation for Picol.
  * To instantiate the implementation put the line
@@ -37,7 +37,7 @@
 #include <string.h>
 #include <time.h>
 
-#define PICOL_PATCHLEVEL "0.1.24"
+#define PICOL_PATCHLEVEL "0.1.25"
 
 /* MSVC compatibility. */
 #ifdef _MSC_VER
@@ -1806,7 +1806,7 @@ COMMAND(format) {
         return picolSetResult(i, buf);
     default:
         return picolErr1(i, "bad format string \"%s\"", argv[1]);
-    }   
+    }
 }
 #if PICOL_FEATURE_IO
 COMMAND(gets) {
