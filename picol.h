@@ -37,7 +37,7 @@
 #include <string.h>
 #include <time.h>
 
-#define PICOL_PATCHLEVEL "0.1.26"
+#define PICOL_PATCHLEVEL "0.1.28"
 
 /* MSVC compatibility. */
 #ifdef _MSC_VER

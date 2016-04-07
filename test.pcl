@@ -2,7 +2,7 @@
 # test.pcl - test suite for the Picol interpreter
 # with many extensions by suchenwi. Call with "-l" to display all test cases \
 this comment extended? yes
-set patchlevel 0.1.26
+set patchlevel 0.1.28
 set thisfile [info script]
 
 # lappend argv -l
