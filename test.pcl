@@ -36,10 +36,10 @@ if !$test_config(picol) { #----------------------- compatibility mode for tclsh
     foreach i {/ % == != > < >= <=} {proc $i {a b} "expr {\$a $i \$b}"}
     foreach i {+ * && ||} {proc $i args "expr \[join \$args $i\]+0"}
     proc - {a1 args} {
-	    if {$args eq ""} {return [expr -$a1]}
-	    foreach a $args {set a1 [expr $a1-$a]}
+        if {$args eq ""} {return [expr -$a1]}
+        foreach a $args {set a1 [expr $a1-$a]}
         return $a1 
-    }	 
+    }
     proc !   x {expr !$x}
     proc abs x {expr abs($x)}
     interp alias {} eq {} string equal
@@ -230,11 +230,10 @@ if {$test_config(io)} {
         } -> {read contents too long}
         test file.9     {
             set f [open picol.h]
-            set len [expr {$::tcl_platform(maxLength) + 1}]
-            set res [catch {read $f $len}]
+            catch [list read $f [expr {$::tcl_platform(maxLength) + 1}]] res
             close $f
             set res
-        } -> 1
+        } -> [list size [expr {$::tcl_platform(maxLength) + 1}] too large]
     }
 }
 test file.7     {file dirname /foo/bar/grill.txt} -> /foo/bar

@@ -2486,7 +2486,7 @@ COMMAND(read) {
     if (argc == 3) {
         SCAN_INT(size, argv[2]);
         if (size > MAXSTR - 1) {
-            return picolErr1(i, "size %d too large", size);
+            return picolErr1(i, "size %s too large", argv[2]);
         }
     }
     actual_size = fread(buf, 1, size, fp);
