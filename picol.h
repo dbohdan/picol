@@ -813,7 +813,7 @@ int picolEval2(picolInterp* i, char* t, int mode) { /*----------- EVAL! */
     /* mode==0: subst only, mode==1: full eval */
     picolParser p;
     int argc = 0, j;
-    char**      argv = NULL, buf[MAXSTR];
+    char**      argv = NULL, buf[MAXSTR*2];
     int tlen, rc = PICOL_OK;
     picolSetResult(i,"");
     picolInitParser(&p,t);
@@ -924,10 +924,10 @@ int picolEval2(picolInterp* i, char* t, int mode) { /*----------- EVAL! */
                 argc++;
                 p.expand = 0;
             } else if (strlen(t)) {
-                char buf[MAXSTR], *cp;
-                FOREACH(buf,cp,t) {
+                char buf2[MAXSTR], *cp;
+                FOREACH(buf2,cp,t) {
                     argv       = realloc(argv, sizeof(char*)*(argc+1));
-                    argv[argc] = strdup(buf);
+                    argv[argc] = strdup(buf2);
                     argc++;
                 }
                 free(t);
@@ -935,10 +935,10 @@ int picolEval2(picolInterp* i, char* t, int mode) { /*----------- EVAL! */
             }
         } else if (p.expand) {
             /* slice in the words separately */
-            char buf[MAXSTR], *cp;
-            FOREACH(buf,cp,t) {
+            char buf2[MAXSTR], *cp;
+            FOREACH(buf2,cp,t) {
                 argv       = realloc(argv, sizeof(char*)*(argc+1));
-                argv[argc] = strdup(buf);
+                argv[argc] = strdup(buf2);
                 argc++;
             }
             free(t);
@@ -2999,7 +2999,7 @@ picolInterp* picolCreateInterp(void) {
     picolInterp* i = calloc(1,sizeof(picolInterp));
     /* Maximum string length. */
     char maxLength[8];
-    /* Substract one for the final '\0', which scripts don't see. */
+    /* Subtract one for the final '\0', which scripts don't see. */
     sprintf(maxLength, "%d", MAXSTR - 1);
     picolInitInterp(i);
     picolRegisterCoreCmds(i);

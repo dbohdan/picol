@@ -22,8 +22,10 @@ set test_config(unix) [expr {$tcl_platform(platform) eq {unix}}]
 set test_config(windows) [expr {$tcl_platform(platform) eq {windows}}]
 if {$test_config(windows)} {
     set test_config(hello_file_length) 7
+    set test_config(newline) \r\n
 } else {
     set test_config(hello_file_length) 6
+    set test_config(newline) \n
 }
 
 set test_config(arrays) [expr {[info commands array] eq {array}}]
@@ -214,22 +216,27 @@ if {$test_config(io)} {
                         } -> $test_config(hello_file_length)
     test file.4     {set f [open t.t]; gets $f l; close $f; set l} -> hello
     test file.5     {file size t.t} -> $test_config(hello_file_length)
-    test file.6     {set f [open t.t]; set l [read $f]; close $f; set l} -> hello\n
+    test file.6     {
+        set f [open t.t]
+        set l [string trimright [read $f] \r\n]
+        close $f
+        set l
+    } -> hello
     if {$test_config(picol)} {
         test file.7     {
-            set f [open picol.h]
+            set f [open picol.h rb]
             set res [lindex [read $f $::tcl_platform(maxLength)] 1]
             close $f
             set res
         } -> Tcl
         test file.8     {
-            set f [open picol.h]
+            set f [open picol.h rb]
             catch {read $f} res
             close $f
             set res
         } -> {read contents too long}
         test file.9     {
-            set f [open picol.h]
+            set f [open picol.h rb]
             catch [list read $f [expr {$::tcl_platform(maxLength) + 1}]] res
             close $f
             set res
@@ -567,6 +574,23 @@ test switch.5    {set x 4;switch $x 4 - 5 {set y K} default {set y 0}} -> K
 test switch.6    {set x 6;switch $x 4 - 5 {set y k} default {set y df}} -> df
 
 test tcl_platform.1 {info exists ::tcl_platform(platform)} -> 1
+if {$test_config(picol)} {
+    test tcl_platform.2 {
+        set s {}
+        set len $::tcl_platform(maxLength)
+        for {set i 0} {$i < $len} {incr i} {
+            append s x
+        }
+        string length $s
+    } -> $tcl_platform(maxLength)
+    test tcl_platform.3 {
+        set s {}
+        set len [expr {$::tcl_platform(maxLength) + 1}]
+        for {set i 0} {$i < $len} {incr i} {
+            append s x
+        }
+    } -> {string too long}
+}
 
 test unset.1     {set foo 1;unset foo;info exists foo} -> 0
 
