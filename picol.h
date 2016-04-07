@@ -2481,7 +2481,7 @@ COMMAND(read) {
     char buf[MAXSTR*2];
     int buf_size = sizeof(buf) - 1;
     int size = buf_size; /* Size argument value. */
-    int actual_size = 0;
+    int len = 0;
     FILE* fp = NULL;
     ARITY2(argc == 2 || argc == 3, "read channelId ?size?");
     SCAN_PTR(fp, argv[1]); /* caveat usor */
@@ -2491,11 +2491,13 @@ COMMAND(read) {
             return picolErr1(i, "size %s too large", argv[2]);
         }
     }
-    actual_size = fread(buf, 1, size, fp);
-    if (actual_size > MAXSTR - 1) {
+    fread(buf, 1, size, fp);
+    /* On Windows len may not equal the number returned by fread(). */
+    len = strlen(buf);
+    if (len > MAXSTR - 1) {
         return picolErr(i, "read contents too long");
     } else {
-        buf[actual_size] = '\0';
+        buf[len] = '\0';
         return picolSetResult(i, buf);
     }
 }
