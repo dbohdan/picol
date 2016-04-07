@@ -37,7 +37,7 @@
 #include <string.h>
 #include <time.h>
 
-#define PICOL_PATCHLEVEL "0.1.28"
+#define PICOL_PATCHLEVEL "0.1.29"
 
 /* MSVC compatibility. */
 #ifdef _MSC_VER
@@ -1390,7 +1390,7 @@ COMMAND(array) {
         SCAN_PTR(ap,v->val); /* caveat usor */
     }
     if (SUBCMD("exists")) {
-        picolSetBoolResult(i,(int)v);
+        picolSetBoolResult(i, v);
     }
     else if (SUBCMD("get") || SUBCMD("names") || SUBCMD("size")) {
         char* pat = "*";
@@ -1616,7 +1616,7 @@ COMMAND(file) {
             fseek(fp,0,2);
             picolSetIntResult(i,ftell(fp));
         } else {
-            picolSetBoolResult(i,(int)fp);
+            picolSetBoolResult(i,fp);
         }
         if (fp) {
             fclose(fp);
@@ -1991,7 +1991,7 @@ COMMAND(info) {
         if (argc != 3) {
             return picolErr(i,"usage: info exists varName");
         }
-        picolSetBoolResult(i, (int)picolGetVar(i,argv[2]));
+        picolSetBoolResult(i, picolGetVar(i,argv[2]));
     } else if (SUBCMD("level")) {
         if (argc==2) {
             picolSetIntResult(i, i->level);
@@ -2384,6 +2384,7 @@ COMMAND(not) {
 COMMAND(open) {
     char* mode = "r";
     FILE* fp = NULL;
+    char fp_str[MAXSTR];
     ARITY2(argc == 2 || argc == 3, "open fileName ?access?");
     if (argc == 3) {
         mode = argv[2];
@@ -2392,7 +2393,8 @@ COMMAND(open) {
     if (!fp) {
         return picolErr1(i,"could not open %s", argv[1]);
     }
-    return picolSetFmtResult(i,"%p",(int)fp);
+    sprintf(fp_str, "%p", fp);
+    return picolSetResult(i, fp_str);
 }
 #endif
 COMMAND(pid) {
