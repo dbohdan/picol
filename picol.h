@@ -37,7 +37,7 @@
 #include <string.h>
 #include <time.h>
 
-#define PICOL_PATCHLEVEL "0.1.25"
+#define PICOL_PATCHLEVEL "0.1.26"
 
 /* MSVC compatibility. */
 #ifdef _MSC_VER
@@ -78,7 +78,7 @@
 #endif
 
 /* -------------------------- Macros mostly need picol_ environment (argv,i) */
-#define APPEND(dst,src) do {if((strlen(dst)+strlen(src))>=sizeof(dst)-1) {\
+#define APPEND(dst,src) do {if ((strlen(dst)+strlen(src)) > sizeof(dst) - 1) {\
                         return picolErr(i, "string too long");} \
                         strcat(dst,src);} while (0)
 
@@ -2476,16 +2476,26 @@ COMMAND(rand) {
 }
 #if PICOL_FEATURE_IO
 COMMAND(read) {
-    char buf[MAXSTR*64];
-    int size = sizeof(buf)-1;
+    char buf[MAXSTR*2];
+    int buf_size = sizeof(buf) - 1;
+    int size = buf_size; /* Size argument value. */
+    int actual_size = 0;
     FILE* fp = NULL;
     ARITY2(argc == 2 || argc == 3, "read channelId ?size?");
     SCAN_PTR(fp, argv[1]); /* caveat usor */
-    if (argc==3) {
-        SCAN_INT(size,argv[2]);
+    if (argc == 3) {
+        SCAN_INT(size, argv[2]);
+        if (size > MAXSTR - 1) {
+            return picolErr1(i, "size %d too large", size);
+        }
     }
-    buf[fread(buf,1,size,fp)] = '\0';
-    return picolSetResult(i,buf);
+    actual_size = fread(buf, 1, size, fp);
+    if (actual_size > MAXSTR - 1) {
+        return picolErr(i, "read contents too long");
+    } else {
+        buf[actual_size] = '\0';
+        return picolSetResult(i, buf);
+    }
 }
 #endif
 COMMAND(rename) {
@@ -2985,12 +2995,17 @@ void picolRegisterCoreCmds(picolInterp* i) {
 }
 picolInterp* picolCreateInterp(void) {
     picolInterp* i = calloc(1,sizeof(picolInterp));
+    /* Maximum string length. */
+    char maxLength[8];
+    /* Substract one for the final '\0', which scripts don't see. */
+    sprintf(maxLength, "%d", MAXSTR - 1);
     picolInitInterp(i);
     picolRegisterCoreCmds(i);
     picolSetVar(i,"::errorInfo","");
     srand(clock());
     picolSetVar2(i, "tcl_platform(platform)", TCL_PLATFORM_PLATFORM_STRING, 1);
     picolSetVar2(i, "tcl_platform(engine)", TCL_PLATFORM_ENGINE_STRING, 1);
+    picolSetVar2(i, "tcl_platform(maxLength)", maxLength, 1);
     return i;
 }
 

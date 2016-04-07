@@ -2,7 +2,7 @@
 # test.pcl - test suite for the Picol interpreter
 # with many extensions by suchenwi. Call with "-l" to display all test cases \
 this comment extended? yes
-set patchlevel 0.1.25
+set patchlevel 0.1.26
 set thisfile [info script]
 
 # lappend argv -l
@@ -215,6 +215,27 @@ if {$test_config(io)} {
     test file.4     {set f [open t.t]; gets $f l; close $f; set l} -> hello
     test file.5     {file size t.t} -> $test_config(hello_file_length)
     test file.6     {set f [open t.t]; set l [read $f]; close $f; set l} -> hello\n
+    if {$test_config(picol)} {
+        test file.7     {
+            set f [open picol.h]
+            set res [lindex [read $f $::tcl_platform(maxLength)] 1]
+            close $f
+            set res
+        } -> Tcl
+        test file.8     {
+            set f [open picol.h]
+            catch {read $f} res
+            close $f
+            set res
+        } -> {read contents too long}
+        test file.9     {
+            set f [open picol.h]
+            set len [expr {$::tcl_platform(maxLength) + 1}]
+            set res [catch {read $f $len}]
+            close $f
+            set res
+        } -> 1
+    }
 }
 test file.7     {file dirname /foo/bar/grill.txt} -> /foo/bar
 test file.8     {file tail /foo/bar/grill.txt}    -> grill.txt
@@ -284,8 +305,8 @@ if {$test_config(picol)} {
     if {$test_config(arrays)} {
         lappend globals env tcl_platform test_config
     } else {
-        lappend globals tcl_platform(engine) tcl_platform(platform) \
-                test_config(arrays) test_config(glob) \
+        lappend globals tcl_platform(engine) tcl_platform(maxLength) \
+                tcl_platform(platform) test_config(arrays) test_config(glob) \
                 test_config(hello_file_length) test_config(interp) \
                 test_config(io) test_config(picol) test_config(unix) \
                 test_config(windows)
