@@ -574,6 +574,23 @@ test switch.5    {set x 4;switch $x 4 - 5 {set y K} default {set y 0}} -> K
 test switch.6    {set x 6;switch $x 4 - 5 {set y k} default {set y df}} -> df
 
 test tcl_platform.1 {info exists ::tcl_platform(platform)} -> 1
+if {$test_config(picol)} {
+    test tcl_platform.2 {
+        set s {}
+        set len $::tcl_platform(maxLength)
+        for {set i 0} {$i < $len} {incr i} {
+            append s x
+        }
+        string length $s
+    } -> $tcl_platform(maxLength)
+    test tcl_platform.3 {
+        set s {}
+        set len [expr {$::tcl_platform(maxLength) + 1}]
+        for {set i 0} {$i < $len} {incr i} {
+            append s x
+        }
+    } -> {string too long}
+}
 
 test unset.1     {set foo 1;unset foo;info exists foo} -> 0
 

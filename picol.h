@@ -3001,7 +3001,7 @@ picolInterp* picolCreateInterp(void) {
     picolInterp* i = calloc(1,sizeof(picolInterp));
     /* Maximum string length. */
     char maxLength[8];
-    /* Substract one for the final '\0', which scripts don't see. */
+    /* Subtract one for the final '\0', which scripts don't see. */
     sprintf(maxLength, "%d", MAXSTR - 1);
     picolInitInterp(i);
     picolRegisterCoreCmds(i);
