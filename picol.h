@@ -45,12 +45,14 @@
 #   undef  PICOL_FEATURE_GLOB
 #   define PICOL_FEATURE_GLOB 0
 #   define MAXRECURSION 75
+#   define PICOL_GETCWD _getcwd
 #   define PICOL_GETPID GetCurrentProcessId
 #   define PICOL_POPEN  _popen
 #   define PICOL_PCLOSE _pclose
 #else
 #   include <unistd.h>
 #   define MAXRECURSION 160
+#   define PICOL_GETCWD getcwd
 #   define PICOL_GETPID getpid
 #   define PICOL_POPEN  popen
 #   define PICOL_PCLOSE pclose
@@ -134,19 +136,20 @@ enum {PT_ESC, PT_STR, PT_CMD, PT_VAR, PT_SEP, PT_EOL, PT_EOF, PT_XPND};
 
 /* ------------------------------------------------------------------- types */
 typedef struct picolParser {
-  char  *text;
-  char  *p;           /* current text position */
+  char*  text;
+  char*  p;           /* current text position */
   size_t len;         /* remaining length */
-  char  *start;       /* token start */
-  char  *end;         /* token end */
+  char*  start;       /* token start */
+  char*  end;         /* token end */
   int    type;        /* token type, PT_... */
   int    insidequote; /* True if inside " " */
   int    expand;      /* true after {*} */
 } picolParser;
 
 typedef struct picolVar {
-  char            *name, *val;
-  struct picolVar *next;
+  char*  name;
+  char*  val;
+  struct picolVar* next;
 } picolVar;
 
 struct picolInterp; /* forward declaration */
@@ -154,31 +157,31 @@ typedef int (*picol_Func)(struct picolInterp *i, int argc, char **argv, \
                           void *pd);
 
 typedef struct picolCmd {
-  char            *name;
+  char*            name;
   picol_Func       func;
-  void            *privdata;
-  struct picolCmd *next;
+  void*            privdata;
+  struct picolCmd* next;
 } picolCmd;
 
 typedef struct picolCallFrame {
-  picolVar              *vars;
-  char                  *command;
-  struct picolCallFrame *parent; /* parent is NULL at top level */
+  picolVar*              vars;
+  char*                  command;
+  struct picolCallFrame* parent; /* parent is NULL at top level */
 } picolCallFrame;
 
 typedef struct picolInterp {
   int             level;              /* Level of nesting */
-  picolCallFrame *callframe;
-  picolCmd       *commands;
-  char           *current;        /* currently executed command */
-  char           *result;
+  picolCallFrame* callframe;
+  picolCmd*       commands;
+  char*           current;        /* currently executed command */
+  char*           result;
   int             trace; /* 1 to display each command, 0 if not */
 } picolInterp;
 
 #define DEFAULT_ARRSIZE 16
 
 typedef struct picolArray {
-  picolVar *table[DEFAULT_ARRSIZE];
+  picolVar* table[DEFAULT_ARRSIZE];
   int       size;
 } picolArray;
 
@@ -1724,7 +1727,7 @@ COMMAND(file) {
             APPEND(buf, "/");
             start++;
         }
-        while (cp = strchr(start, '/')) {
+        while ((cp = strchr(start, '/'))) {
             memcpy(fragment, start, cp - start);
             fragment[cp - start] = '\0';
             LAPPEND(buf, fragment);
@@ -1935,7 +1938,7 @@ COMMAND(glob) {
             return picolErr1(i, "bad option \"%s\": must be -directory",
                     argv[1]);
         }
-        getcwd(old_wd, MAXSTR);
+        PICOL_GETCWD(old_wd, MAXSTR);
         new_wd = argv[2];
         pattern = argv[3];
         if (chdir(new_wd)) {
@@ -2246,12 +2249,10 @@ COMMAND(lrange) {
     return picolSetResult(i, buf2);
 }
 COMMAND(lreplace) {
-    char buf[MAXSTR] = "", *what = "", *cp;
-    char buf2[MAXSTR]="";
+    char buf[MAXSTR] = "";
+    char buf2[MAXSTR] = "";
+    char* cp;
     int from, to = INT_MAX, a = 0, done = 0, j, toend = 0;
-    if (argc == 5) {
-        what = argv[4];
-    }
     ARITY2(argc >= 4, "lreplace list first last ?element element ...?");
     SCAN_INT(from, argv[2]);
     if (EQ(argv[3], "end")) {
@@ -2549,7 +2550,7 @@ COMMAND(puts) {
 COMMAND(pwd) {
     ARITY(argc == 1);
     char buf[MAXSTR] = "\0";
-    return picolSetResult(i, getcwd(buf, MAXSTR));
+    return picolSetResult(i, PICOL_GETCWD(buf, MAXSTR));
 }
 #endif
 COMMAND(rand) {
