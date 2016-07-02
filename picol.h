@@ -792,7 +792,7 @@ void picolEscape(char* str) {
                 cp++;
                 break;
             case 'x':
-                sscanf(cp+2, "%x", &ichar);
+                sscanf(cp+2, "%x", (unsigned int *)&ichar);
                 *cp2++ = (char)ichar&0xFF;
                 cp += 3;
                 break;
@@ -1217,9 +1217,9 @@ int picolReplace(char* str, char* from, char* to, int nocase) {
 }
 int picolQuoteForShell(char* dest, int argc, char** argv) {
     char command[MAXSTR] = "\0";
-    int j;
-    int k;
-    int offset = 0;
+    unsigned int j;
+    unsigned int k;
+    unsigned int offset = 0;
 #define ADDCHAR(c) do {command[offset] = c; offset++; \
                    if (offset >= sizeof(command) - 1) {return -1;}} while (0)
 #if TCL_PLATFORM_PLATFORM == windows
@@ -1282,7 +1282,7 @@ int picolQuoteForShell(char* dest, int argc, char** argv) {
     ADDCHAR('\0');
 #else
     /* Assume a POSIXy platform. */
-    for (j = 1; j < argc; j++) {
+    for (j = 1; j < (unsigned int)argc; j++) {
         ADDCHAR(' ');
         ADDCHAR('\'');
         for (k = 0; k < strlen(argv[j]); k++) {
@@ -1349,7 +1349,7 @@ int picolHash(char* key, int modul) {
 picolArray* picolArrCreate(picolInterp* i, char* name) {
     char buf[MAXSTR];
     picolArray* ap = calloc(1, sizeof(picolArray));
-    sprintf(buf, "%p", ap);
+    sprintf(buf, "%p", (void*)ap);
     picolSetVar(i, name, buf);
     return ap;
 }
@@ -1850,7 +1850,7 @@ COMMAND(foreach) {
 COMMAND(format) {
     /* Limited to a single integer or string argument so far. */
     int value;
-    int j = 0;
+    unsigned int j = 0;
     int length = 0;
     char buf[MAXSTR];
     ARITY2(argc == 2 || argc == 3, "format formatString ?arg?");
@@ -2124,7 +2124,7 @@ COMMAND(interp) {
         char buf[32];
         ARITY(argc == 2);
         trg = picolCreateInterp();
-        sprintf(buf, "%p", trg);
+        sprintf(buf, "%p", (void*)trg);
         return picolSetResult(i, buf);
     } else if (SUBCMD("eval")) {
         int rc;
@@ -2476,7 +2476,7 @@ COMMAND(open) {
     if (!fp) {
         return picolErr1(i, "could not open %s", argv[1]);
     }
-    sprintf(fp_str, "%p", fp);
+    sprintf(fp_str, "%p", (void*)fp);
     return picolSetResult(i, fp_str);
 }
 #endif
