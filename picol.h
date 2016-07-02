@@ -37,7 +37,7 @@
 #include <string.h>
 #include <time.h>
 
-#define PICOL_PATCHLEVEL "0.1.30"
+#define PICOL_PATCHLEVEL "0.1.31"
 
 /* MSVC compatibility. */
 #ifdef _MSC_VER
@@ -77,7 +77,7 @@
 #    define TCL_PLATFORM_PLATFORM_STRING  "unknown"
 #endif
 
-/* -------------------------- Macros mostly need picol_ environment (argv,i) */
+/* ------------------------ Most macros need the picol_ environment (argv, i) */
 #define APPEND(dst,src) do {if ((strlen(dst)+strlen(src)) > sizeof(dst) - 1) {\
                         return picolErr(i, "string too long");} \
                         strcat(dst,src);} while (0)
@@ -535,7 +535,7 @@ int picolErr(picolInterp* i, char* str) {
     return PICOL_ERR;
 }
 int picolErr1(picolInterp* i, char* format, char* arg) {
-    /* 'format' should contain exactly one %s specifier */
+    /* The format line should contain exactly one %s specifier. */
     char buf[MAXSTR];
     sprintf(buf,format,arg);
     return picolErr(i,buf);
@@ -710,7 +710,7 @@ int picolRegisterCmd(picolInterp* i, char* name, picol_Func f, void* pd) {
 }
 char* picolList(char* buf, int argc, char** argv) {
     int a;
-    /* caller responsible for supplying large enough buffer */
+    /* The caller is responsible for supplying a large enough buffer. */
     buf[0] = '\0';
     for (a=0; a<argc; a++) {
         LAPPEND_X(buf,argv[a]);
@@ -1298,13 +1298,13 @@ int picolQuoteForShell(char* dest, int argc, char** argv) {
     memcpy(dest, command, strlen(command));
     return 0;
 }
-/* ------------------------------------------------ Commands in ABC.. order */
+/* ------------------------------------------- Commands in alphabetical order */
 COMMAND(abs) {
-    /* ---------- example for wrapping int functions */
+    /* This is an example of how to wrap int functions. */
     int x;
     ARITY2(argc == 2, "abs int");
-    SCAN_INT(x,argv[1]);
-    return picolSetIntResult(i,abs(x));
+    SCAN_INT(x, argv[1]);
+    return picolSetIntResult(i, abs(x));
 }
 COMMAND(append) {
     picolVar* v;
@@ -1518,7 +1518,7 @@ COMMAND(break)    {
 }
 char* picolConcat(char* buf, int argc, char** argv) {
     int a;
-    /* caller responsible for supplying large enough buffer */
+    /* The caller is responsible for supplying a large enough buffer. */
     buf[0] = '\0';
     for (a = 1; a < argc; a++) {
         strcat(buf,argv[a]);
@@ -1600,7 +1600,7 @@ COMMAND(error) {
 }
 #if PICOL_FEATURE_IO
 COMMAND(exec) {
-    /* This is far from the real thing, but may be useful */
+    /* This is far from the real thing, but it may be useful. */
     char command[MAXSTR] = "\0";
     char buf[256] = "\0";
     char output[MAXSTR] = "\0";
@@ -1647,7 +1647,9 @@ COMMAND(exit) {
 }
 #endif
 COMMAND(expr) {
-    char buf[MAXSTR] = "";      /* only simple cases supported */
+    /* Only a simple case is supported: two or more operands with the same
+    operator between them. */
+    char buf[MAXSTR] = "";
     int a;
     ARITY2((argc%2)==0, "expr int1 op int2 ...");
     if (argc==2) {
@@ -1663,7 +1665,7 @@ COMMAND(expr) {
     LAPPEND(buf,argv[1]); /* {a + b + c} -> {+ a b c} */
     for (a = 3; a < argc; a += 2) {
         if (a < argc-1 && !EQ(argv[a+1],argv[2])) {
-            return picolErr(i,"need equal operators");
+            return picolErr(i, "need equal operators");
         }
         LAPPEND(buf,argv[a]);
     }
@@ -1804,10 +1806,11 @@ COMMAND(for) {
     }
 }
 COMMAND(foreach) {
-    char buf[MAXSTR] = "", buf2[MAXSTR]; /* only single list supported */
+    /* Only loop over a single list is supported. */
+    char buf[MAXSTR] = "", buf2[MAXSTR];
     char* cp, *varp;
     int rc, done=0;
-    ARITY2((argc%2)==0, "foreach varList list ?varList list ...? command");
+    ARITY2(argc == 4, "foreach varList list command");
     if (*argv[2] == '\0') {
         return PICOL_OK;          /* empty data list */
     }
@@ -1840,7 +1843,8 @@ COMMAND(foreach) {
     return picolSetResult(i,"");
 }
 COMMAND(format) {
-    int value;   /* limited to single integer or string argument so far */
+    /* Limited to a single integer or string argument so far. */
+    int value;
     int j = 0;
     int length = 0;
     char buf[MAXSTR];
@@ -2012,7 +2016,7 @@ COMMAND(incr) {
         v = picolGetGlobalVar(i,argv[1]);
     }
     if (v) {
-        SCAN_INT(value, v->val);       /* creates if not exists */
+        SCAN_INT(value, v->val);       /* creates if nonexistent */
     }
     if (argc == 3) {
         SCAN_INT(increment, argv[2]);
@@ -2450,7 +2454,8 @@ int picol_Math(picolInterp* i, int argc, char** argv, void* pd) {
     return picolSetIntResult(i,c);
 }
 COMMAND(not) {
-    int res;            /* implements the [! int] command */
+    /* Implements the [! int] command. */
+    int res;
     ARITY2(argc == 2,"! expression");
     SCAN_INT(res, argv[1]);
     return picolSetBoolResult(i, !res);
@@ -2487,7 +2492,7 @@ COMMAND(proc) {
         procdata = malloc(sizeof(char*)*2);
         if (c) {
             c->privdata = procdata;
-            c->func = picolCallProc; /* may override C-coded cmds */
+            c->func = picolCallProc; /* may override C-coded commands */
         }
     }
     procdata[0] = strdup(argv[2]); /* arguments list */
@@ -2586,7 +2591,7 @@ COMMAND(rename) {
             } else if (EQ(argv[2],"")) {
                 last->next = c->next; /* delete other */
             } else {
-                c->name = strdup(argv[2]);   /* overwrite, don't free */
+                c->name = strdup(argv[2]);   /* overwrite, do not free */
             }
             found = 1;
             break;
@@ -2603,7 +2608,8 @@ COMMAND(return ) {
     return PICOL_RETURN;
 }
 COMMAND(scan) {
-    int result, rc = 1; /* limited to one integer so far */
+    /* Limited to one integer/character code so far. */
+    int result, rc = 1;
     ARITY2(argc == 3 || argc == 4, "scan string formatString ?varName?");
     if (strlen(argv[2]) != 2 || argv[2][0] != '%') {
         return picolErr1(i, "bad format \"%s\"", argv[2]);
@@ -3015,7 +3021,7 @@ COMMAND(while) {
         }
     }
     return picolSetResult(i,"");
-} /* --------------------------------------------------- now registering... */
+} /* --------------------------------------------------------- Initialization */
 void picolRegisterCoreCmds(picolInterp* i) {
     int j;
     char* name[] =
