@@ -11,6 +11,7 @@ int set_interp_argv(picolInterp* i, int offset, int argc, char** argv) {
         LAPPEND(buf, argv[j]);
     }
     picolSetVar(i, "argv", buf);
+    return PICOL_OK;
 }
 
 int main(int argc, char** argv) {
