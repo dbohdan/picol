@@ -2,7 +2,7 @@
 # test.pcl - test suite for the Picol interpreter
 # with many extensions by suchenwi. Call with "-l" to display all test cases \
 this comment extended? yes
-set patchlevel 0.1.29
+set patchlevel 0.1.30
 set thisfile [info script]
 
 # lappend argv -l
@@ -528,6 +528,25 @@ test str.last.1  {string last + a+b+c+d}   -> 5
 test str.last.2  {string last - a+b+c+d}   -> -1
 test str.length  {string length hello}     -> 5
 test str.lower   {string tolower FOO} -> foo
+
+test str.map.1   {string map {FOO BAR} abcdFOOefgh}           -> abcdBARefgh
+test str.map.2   {string map -nocase {foo BAR} abcdFOOefgh}   -> abcdBARefgh
+test str.map.3   {string map {a b} aaaaa}         -> bbbbb
+test str.map.4   {string map {a b c d X {}} XabcbaX}     -> bbdbb
+test str.map.5   {string map {a b c} abcba}       -> {char map list unbalanced}
+test str.map.6   {string map {foo bar} f}         -> f
+test str.map.7   {string map {foo bar} fo}        -> fo
+test str.map.8   {string map {a b eh ha e f} aehaeheee}  -> bhabhafff
+test str.map.9   {string map {s longer} xsx}      -> xlongerx
+test str.map.10  {string map {quite_long shorter} this_is_quite_long} -> this_is_shorter
+test str.map.11  {string map {{} {}} hello}       -> hello
+test str.map.12  {string map {{} { }} hello}      -> hello
+if {$test_config(picol)} {
+    set long {x xxxxxxxxxx x xxxxxxxxxx x xxxxxxxxxx x xxxxxxxxxx x xxxxxxxxxx}
+    test str.map.13  {string length [string map $::long xxxxxxxxxx]} -> \
+            $::tcl_platform(maxLength)
+    unset long
+}
 
 test str.match.1  {string match f* foo}     -> 1
 test str.match.2  {string match f* bar}     -> 0

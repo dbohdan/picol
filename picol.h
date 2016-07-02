@@ -37,7 +37,7 @@
 #include <string.h>
 #include <time.h>
 
-#define PICOL_PATCHLEVEL "0.1.29"
+#define PICOL_PATCHLEVEL "0.1.30"
 
 /* MSVC compatibility. */
 #ifdef _MSC_VER
@@ -199,9 +199,9 @@ char* picolArrGet(picolArray *ap, char* pat, char* buf, int mode);
 char* picolArrStat(picolArray *ap,char* buf);
 char* picolList(char* buf, int argc, char** argv);
 char* picolParseList(char* start,char* trg);
-char* picolStrRev(char *str);
-char* picolToLower(char *str);
-char* picolToUpper(char *str);
+char* picolStrRev(char* str);
+char* picolToLower(char* str);
+char* picolToUpper(char* str);
 COMMAND(abs);
 COMMAND(append);
 COMMAND(apply);
@@ -302,6 +302,7 @@ int picolSetFmtResult(picolInterp* i, char* fmt, int result);
 int picolSetIntVar(picolInterp *i, char *name, int value);
 int picolSetResult(picolInterp *i, char *s);
 int picolSetVar2(picolInterp *i, char *name, char *val, int glob);
+int picolReplace(char* str, char* from, char* to, int nocase);
 int picolSource(picolInterp *i,char *filename);
 int picolQuoteForShell(char* dest, int argc, char** argv);
 int picolWildEq(char* pat, char* str, int n);
@@ -1134,6 +1135,80 @@ int picolMatch(char* pat, char* str) {
     }
     free(mypat);
     return res;
+}
+int picolReplace(char* str, char* from, char* to, int nocase) {
+    int strLen = strlen(str);
+    int fromLen = strlen(from);
+    int toLen = strlen(to);
+
+    int fromIndex = 0;
+    char result[MAXSTR] = "\0";
+    char buf[MAXSTR] = "\0";
+    int resultLen = 0;
+    int bufLen = 0;
+    int count = 0;
+
+    int strIndex;
+    int j;
+
+    for (strIndex = 0; strIndex < strLen; strIndex++) {
+        char strC = str[strIndex];
+        char fromC = from[fromIndex];
+        int match = nocase ? toupper(strC) == toupper(fromC) : strC == fromC;
+
+        if (match) {
+            /* Append the current str character to buf. */
+            buf[bufLen] = strC;
+            bufLen++;
+
+            fromIndex++;
+        } else {
+            /* Append buf to result. */
+            for (j = 0; j < bufLen; j++) {
+                result[resultLen + j] = buf[j];
+            }
+            resultLen += bufLen;
+
+            /* Append the current str character to result. */
+            result[resultLen] = strC;
+            resultLen++;
+
+            fromIndex = 0;
+            bufLen = 0;
+        }
+        if (fromIndex == fromLen) {
+            /* Append to to result. */
+
+            for (j = 0; j < toLen; j++) {
+                result[resultLen + j] = to[j];
+                if (resultLen + j >= MAXSTR - 1) {
+                    break;
+                }
+            }
+            resultLen += j;
+                
+            fromIndex = 0;
+            bufLen = 0;
+            count++;
+
+            if (resultLen >= MAXSTR - 1) {
+                break;
+            }
+        }
+    }
+
+    if (resultLen < MAXSTR - 1) {
+        for (j = 0; j < bufLen; j++) {
+            result[resultLen + j] = buf[j];
+        }
+        resultLen += bufLen;
+        result[resultLen] = '\0';
+    } else {
+        result[MAXSTR - 1] = '\0';
+    }
+
+    strcpy(str, result);
+    return count;
 }
 int picolQuoteForShell(char* dest, int argc, char** argv) {
     char command[MAXSTR] = "\0";
@@ -2689,6 +2764,40 @@ COMMAND(string) {
         buf[0] = argv[2][from];
         picolSetResult(i, buf);
 
+    } else if (SUBCMD("map")) {
+        char* charMap;
+        char* str;
+        char* cp;
+        char from[MAXSTR] = "\0";
+        char to[MAXSTR] = "\0";
+        char result[MAXSTR] = "\0";
+        int nocase = 0;
+
+        if (argc == 4) {
+            charMap = argv[2];
+            str = argv[3];
+        } else if (argc == 5 && EQ(argv[2],"-nocase")) {
+            charMap = argv[3];
+            str = argv[4];
+            nocase = 1;
+        } else {
+            return picolErr(i, "usage: string map ?-nocase? charMap str");
+        }
+
+        cp = charMap;
+        strcpy(result, str);
+        FOREACH(from, cp, charMap) {
+            cp = picolParseList(cp, to);
+            if (!cp) {
+                return picolErr(i, "char map list unbalanced");
+            }
+            if (EQ(from, "")) {
+                continue;
+            }
+            picolReplace(result, from, to, nocase);
+        }
+
+        return picolSetResult(i, result);
     } else if (SUBCMD("match")) {
         if (argc == 4)
             return picolSetBoolResult(i,picolMatch(argv[2],argv[3]));
@@ -2771,7 +2880,7 @@ COMMAND(string) {
 
     } else {
         return picolErr1(i, "bad option \"%s\": must be compare, equal, first, "
-                "index, is int, last, length, match, range, repeat, "
+                "index, is int, last, length, map, match, range, repeat, "
                 "reverse, tolower, or toupper", argv[1]);
     }
     return PICOL_OK;
