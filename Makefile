@@ -1,14 +1,16 @@
+CFLAGS=-Wall
+
 picol: interp.c picol.h
-	$(CC) interp.c -o $@
+	$(CC) interp.c -o $@ $(CFLAGS)
 
 test: picol
 	./picol test.pcl
 
 examples: examples/command examples/hello
 examples/command: examples/command.c picol.h
-	$(CC) -I. examples/command.c -o $@
+	$(CC) -I. examples/command.c -o $@ $(CFLAGS)
 examples/hello: examples/hello.c picol.h
-	$(CC) -I. examples/hello.c -o $@
+	$(CC) -I. examples/hello.c -o $@ $(CFLAGS)
 
 examples-test: examples
 	./examples/command
