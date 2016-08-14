@@ -37,7 +37,7 @@
 #include <string.h>
 #include <time.h>
 
-#define PICOL_PATCHLEVEL "0.1.31"
+#define PICOL_PATCHLEVEL "0.1.32"
 
 /* MSVC compatibility. */
 #ifdef _MSC_VER
@@ -101,15 +101,16 @@
                 for(_p = picolParseList(_s,_v); _p; _p = picolParseList(_p,_v))
 
 #define LAPPEND(dst, src) do {\
-                        int needbraces = (strchr(src, ' ') || strlen(src)==0); \
+                        int needbraces = picolNeedsBraces(src); \
                         if(*dst!='\0') {APPEND(dst, " ");} \
                         if(needbraces) {APPEND(dst, "{");} \
                         APPEND(dst, src); \
                         if(needbraces) {APPEND(dst, "}");}} while (0)
 
 /* this is the unchecked version, for functions without access to 'i' */
-#define LAPPEND_X(dst,src) do {int needbraces = (strchr(src, ' ')!=NULL) || \
-                            strlen(src)==0; if(*dst!='\0') strcat(dst, " "); \
+#define LAPPEND_X(dst,src) do {\
+                            int needbraces = picolNeedsBraces(src); \
+                            if(*dst!='\0') strcat(dst, " "); \
                             if(needbraces) {strcat(dst, "{");} \
                             strcat(dst, src); \
                             if(needbraces) {strcat(dst, "}");}} while (0)
@@ -201,6 +202,7 @@ typedef struct picolArray {
 char* picolArrGet(picolArray *ap, char* pat, char* buf, int mode);
 char* picolArrStat(picolArray *ap, char* buf);
 char* picolList(char* buf, int argc, char** argv);
+int   picolNeedsBraces(char* str);
 char* picolParseList(char* start, char* trg);
 char* picolStrRev(char* str);
 char* picolToLower(char* str);
@@ -1282,7 +1284,7 @@ int picolQuoteForShell(char* dest, int argc, char** argv) {
     ADDCHAR('\0');
 #else
     /* Assume a POSIXy platform. */
-    for (j = 1; j < (unsigned int)argc; j++) {
+    for (j = 1; j < argc; j++) {
         ADDCHAR(' ');
         ADDCHAR('\'');
         for (k = 0; k < strlen(argv[j]); k++) {
@@ -2455,6 +2457,30 @@ int picol_Math(picolInterp* i, int argc, char** argv, void* pd) {
         c = a != b;
     }
     return picolSetIntResult(i, c);
+}
+int picolNeedsBraces(char* str) {
+    int i;
+    int length = 0;
+    for (i = 0;; i++) {
+        if (str[i] == '\0') {
+            break;
+        }
+        switch (str[i]) {
+        case ' ': return 1;
+        case '"': return 1;
+        case '$': return 1;
+        case '[': return 1;
+        case '\\': return 1;
+        case '\n': return 1;
+        case '\r': return 1;
+        case '\t': return 1;
+        }
+        length++;
+    }
+    if (length == 0) {
+        return 1;
+    }
+    return 0;
 }
 COMMAND(not) {
     /* Implements the [! int] command. */

@@ -2,7 +2,7 @@
 # test.pcl - test suite for the Picol interpreter
 # with many extensions by suchenwi. Call with "-l" to display all test cases \
 this comment extended? yes
-set patchlevel 0.1.31
+set patchlevel 0.1.32
 set thisfile [info script]
 
 # lappend argv -l
@@ -160,6 +160,7 @@ if {$test_config(arrays)} {
 test errorinfo.1 {proc f x {/ $x 0}; catch {f 5} res; set res} -> "divide by zero"
 test escape.1    {set f hello\x41world} -> helloAworld
 test escape.2    {set f {hello\x41world}} -> hello\\x41world
+test eval.1      {set a {\t}; eval [list set b $a]} -> {\t}
 test eval_mul.1  {eval * 8 7} -> 56
 test eval_mul.2  {eval {* 4 5}} -> 20
 
@@ -181,7 +182,7 @@ if {$test_config(io)} {
                 [list [list {They said, 'Hello!'} {"Hasta la vista, baby!"} Tab\ttab]]
         test exec.10 {exec picol.exe qargv.pcl &whoami} -> &whoami
         test exec.11 {exec echo {\n} {\\\n} {\"}} -> {\n \\\n "\\\""}
-        test exec.12 {exec picol.exe qargv.pcl {\n} {\\\n} {\"}} -> {{\n \\\n \"}}
+        test exec.12 {exec picol.exe qargv.pcl {\n} {\\\n} {\"}} -> {{{\n} {\\\n} {\"}}}
     }
 }
 
@@ -212,6 +213,14 @@ test fac.2      {fac 12} ->  479001600
 if {$test_config(io)} {
     test file.ex.1  {file exists test.pcl} -> 1
     test file.ex.2  {file exists does.not} -> 0
+    test file.ex.3  {file exists {globtest/test1}}     -> 1
+    test file.ex.4  {file exists {globtest/foo bar}}   -> 1
+    test file.ex.5  {file exists {./globtest/foo bar}} -> 1
+    if {$test_config(windows)} {
+        test file.ex.6  {file exists {globtest\test1}}     ->  1
+        test file.ex.7  {file exists {globtest\foo bar}}   ->  1
+        test file.ex.7  {file exists {.\globtest\foo bar}} ->  1
+    }
     test file.3     {set f [open t.t w];puts $f hello;set x [tell $f];close $f; set x
                         } -> $test_config(hello_file_length)
     test file.4     {set f [open t.t]; gets $f l; close $f; set l} -> hello
@@ -397,6 +406,8 @@ test lindex.5    {lindex "  \t   \n    a      \t \n   b    " 1} -> b
 test lindex.6    {lindex "  \t   \n    a      \t \n   b    " 2} -> {}
 test lindex.7    {lindex "  \t   \n    {hello world} \t  \n   " 0} -> {hello world}
 test lindex.8    {lindex "  \t   \n    {hello world} \t  \n   " 1} -> {}
+test lindex.9    {lindex {{a} {b} {c}} 1} -> b
+test lindex.10   {lindex {a b c} 1} -> b
 test linsert.1   {linsert {a b} 1 c}    -> {a c b}
 test linsert.2   {linsert {a b} 1 c d}  -> {a c d b}
 test linsert.3   {linsert {a b} end c}  -> {a b c}
@@ -406,8 +417,16 @@ test linsert.6   {linsert {a b} 0 c d e}  -> {c d e a b}
 test list.0      list -> {}
 test list.1      {list a "b c" d}       -> {a {b c} d}
 test list.2      {list "" a} -> {{} a}
-test list.2      {list a {} b} -> {a {} b}
-test list.2      {list a {}} -> {a {}}
+test list.3      {list a {} b} -> {a {} b}
+test list.4      {list a {}} -> {a {}}
+test list.5      {list a \t} -> "a {\t}"
+test list.6      {list a \n} -> "a {\n}"
+test list.7      {list a {\n}} -> {a {\n}}
+test list.8      {list a {\r}} -> {a {\r}}
+test list.9      {list a {\t}} -> {a {\t}}
+test list.10     {list {$a}} -> {{$a}}
+test list.11     {list {[hi]}} -> {{[hi]}}
+test list.11     {list {[hi]}} -> {{[hi]}}
 test llength.0   {llength {}} -> 0
 test llength.1   {llength { }} -> 0
 test llength.2   {llength {   }} -> 0
@@ -506,6 +525,13 @@ test set.1       {set x 42}                -> 42
 test set.2       {set x 24; set x}         -> 24
 test set.3       {set x_y 35; set x_y}     -> 35
 test set.4       {set x_y 37; return $x_y} -> 37
+
+test source.1    {source globtest/test1} -> {}
+if {$test_config(windows)} {
+    test source.2    {source globtest\\test1} -> {}
+    test source.3    {source [pwd]\\globtest\\test1} -> {}
+
+}
 
 test split.1     {split aa:bb:cd:efg :}     -> {aa bb cd efg}
 test split.2     {split :aa:bb:cd:efg :}    -> {{} aa bb cd efg}
