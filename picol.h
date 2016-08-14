@@ -2175,7 +2175,11 @@ COMMAND(lappend) {
 COMMAND(lindex) {
     char buf[MAXSTR] = "", *cp;
     int n = 0, idx;
-    ARITY2(argc == 3, "lindex list index");
+    ARITY2((argc == 2) || (argc == 3), "lindex list [index]");
+    /* Act as an identity function if no index is given. */
+    if (argc == 2) {
+        return picolSetResult(i, argv[1]);
+    }
     SCAN_INT(idx, argv[2]);
     for (cp=picolParseList(argv[1], buf); cp; cp=picolParseList(cp, buf), n++) {
         if (n==idx) {

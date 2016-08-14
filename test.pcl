@@ -408,6 +408,8 @@ test lindex.7    {lindex "  \t   \n    {hello world} \t  \n   " 0} -> {hello wor
 test lindex.8    {lindex "  \t   \n    {hello world} \t  \n   " 1} -> {}
 test lindex.9    {lindex {{a} {b} {c}} 1} -> b
 test lindex.10   {lindex {a b c} 1} -> b
+test lindex.11   {lindex {a b c}} -> {a b c}
+test lindex.12   {lindex {}} -> {}
 test linsert.1   {linsert {a b} 1 c}    -> {a c b}
 test linsert.2   {linsert {a b} 1 c d}  -> {a c d b}
 test linsert.3   {linsert {a b} end c}  -> {a b c}
