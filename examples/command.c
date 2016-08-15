@@ -28,7 +28,11 @@ void report_error(picolInterp* i, int rc) {
 }
 
 int main(int argc, char** argv) {
-    picolInterp* i = picolCreateInterp();
+    /* Create the interpreter with no core commands. Do not call srand(). */
+    picolInterp* i = picolCreateInterp2(0, 0);
+    /* Register only one built-in. */
+    picolRegisterCmd(i, "puts", picol_puts, NULL);
+    /* Register our custom command. */
     picolRegisterCmd(i, "square", picol_square, NULL);
     int rc = 0;
     rc = picolEval(i, "puts [square]"); /* Wrong usage. */

@@ -2,7 +2,7 @@
 # test.pcl - test suite for the Picol interpreter
 # with many extensions by suchenwi. Call with "-l" to display all test cases \
 this comment extended? yes
-set patchlevel 0.1.32
+set patchlevel 0.1.33
 set thisfile [info script]
 
 # lappend argv -l
@@ -696,4 +696,3 @@ for {set i 6} {$i <= 12} {incr i} {
 #    puts "fac [format %2d $i]:[format %10d [fac $i]], [time {fac $i} 111]"
 }
 puts "[info script] [info patchlevel]: ---------------- tested $n, failed $r"
-

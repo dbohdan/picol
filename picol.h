@@ -37,7 +37,7 @@
 #include <string.h>
 #include <time.h>
 
-#define PICOL_PATCHLEVEL "0.1.32"
+#define PICOL_PATCHLEVEL "0.1.33"
 
 /* MSVC compatibility. */
 #ifdef _MSC_VER
@@ -316,6 +316,7 @@ int qsort_cmp_decr(const void* a, const void *b);
 int qsort_cmp_int(const void* a, const void *b);
 picolCmd *picolGetCmd(picolInterp *i, char *name);
 picolInterp* picolCreateInterp(void);
+picolInterp* picolCreateInterp2(int register_core_cmds, int randomize);
 picolVar *picolGetVar2(picolInterp *i, char *name, int glob);
 void picolDropCallFrame(picolInterp *i);
 void picolEscape(char *str);
@@ -3147,15 +3148,22 @@ void picolRegisterCoreCmds(picolInterp* i) {
 #endif
 }
 picolInterp* picolCreateInterp(void) {
+    return picolCreateInterp2(1, 1);
+}
+picolInterp* picolCreateInterp2(int register_core_cmds, int randomize) {
     picolInterp* i = calloc(1, sizeof(picolInterp));
     /* Maximum string length. */
     char maxLength[8];
     /* Subtract one for the final '\0', which scripts don't see. */
     sprintf(maxLength, "%d", MAXSTR - 1);
     picolInitInterp(i);
-    picolRegisterCoreCmds(i);
+    if (register_core_cmds) {
+        picolRegisterCoreCmds(i);
+    }
     picolSetVar(i, "::errorInfo", "");
-    srand(clock());
+    if (randomize) {
+        srand(clock());
+    }
     picolSetVar2(i, "tcl_platform(platform)", TCL_PLATFORM_PLATFORM_STRING, 1);
     picolSetVar2(i, "tcl_platform(engine)", TCL_PLATFORM_ENGINE_STRING, 1);
     picolSetVar2(i, "tcl_platform(maxLength)", maxLength, 1);
