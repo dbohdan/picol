@@ -1,0 +1,11 @@
+version: "0.1.34.{build}"
+build_script:
+  - cmd: build-mingw.cmd /batch
+test_script:
+  - cmd: picol.exe test.pcl
+after_build:
+  - cmd: copy picol.exe picol_debug.exe
+  - cmd: strip picol.exe
+artifacts:
+  - path: picol.exe
+  - path: picol_debug.exe
