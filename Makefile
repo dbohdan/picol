@@ -1,4 +1,4 @@
-CFLAGS=-Wall
+CFLAGS = -Wall
 
 picol: interp.c picol.h
 	$(CC) interp.c -o $@ $(CFLAGS)
@@ -17,8 +17,8 @@ examples-test: examples
 	./examples/hello
 
 clean:
-	rm picol picol.exe || true
-	rm examples/command examples/command.exe || true
-	rm examples/hello examples/hello.exe || true
+	-rm picol picol.exe
+	-rm examples/command examples/command.exe
+	-rm examples/hello examples/hello.exe
 
 .PHONY: clean examples examples-test test
