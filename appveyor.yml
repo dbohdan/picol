@@ -1,4 +1,6 @@
 version: "0.1.34.{build}"
+install:
+  - ps: Invoke-WebRequest http://kitcreator.rkeene.org/kits/73e51976aa01502eb5b4365a35ac35ad38f46414/tclkit.exe -OutFile tclsh.exe
 build_script:
   - cmd: build-mingw.cmd /batch
 test_script:
