@@ -23,16 +23,17 @@ int main(int argc, char** argv) {
     picolSetVar(i, "argv",  "");
     picolSetVar(i, "argc",  "0");
     picolSetVar(i, "auto_path", "");
-    picolEval(i, "array set env {}"); /* populated from real env on demand */
+    /* The array ::env is lazily populated with environment variables. */
+    picolEval(i, "array set env {}");
     if (fp) {
         fclose(fp);
         rc = picolSource(i, "init.pcl");
         if (rc != PICOL_OK) {
             puts(i->result);
         }
-        i->current = NULL; /* avoid misleading error traceback */
+        i->current = NULL; /* Prevent a misleading error traceback. */
     }
-    if (argc == 1) { /* no arguments - interactive mode */
+    if (argc == 1) { /* No arguments - interactive mode. */
         while (1) {
             printf("picol> ");
             fflush(stdout);
@@ -44,7 +45,7 @@ int main(int argc, char** argv) {
                 printf("[%d] %s\n", rc, i->result);
             }
         }
-    } else if (EQ(argv[1], "-e")) { /* script in argv[2] */
+    } else if (EQ(argv[1], "-e")) { /* A script in argv[2]. */
         set_interp_argv(i, 1, argc, argv);
         rc = picolEval(i, argv[2]);
         if (rc != PICOL_OK) {
@@ -55,7 +56,7 @@ int main(int argc, char** argv) {
         } else {
             puts(i->result);
         }
-    } else { /* first arg is file to source, rest goes to argv */
+    } else { /* The first arg is the file to source; the rest goes into argv. */
         picolSetVar(i, "argv0", argv[1]);
         set_interp_argv(i, 2, argc, argv);
         rc = picolSource(i, argv[1]);

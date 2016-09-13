@@ -1,4 +1,4 @@
-/* Picol use example: Hello, World! */
+/* Picol use example: "Hello, World!" */
 
 #define PICOL_IMPLEMENTATION
 #include "picol.h"

@@ -1963,7 +1963,7 @@ COMMAND(glob) {
         LAPPEND(buf, file_path);
     }
     globfree(&pglob);
-    /* Fix result corruption on MinGW 20130722. */
+    /* Fix result corruption in MinGW 20130722. */
     pglob.gl_pathc = 0;
     pglob.gl_pathv = NULL;
 
