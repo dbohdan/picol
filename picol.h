@@ -589,13 +589,17 @@ picolVar* picolGetVar2(picolInterp* i, char* name, int glob) {
         *cp = '\0';
         v = picolArrGet1(ap, buf2);
         if (!v) {
-            if (!((cp2 = getenv(buf2)))) {
+            if (global && EQ(buf, "env")) {
+                if (!((cp2 = getenv(buf2)))) {
+                    return NULL;
+                }
+                strcpy(buf, "::env(");
+                strcat(buf, buf2);
+                strcat(buf, ")");
+                return picolArrSet1(i, buf, cp2);
+            } else {
                 return NULL;
             }
-            strcpy(buf, "::env(");
-            strcat(buf, buf2);
-            strcat(buf, ")");
-            return picolArrSet1(i, buf, cp2);
         }
         return v;
     }

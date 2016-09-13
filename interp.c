@@ -23,7 +23,8 @@ int main(int argc, char** argv) {
     picolSetVar(i, "argv",  "");
     picolSetVar(i, "argc",  "0");
     picolSetVar(i, "auto_path", "");
-    /* The array ::env is lazily populated with environment variables. */
+    /* The array ::env is lazily populated with the environment variables'
+       values. */
     picolEval(i, "array set env {}");
     if (fp) {
         fclose(fp);

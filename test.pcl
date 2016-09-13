@@ -150,11 +150,24 @@ test concat.6   {concat {} {}}           -> ""
 test concat.7   {concat foo {} bar}      -> {foo bar}
 
 if {$test_config(arrays)} {
-    test env.1       {catch {set ::env(PICOL)}} -> 1
-    test env.2       {set ::env(PICOL) world}   -> world
-    test env.3       {set ::env(PICOL)}         -> world
-    test env.4       {info exists ::env(PATH)}  -> 1 ;# should be there
-    test env.5       {info exists ::env(HTAP)}  -> 0
+    test env.1       {catch {set ::env(PICOL)}}   -> 1
+    test env.2       {set ::env(PICOL) world}     -> world
+    test env.3       {set env(PICOL) blah}        -> blah
+    test env.4       {set ::env(PICOL)}           -> world
+    if {$test_config(picol)} {
+        test env.5   {array names ::env}          -> PICOL
+        # Do not return the value of the corresponding environment variable
+        # when a key is missing in an array that is not ::env.
+        test env.6   {array set ::a {}; catch {set b $::a(PATH)}}  -> 1
+        unset ::a
+        test env.7   {catch {set b $env(FOO))}}   -> 1
+        # Do not populate ::env when other arrays are accessed.
+        test env.8   {array names ::env}          -> PICOL
+        test env.9   {catch {set b $::env(FOO))}} -> 1
+        test env.10  {array names ::env}          -> PICOL
+    }
+    test env.11      {info exists ::env(PATH)}    -> 1 ;# should be there
+    test env.12      {info exists ::env(HTAP)}    -> 0
 }
 
 test errorinfo.1 {proc f x {/ $x 0}; catch {f 5} res; set res} -> "divide by zero"
