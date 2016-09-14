@@ -7,8 +7,9 @@ for %%a in (%*) do (
 )
 
 rem Build Picol with MinGW.
+echo on
 set PATH=C:\MinGW\bin;C:\MinGW\msys\1.0\bin
 set CC=gcc
 make
 make examples
-if "%flag_batch%"=="0" pause
+@if "%flag_batch%"=="0" pause
