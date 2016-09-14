@@ -550,7 +550,6 @@ int picolErr1(picolInterp* i, char* format, char* arg) {
 picolVar* picolGetVar2(picolInterp* i, char* name, int glob) {
     picolVar* v = i->callframe->vars;
     int global = COLONED(name);
-    char buf[MAXSTR], buf2[MAXSTR], *cp, *cp2;
     if (global || glob) {
         picolCallFrame* c = i->callframe;
         while (c->parent) {
@@ -562,46 +561,48 @@ picolVar* picolGetVar2(picolInterp* i, char* name, int glob) {
         }
     }
 #if PICOL_FEATURE_ARRAYS
-    /* array element syntax? */
-    if ((cp = strchr(name, '('))) {
-        picolArray* ap;
-        int found = 0;
-        strncpy(buf, name, cp - name);
-        buf[cp-name] = '\0';
-        for (; v; v = v->next) {
-            if (EQ(v->name, buf)) {
-                found = 1;
-                break;
-            }
-        }
-        if (!found) {
-            return NULL;
-        }
-        if (!((ap = picolIsPtr(v->val)))) {
-            return NULL;
-        }
-        /* copy the key from after the opening paren */
-        strcpy(buf2, cp +1);
-        if (!((cp = strchr(buf2, ')')))) {
-            return NULL;
-        }
-        /* overwrite closing paren */
-        *cp = '\0';
-        v = picolArrGet1(ap, buf2);
-        if (!v) {
-            if (global && EQ(buf, "env")) {
-                if (!((cp2 = getenv(buf2)))) {
-                    return NULL;
+    {
+        char buf[MAXSTR], buf2[MAXSTR], *cp, *cp2;
+        /* array element syntax? */
+        if ((cp = strchr(name, '('))) {
+            picolArray* ap;
+            int found = 0;        strncpy(buf, name, cp - name);
+            buf[cp-name] = '\0';
+            for (; v; v = v->next) {
+                if (EQ(v->name, buf)) {
+                    found = 1;
+                    break;
                 }
-                strcpy(buf, "::env(");
-                strcat(buf, buf2);
-                strcat(buf, ")");
-                return picolArrSet1(i, buf, cp2);
-            } else {
+            }
+            if (!found) {
                 return NULL;
             }
+            if (!((ap = picolIsPtr(v->val)))) {
+                return NULL;
+            }
+            /* copy the key from after the opening paren */
+            strcpy(buf2, cp +1);
+            if (!((cp = strchr(buf2, ')')))) {
+                return NULL;
+            }
+            /* overwrite closing paren */
+            *cp = '\0';
+            v = picolArrGet1(ap, buf2);
+            if (!v) {
+                if (global && EQ(buf, "env")) {
+                    if (!((cp2 = getenv(buf2)))) {
+                        return NULL;
+                    }
+                    strcpy(buf, "::env(");
+                    strcat(buf, buf2);
+                    strcat(buf, ")");
+                    return picolArrSet1(i, buf, cp2);
+                } else {
+                    return NULL;
+                }
+            }
+            return v;
         }
-        return v;
     }
 #endif /* PICOL_FEATURE_ARRAYS */
     for (; v; v = v->next) {
@@ -1685,7 +1686,6 @@ COMMAND(expr) {
 }
 COMMAND(file) {
     char buf[MAXSTR] = "\0", *cp;
-    FILE* fp = NULL;
     int a;
     ARITY2(argc >= 3, "file option ?arg ...?");
     if (SUBCMD("dirname")) {
@@ -1697,6 +1697,7 @@ COMMAND(file) {
         picolSetResult(i, cp);
 #if PICOL_FEATURE_IO
     } else if (SUBCMD("exists") || SUBCMD("size")) {
+        FILE* fp = NULL;
         fp = fopen(argv[2], "r");
         if (SUBCMD("size")) {
             if (!fp) {
