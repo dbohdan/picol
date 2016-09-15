@@ -7,7 +7,8 @@ for %%a in (%*) do (
 )
 
 rem Build Picol with MSVC.
+echo on
 call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat"
 echo on
 nmake /F Makefile.nmake
-if "%flag_batch%"=="0" pause
+@if "%flag_batch%"=="0" pause
