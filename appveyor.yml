@@ -2,12 +2,22 @@ version: "0.1.35.{build}"
 install:
   - ps: Invoke-WebRequest http://kitcreator.rkeene.org/kits/73e51976aa01502eb5b4365a35ac35ad38f46414/tclkit.exe -OutFile tclsh.exe
 build_script:
+  - cmd: set default_path=%PATH%
+
   - cmd: build-mingw.cmd /batch
+  - cmd: copy picol.exe picol_mingw.exe
+  - cmd: copy picol.exe picol_mingw_debug.exe
+  - cmd: strip picol_mingw.exe
+  - cmd: make clean
+
+  - cmd: set PATH=%default_path%
+
+  - cmd: build-msvc.cmd /batch /version:12.0
+  - cmd: copy picol.exe picol_msvc.exe
 test_script:
-  - cmd: picol.exe test.pcl
-after_build:
-  - cmd: copy picol.exe picol_debug.exe
-  - cmd: strip picol.exe
+  - cmd: picol_mingw.exe test.pcl
+  - cmd: picol_msvc.exe test.pcl
 artifacts:
-  - path: picol.exe
-  - path: picol_debug.exe
+  - path: picol_mingw.exe
+  - path: picol_mingw_debug.exe
+  - path: picol_msvc.exe
