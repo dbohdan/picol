@@ -1,13 +1,20 @@
 version: "0.1.35.{build}"
+os: Visual Studio 2015
 install:
   - ps: Invoke-WebRequest http://kitcreator.rkeene.org/kits/73e51976aa01502eb5b4365a35ac35ad38f46414/tclkit.exe -OutFile tclsh.exe
 build_script:
   - cmd: build-mingw.cmd /batch
+  - cmd: copy picol.exe picol_mingw.exe
+  - cmd: make clean
+  - cmd: build-msvc.cmd /batch
+  - cmd: copy picol.exe picol_msvc.exe
 test_script:
-  - cmd: picol.exe test.pcl
+  - cmd: picol_mingw.exe test.pcl
+  - cmd: picol_msvc.exe test.pcl
 after_build:
-  - cmd: copy picol.exe picol_debug.exe
-  - cmd: strip picol.exe
+  - cmd: copy picol_mingw.exe picol_mingw_debug.exe
+  - cmd: strip picol_mingw.exe
 artifacts:
-  - path: picol.exe
-  - path: picol_debug.exe
+  - path: picol_mingw.exe
+  - path: picol_mingw_debug.exe
+  - path: picol_msvc.exe
