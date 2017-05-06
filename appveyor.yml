@@ -1,4 +1,4 @@
-version: "0.2.00.{build}"
+version: "0.2.2.{build}"
 install:
   - ps: Invoke-WebRequest http://kitcreator.rkeene.org/kits/73e51976aa01502eb5b4365a35ac35ad38f46414/tclkit.exe -OutFile tclsh.exe
 build_script:
