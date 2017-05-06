@@ -39,7 +39,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#define PICOL_PATCHLEVEL "0.2.1"
+#define PICOL_PATCHLEVEL "0.2.2"
 
 /* MSVC compatibility. */
 #ifdef _MSC_VER
@@ -1259,7 +1259,8 @@ int picolQuoteForShell(char* dest, int argc, char** argv) {
     for (j = 1; j < argc; j++) {
         ADDCHAR(' ');
         length = strlen(argv[j]);
-        if (strchr(argv[j], ' ') == NULL && \
+        if ((j > 1) &&
+                strchr(argv[j], ' ') == NULL && \
                 strchr(argv[j], '\t') == NULL && \
                 strchr(argv[j], '\n') == NULL && \
                 strchr(argv[j], '\v') == NULL && \
@@ -1643,7 +1644,7 @@ COMMAND(exec) {
 
     if (picolQuoteForShell(command, argc, argv) == -1) {
         picolSetResult(interp, "string too long");
-    return PICOL_ERR;
+        return PICOL_ERR;
     }
 
     fd = PICOL_POPEN(command, "r");
