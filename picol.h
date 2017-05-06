@@ -39,7 +39,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#define PICOL_PATCHLEVEL "0.2.0"
+#define PICOL_PATCHLEVEL "0.2.1"
 
 /* MSVC compatibility. */
 #ifdef _MSC_VER
@@ -755,14 +755,14 @@ char* picolParseList(char* start, char* trg) {
             bracelevel++;
         } else if (*cp == '}') {
             bracelevel--;
-        } else if (bracelevel==0 && *cp == '\"') {
+        } else if (bracelevel == 0 && *cp == '\"') {
             if (quoted) {
                 done = 1;
                 quoted = 0;
-            } else {
+            } else if ((cp == start) || isspace(*cp)) {
                 quoted = 1;
             }
-        } else if (bracelevel==0 &&!quoted && (isspace(*cp) || *cp=='\0')) {
+        } else if (bracelevel == 0 &&!quoted && (isspace(*cp) || *cp == '\0')) {
             done = 1;
         }
         if (done && !quoted) {
