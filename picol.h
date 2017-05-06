@@ -31,10 +31,12 @@
 #define PICOL_H
 
 #include <ctype.h>
+#include <errno.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <time.h>
 
 #define PICOL_PATCHLEVEL "0.1.35"
@@ -291,6 +293,7 @@ int picolErr(picolInterp *i, char* str);
 int picolEval2(picolInterp *i, char *t, int mode);
 int picolGetToken(picolInterp *i, picolParser *p);
 int picol_InNi(picolInterp *i, int argc, char **argv, void *pd);
+int picolIsDirectory(char* path);
 int picolIsInt(char* str);
 int picolLsort(picolInterp *i, int argc, char **argv, void *pd);
 int picolMatch(char* pat, char* str);
@@ -914,7 +917,7 @@ int picolEval2(picolInterp* i, char* t, int mode) { /*----------------- EVAL! */
                 }
                 rc = c->func(i, argc, argv, c->privdata);
                 if (i->trace) {
-                    printf("> %d: {%s} -> {%s}\n", 
+                    printf("> %d: {%s} -> {%s}\n",
                            i->level, picolList(buf, argc, argv), i->result);
                 }
                 if (rc != PICOL_OK) {
@@ -1016,6 +1019,16 @@ int picolCondition(picolInterp* i, char* str) {
         return picolEval(i, buf);
     } else {
         return picolErr(i, "NULL condition");
+    }
+}
+int picolIsDirectory(char* path)
+{
+    struct stat path_stat;
+    if (stat(path, &path_stat) == 0) {
+        return !S_ISREG(path_stat.st_mode);
+    } else {
+        /* Return -2 if the path doesn't exist and -1 on other errors. */
+        return (errno == ENOENT ? -2 : -1);
     }
 }
 int picolIsInt(char* str) {
@@ -1199,7 +1212,7 @@ int picolReplace(char* str, char* from, char* to, int nocase) {
                 }
             }
             resultLen += j;
-                
+
             fromIndex = 0;
             bufLen = 0;
             count++;
@@ -1696,6 +1709,30 @@ COMMAND(file) {
         } else cp = "";
         picolSetResult(i, cp);
 #if PICOL_FEATURE_IO
+    } else if (SUBCMD("delete")) {
+        int is_dir = picolIsDirectory(argv[2]);
+        int del_result = 0;
+        if (is_dir < 0) {
+            if (is_dir == -2) {
+                /* Tcl 8.x and Jim Tcl don't throw an error if the file
+                   to delete doesn't exist. */
+                picolSetResult(i, "");
+                return 0;
+            } else {
+                return picolErr1(i, "error deleting '%s'", argv[2]);
+            }
+        }
+        if (is_dir) {
+            del_result = rmdir(argv[2]);
+        } else {
+            del_result = unlink(argv[2]);
+        }
+        if (del_result == 0) {
+            picolSetResult(i, "");
+            return 0;
+        } else {
+            return picolErr1(i, "error deleting '%s'", argv[2]);
+        }
     } else if (SUBCMD("exists") || SUBCMD("size")) {
         FILE* fp = NULL;
         fp = fopen(argv[2], "r");
@@ -1711,6 +1748,15 @@ COMMAND(file) {
         if (fp) {
             fclose(fp);
         }
+    } else if (SUBCMD("isdirectory") || SUBCMD("isfile")) {
+        int result = picolIsDirectory(argv[2]);
+        if (result < 0) {
+            return picolErr1(i, "can't check path '%s'", argv[2]);
+        }
+        if (SUBCMD("isfile")) {
+            result = !result;
+        }
+        picolSetBoolResult(i, result);
 #endif
     } else if (SUBCMD("join")) {
         strcpy(buf, argv[2]);
@@ -1755,7 +1801,8 @@ COMMAND(file) {
     } else {
         return picolErr(i,
 #if PICOL_FEATURE_IO
-        "usage: file dirname|exists|size|split|tail filename"
+        "usage: file delete|dirname|exists|isdirectory|isfile|size|split|tail "
+        "filename"
 #else
         "usage: file dirname|split|tail filename"
 #endif
@@ -3167,7 +3214,7 @@ picolInterp* picolCreateInterp2(int register_core_cmds, int randomize) {
     }
     picolSetVar(i, "::errorInfo", "");
     if (randomize) {
-        srand(clock());
+        srand(time(NULL));
     }
     picolSetVar2(i, "tcl_platform(platform)", TCL_PLATFORM_PLATFORM_STRING, 1);
     picolSetVar2(i, "tcl_platform(engine)", TCL_PLATFORM_ENGINE_STRING, 1);

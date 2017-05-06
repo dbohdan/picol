@@ -232,32 +232,60 @@ if {$test_config(io)} {
     if {$test_config(windows)} {
         test file.ex.6  {file exists {globtest\test1}}     ->  1
         test file.ex.7  {file exists {globtest\foo bar}}   ->  1
-        test file.ex.7  {file exists {.\globtest\foo bar}} ->  1
+        test file.ex.8  {file exists {.\globtest\foo bar}} ->  1
     }
-    test file.3     {set f [open t.t w];puts $f hello;set x [tell $f];close $f; set x
+
+    test file.isdir.1  {file isdirectory test.pcl} -> 0
+    test file.isdir.2  {file isdirectory globtest} -> 1
+    test file.isdir.3  {catch {file isdirectory no_such_thing}} -> 1
+    test file.isfile.1 {file isfile test.pcl} -> 1
+    test file.isfile.2 {file isfile globtest} -> 0
+
+    test file.delete.1 {file delete no_such_thing} -> {} ;# No error.
+    test file.delete.2 {
+        close [open disposable w]
+        file delete disposable
+    } -> {}
+    if {$test_config(unix)} {
+        test file.delete.3 {file delete /dev/null/blah} -> {error deleting '/dev/null/blah'}
+    }
+    test file.delete.4 {
+        catch {exec mkdir directory}
+        file delete directory
+    } -> {}
+    test file.delete.5 {
+        catch {exec mkdir directory}
+        close [open directory/file w]
+        set error [catch {file delete directory}]
+        file delete directory/file
+        file delete directory
+        set error
+    } -> 1
+
+    test file.1     {set f [open t.t w];puts $f hello;set x [tell $f];close $f; set x
                         } -> $test_config(hello_file_length)
-    test file.4     {set f [open t.t]; gets $f l; close $f; set l} -> hello
-    test file.5     {file size t.t} -> $test_config(hello_file_length)
-    test file.6     {
+    test file.2     {set f [open t.t]; gets $f l; close $f; set l} -> hello
+    test file.3     {file size t.t} -> $test_config(hello_file_length)
+    test file.4     {
         set f [open t.t]
         set l [string trimright [read $f] \r\n]
         close $f
         set l
     } -> hello
     if {$test_config(picol)} {
-        test file.7     {
+        test file.5     {
             set f [open picol.h rb]
             set res [lindex [read $f $::tcl_platform(maxLength)] 1]
             close $f
             set res
         } -> Tcl
-        test file.8     {
+        test file.6     {
             set f [open picol.h rb]
             catch {read $f} res
             close $f
             set res
         } -> {read contents too long}
-        test file.9     {
+        test file.7     {
             set f [open picol.h rb]
             catch [list read $f [expr {$::tcl_platform(maxLength) + 1}]] res
             close $f
@@ -265,19 +293,19 @@ if {$test_config(io)} {
         } -> [list size [expr {$::tcl_platform(maxLength) + 1}] too large]
     }
 }
-test file.7     {file dirname /foo/bar/grill.txt} -> /foo/bar
-test file.8     {file tail /foo/bar/grill.txt}    -> grill.txt
-test file.9     {file join foo}              -> foo
-test file.10    {file join foo bar}          -> foo/bar
-test file.11    {file join foo /bar}         -> /bar
+test file.8     {file dirname /foo/bar/grill.txt} -> /foo/bar
+test file.9     {file tail /foo/bar/grill.txt}    -> grill.txt
+test file.10    {file join foo}              -> foo
+test file.11    {file join foo bar}          -> foo/bar
+test file.12    {file join foo /bar}         -> /bar
 if {$::tcl_platform(platform) eq {windows}} {
-    test file.12    {file join foo C:/bar grill} -> C:/bar/grill
+    test file.13    {file join foo C:/bar grill} -> C:/bar/grill
 }
-test file.13    {file split {/foo/space station/bar}} -> {/ foo {space station} bar}
-test file.14    {file split {/foo/space station/bar/}} -> {/ foo {space station} bar}
-test file.15    {file split {foo/space station/bar}} -> {foo {space station} bar}
-test file.16    {file split foo///bar} -> {foo bar}
-test file.17    {file split foo} -> foo
+test file.14    {file split {/foo/space station/bar}} -> {/ foo {space station} bar}
+test file.15    {file split {/foo/space station/bar/}} -> {/ foo {space station} bar}
+test file.16    {file split {foo/space station/bar}} -> {foo {space station} bar}
+test file.17    {file split foo///bar} -> {foo bar}
+test file.18    {file split foo} -> foo
 
 test for.1      {for {set i 0} {[< $i 4]} {incr i} {append r -$i}; set r
                 } -> -0-1-2-3
@@ -423,6 +451,7 @@ test lindex.9    {lindex {{a} {b} {c}} 1} -> b
 test lindex.10   {lindex {a b c} 1} -> b
 test lindex.11   {lindex {a b c}} -> {a b c}
 test lindex.12   {lindex {}} -> {}
+test lindex.13   {lindex {a b "c"} 3} -> {}
 test linsert.1   {linsert {a b} 1 c}    -> {a c b}
 test linsert.2   {linsert {a b} 1 c d}  -> {a c d b}
 test linsert.3   {linsert {a b} end c}  -> {a b c}
@@ -656,7 +685,7 @@ if {$test_config(picol)} {
 
 test unset.1     {set foo 1;unset foo;info exists foo} -> 0
 
-test unknown.1   bogus -> {invalid command name "bogus"}
+test unknown.1  bogus -> {invalid command name "bogus"}
 if {$test_config(io)} {
     test unknown.2   {info commands unknown} -> unknown
 }
@@ -679,29 +708,36 @@ test while.3     {set i 10; while {$i > 5} {incr i -1}; set i} -> 5
 
 #-- These tests for Picol only, tclsh please skip
 if {$test_config(picol) && $test_config(io)} {
-    puts "tclsh $thisfile -m $match"
-    exec tclsh $thisfile -m $match
-    #-|- testing the test suite for Tcl compliance :)
-
-    #----------- a bit complicated way to get output from another process...
+    #----------- a somewhat complicated way to get output from another process.
     set f [open temp.tcl w]
     puts $f {puts [lsort [info commands]]}
     close $f
 
-    set miss {}
-    
-    foreach i [exec tclsh temp.tcl] {
-        if [string match auto* $i]       continue
-        if {$i in {case history tclLog}} continue
-        if {[info commands $i] ne $i}    {lappend miss $i}
+    if {[catch {set output [exec tclsh temp.tcl]}]} {
+        puts {warning: can't run tclsh; the test suite won't be tested}
+        puts {         against mainline Tcl and no statistics will be}
+        puts {         displayed}
+    } else {
+        puts "tclsh $thisfile -m $match"
+        exec tclsh $thisfile -m $match
+        #-|- testing the test suite for Tcl compliance :)
+
+        set miss {}
+        
+        foreach i $output {
+            if [string match auto* $i]       continue
+            if {$i in {case history tclLog}} continue
+            if {[info commands $i] ne $i}    {lappend miss $i}
+        }
+
+        set nc  [llength [info commands]]
+        set now [clock format [clock seconds] -format %H:%M:%S]
+        puts -nonewline "Picol [info pa] at $now has $nc commands. "
+        puts "Lines of code: [exec wc -l picol.h]"
+        puts "Still missing [llength $miss] commands: $miss"
     }
 
-    set nc  [llength [info commands]]
-    set now [clock format [clock seconds] -format %H:%M:%S]
-    puts -nonewline "Picol [info pa] at $now has $nc commands. "
-    puts "Lines of code: [exec wc -l picol.h]"
-    puts "Still missing [llength $miss] commands: $miss"
-    test exec       {exec rm temp.tcl} -> ""
+    file delete temp.tcl
 }
     #puts "[info pa] pwd: [pwd] pid: [pid]"
 #--------------------- factorial demo, to compare [time] results
