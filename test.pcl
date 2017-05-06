@@ -2,7 +2,7 @@
 # test.pcl - test suite for the Picol interpreter
 # with many extensions by suchenwi. Call with "-l" to display all test cases \
 this comment extended? yes
-set patchlevel 0.2.0
+set patchlevel 0.2.1
 set thisfile [info script]
 
 # lappend argv -l
@@ -455,8 +455,16 @@ test lindex.12   {lindex {}} -> {}
 test lindex.13   {lindex {a b "c"} 3} -> {}
 test lindex.14   {lindex {a b"c"} 1} -> {b"c"}
 test lindex.15   {lindex {a b"c"} 2} -> {}
-test lindex.16   {catch {lindex {a "b"c} 2}} -> 1
-test lindex.17   {lindex {a"b"c} 0} -> {a"b"c}
+if {$test_config(picol)} {
+    # In lindex.16-lindex.18 we expect Picol to do what Jim Tcl, not Tcl 8.x,
+    # does. In Tcl 8.x attempting to [lindex] this string would throw an error.
+    # If we chose to treat it the Jim way, we can keep the assumption that list
+    # parsing never fails.
+    test lindex.16   {lindex {a "b"c} 0} -> a
+    test lindex.17   {lindex {a "b"c} 1} -> b
+    test lindex.18   {lindex {a "b"c} 2} -> c
+}
+test lindex.19   {lindex {a"b"c} 0} -> {a"b"c}
 
 test linsert.1   {linsert {a b} 1 c}    -> {a c b}
 test linsert.2   {linsert {a b} 1 c d}  -> {a c d b}
