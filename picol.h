@@ -66,19 +66,21 @@
 #endif
 
 /* The value for ::tcl_platform(engine). */
-#define TCL_PLATFORM_ENGINE        Picol
 #define TCL_PLATFORM_ENGINE_STRING "Picol"
 
 /* The value for ::tcl_platform(platform). */
+#define TCL_PLATFORM_UNKNOWN  0
+#define TCL_PLATFORM_UNIX     1
+#define TCL_PLATFORM_WINDOWS  2
 #if defined(_WIN32) || defined(_WIN64) || defined(__WIN32__) || \
         defined(_MSC_VER)
-#    define TCL_PLATFORM_PLATFORM         windows
+#    define TCL_PLATFORM_PLATFORM         TCL_PLATFORM_WINDOWS
 #    define TCL_PLATFORM_PLATFORM_STRING  "windows"
 #elif defined(_POSIX_VERSION)
-#    define TCL_PLATFORM_PLATFORM         unix
+#    define TCL_PLATFORM_PLATFORM         TCL_PLATFORM_UNIX
 #    define TCL_PLATFORM_PLATFORM_STRING  "unix"
 #else
-#    define TCL_PLATFORM_PLATFORM         unknown
+#    define TCL_PLATFORM_PLATFORM         TCL_PLATFORM_UNKNOWN
 #    define TCL_PLATFORM_PLATFORM_STRING  "unknown"
 #endif
 
@@ -110,7 +112,7 @@
                         APPEND(dst, src); \
                         if(needbraces) {APPEND(dst, "}");}} while (0)
 
-/* this is the unchecked version, for functions without access to 'i' */
+/* this is the unchecked version, for functions without access to 'interp' */
 #define LAPPEND_X(dst,src) do {\
                         int needbraces = picolNeedsBraces(src); \
                         if(*dst!='\0') strcat(dst, " "); \
@@ -211,7 +213,8 @@ char* picolStrRev(char* str);
 char* picolToLower(char* str);
 char* picolToUpper(char* str);
 COMMAND(abs);
-#if TCL_PLATFORM_PLATFORM == windows || TCL_PLATFORM_PLATFORM == unix
+#if TCL_PLATFORM_PLATFORM == TCL_PLATFORM_UNIX || \
+    TCL_PLATFORM_PLATFORM == TCL_PLATFORM_WINDOWS
 COMMAND(after);
 #endif
 COMMAND(append);
@@ -1252,7 +1255,7 @@ int picolQuoteForShell(char* dest, int argc, char** argv) {
     unsigned int offset = 0;
 #define ADDCHAR(c) do {command[offset] = c; offset++; \
                    if (offset >= sizeof(command) - 1) {return -1;}} while (0)
-#if TCL_PLATFORM_PLATFORM == windows
+#if TCL_PLATFORM_PLATFORM == TCL_PLATFORM_WINDOWS
     /* See http://blogs.msdn.com/b/twistylittlepassagesallalike/archive/2011/
             04/23/everyone-quotes-arguments-the-wrong-way.aspx */
     int backslashes = 0;
@@ -1342,7 +1345,7 @@ COMMAND(abs) {
     SCAN_INT(x, argv[1]);
     return picolSetIntResult(interp, abs(x));
 }
-#if TCL_PLATFORM_PLATFORM == unix
+#if TCL_PLATFORM_PLATFORM == TCL_PLATFORM_UNIX
 COMMAND(after) {
     unsigned int ms;
     struct timespec t, rem;
@@ -1360,7 +1363,7 @@ COMMAND(after) {
     }
     return picolSetResult(interp, "");
 }
-#elif TCL_PLATFORM_PLATFORM == windows
+#elif TCL_PLATFORM_PLATFORM == TCL_PLATFORM_WINDOWS
 COMMAND(after) {
     unsigned int ms;
     ARITY2(argc == 2, "after ms");
@@ -3173,7 +3176,8 @@ void picolRegisterCoreCmds(picolInterp* interp) {
         picolRegisterCmd(interp, name[j], picol_Math, NULL);
     }
     picolRegisterCmd(interp, "abs",      picol_abs, NULL);
-#if TCL_PLATFORM_PLATFORM == windows || TCL_PLATFORM_PLATFORM == unix
+#if TCL_PLATFORM_PLATFORM == TCL_PLATFORM_UNIX || \
+    TCL_PLATFORM_PLATFORM == TCL_PLATFORM_WINDOWS
     picolRegisterCmd(interp, "after",    picol_after, NULL);
 #endif
     picolRegisterCmd(interp, "append",   picol_append, NULL);
