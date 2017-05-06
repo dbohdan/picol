@@ -2,7 +2,7 @@
 # test.pcl - test suite for the Picol interpreter
 # with many extensions by suchenwi. Call with "-l" to display all test cases \
 this comment extended? yes
-set patchlevel 0.2.1
+set patchlevel 0.2.2
 set thisfile [info script]
 
 # lappend argv -l
@@ -247,7 +247,7 @@ if {$test_config(io)} {
         file delete disposable
     } -> {}
     if {$test_config(unix)} {
-        test file.delete.3 {file delete /dev/null/blah} -> {error deleting '/dev/null/blah'}
+        test file.delete.3 {file delete /dev/null/blah} -> {error deleting "/dev/null/blah"}
     }
     test file.delete.4 {
         catch {exec mkdir directory}

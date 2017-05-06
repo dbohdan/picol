@@ -88,7 +88,7 @@
                         strcat(dst, src);} while (0)
 
 #define ARITY(x)        do {if (!(x)) {return picolErr1(interp, \
-                        "wrong # args for '%s'", argv[0]);}} while (0);
+                        "wrong # args for \"%s\"", argv[0]);}} while (0);
 #define ARITY2(x,s)     do {if (!(x)) {return picolErr1(interp, \
                         "wrong # args: should be \"%s\"", s);}} while (0)
 
@@ -715,7 +715,7 @@ picolCmd* picolGetCmd(picolInterp* interp, char* name) {
 int picolRegisterCmd(picolInterp* interp, char* name, picol_Func f, void* pd) {
     picolCmd* c = picolGetCmd(interp, name);
     if (c) {
-        return picolErr1(interp, "command '%s' already defined", name);
+        return picolErr1(interp, "command \"%s\" already defined", name);
     }
     c = malloc(sizeof(picolCmd));
     c->name     = strdup(name);
@@ -1130,7 +1130,7 @@ arityerr:
     /* remove the called proc callframe */
     picolDropCallFrame(interp);
     interp->level--;
-    return picolErr1(interp, "wrong # args for '%s'", argv[0]);
+    return picolErr1(interp, "wrong # args for \"%s\"", argv[0]);
 }
 int picolWildEq(char* pat, char* str, int n) {
     /* allow '?' in pattern */
@@ -1727,7 +1727,7 @@ COMMAND(file) {
                 picolSetResult(interp, "");
                 return 0;
             } else {
-                return picolErr1(interp, "error deleting '%s'", argv[2]);
+                return picolErr1(interp, "error deleting \"%s\"", argv[2]);
             }
         }
         if (is_dir) {
@@ -1739,14 +1739,14 @@ COMMAND(file) {
             picolSetResult(interp, "");
             return 0;
         } else {
-            return picolErr1(interp, "error deleting '%s'", argv[2]);
+            return picolErr1(interp, "error deleting \"%s\"", argv[2]);
         }
     } else if (SUBCMD("exists") || SUBCMD("size")) {
         FILE* fp = NULL;
         fp = fopen(argv[2], "r");
         if (SUBCMD("size")) {
             if (!fp) {
-                return picolErr1(interp, "no file '%s'", argv[2]);
+                return picolErr1(interp, "no file \"%s\"", argv[2]);
             }
             fseek(fp, 0, 2);
             picolSetIntResult(interp, ftell(fp));
@@ -1759,7 +1759,7 @@ COMMAND(file) {
     } else if (SUBCMD("isdirectory") || SUBCMD("isfile")) {
         int result = picolIsDirectory(argv[2]);
         if (result < 0) {
-            return picolErr1(interp, "can't check path '%s'", argv[2]);
+            return picolErr1(interp, "can't check path \"%s\"", argv[2]);
         }
         if (SUBCMD("isfile")) {
             result = !result;
@@ -2749,7 +2749,7 @@ COMMAND(set) {
             pv = picolGetGlobalVar(interp, argv[1]);
         }
         if (!(pv && pv->val)) {
-            return picolErr1(interp, "no value of '%s'\n", argv[1]);
+            return picolErr1(interp, "no value of \"%s\"\n", argv[1]);
         }
         return picolSetResult(interp, pv->val);
     } else {
@@ -2762,7 +2762,7 @@ int picolSource(picolInterp* interp, char* filename) {
     int rc;
     FILE* fp = fopen(filename, "r");
     if (!fp) {
-        return picolErr1(interp, "No such file or directory '%s'", filename);
+        return picolErr1(interp, "No such file or directory \"%s\"", filename);
     }
     picolSetVar(interp, "::_script_", filename);
     buf[fread(buf, 1, sizeof(buf), fp)] = '\0';
