@@ -1,4 +1,9 @@
 @echo off
+rem This build file should work with Visual Studio versions 12.0
+rem (Visual Studio 2013) and 14.0 (Visual Studio 2015) when they are installed
+rem in their default directory on 64-bit Windows. It does not work with
+rem version 15.0 (Visual Studio 2017). Specify which version of VS to use
+rem ("14.0" is the default) with the command line option "/version:".
 
 setlocal ENABLEDELAYEDEXPANSION
 
