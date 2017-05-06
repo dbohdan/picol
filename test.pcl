@@ -97,6 +97,8 @@ test abs.1      {abs -47} -> 47
 test abs.2      {abs 0}   -> 0
 test abs.3      {abs 48}  -> 48
 
+test after.1    {after 100} -> {}
+
 test append.0   {catch append res; lrange $res 0 2} -> {wrong # args:}
 test append.1   {set foo hello; append foo world} -> helloworld
 test append.2   {set foo 47;append foo 11;set foo} -> 4711
@@ -402,7 +404,7 @@ proc f {a b} {+ $a $b}
 test info.args.1 {info args f} -> {a b}
 test info.body.1 {info body f} -> {+ $a $b}
 if $test_config(picol) {
-    set result {abs append apply}
+    set result {abs after append apply}
     if {$test_config(arrays)} {
         lappend result array
     }

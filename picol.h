@@ -211,6 +211,9 @@ char* picolStrRev(char* str);
 char* picolToLower(char* str);
 char* picolToUpper(char* str);
 COMMAND(abs);
+#if TCL_PLATFORM_PLATFORM == windows || TCL_PLATFORM_PLATFORM == unix
+COMMAND(after);
+#endif
 COMMAND(append);
 COMMAND(apply);
 COMMAND(break);
@@ -1339,6 +1342,33 @@ COMMAND(abs) {
     SCAN_INT(x, argv[1]);
     return picolSetIntResult(interp, abs(x));
 }
+#if TCL_PLATFORM_PLATFORM == unix
+COMMAND(after) {
+    unsigned int ms;
+    struct timespec t, rem;
+    ARITY2(argc == 2, "after ms");
+    SCAN_INT(ms, argv[1]);
+    t.tv_sec = ms/1000;
+    t.tv_nsec = (ms % 1000)*1000000;
+    while (nanosleep(&t, &rem) == -1) {
+        if (errno != EINTR) {
+            return picolErr1(interp,
+                             "nanosleep() failed (%s)",
+                             errno == EFAULT ? "EFAULT" : "EINVAL");
+        }
+        t = rem;
+    }
+    return picolSetResult(interp, "");
+}
+#elif TCL_PLATFORM_PLATFORM == windows
+COMMAND(after) {
+    unsigned int ms;
+    ARITY2(argc == 2, "after ms");
+    SCAN_INT(ms, argv[1]);
+    Sleep(ms);
+    return picolSetResult(interp, "");
+}
+#endif
 COMMAND(append) {
     picolVar* v;
     char buf[MAXSTR] = "";
@@ -3143,6 +3173,9 @@ void picolRegisterCoreCmds(picolInterp* interp) {
         picolRegisterCmd(interp, name[j], picol_Math, NULL);
     }
     picolRegisterCmd(interp, "abs",      picol_abs, NULL);
+#if TCL_PLATFORM_PLATFORM == windows || TCL_PLATFORM_PLATFORM == unix
+    picolRegisterCmd(interp, "after",    picol_after, NULL);
+#endif
     picolRegisterCmd(interp, "append",   picol_append, NULL);
     picolRegisterCmd(interp, "apply",    picol_apply, NULL);
     picolRegisterCmd(interp, "break",    picol_break, NULL);
