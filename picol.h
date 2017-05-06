@@ -51,6 +51,7 @@
 #   define PICOL_GETPID GetCurrentProcessId
 #   define PICOL_POPEN  _popen
 #   define PICOL_PCLOSE _pclose
+#   define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
 #else
 #   include <unistd.h>
 #   define MAXRECURSION 160
@@ -1025,7 +1026,7 @@ int picolIsDirectory(char* path)
 {
     struct stat path_stat;
     if (stat(path, &path_stat) == 0) {
-        return !S_ISREG(path_stat.st_mode);
+        return S_ISDIR(path_stat.st_mode);
     } else {
         /* Return -2 if the path doesn't exist and -1 on other errors. */
         return (errno == ENOENT ? -2 : -1);
