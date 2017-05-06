@@ -4,10 +4,10 @@
 #include "picol.h"
 
 int main(int argc, char** argv) {
-    picolInterp* i = picolCreateInterp();
-    int rc = picolEval(i, "puts {Hello, World!}");
+    picolInterp* interp = picolCreateInterp();
+    int rc = picolEval(interp, "puts {Hello, World!}");
     if (rc != PICOL_OK) {
-        printf("[%d] %s\n", rc, i->result);
+        printf("[%d] %s\n", rc, interp->result);
     }
     return rc & 0xFF;
 }

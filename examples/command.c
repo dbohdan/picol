@@ -17,29 +17,29 @@ COMMAND(square) {
     ARITY2(argc == 2, "square number"); 
     int n;
     SCAN_INT(n, argv[1]);
-    picolSetIntResult(i, n * n);
+    picolSetIntResult(interp, n * n);
     return PICOL_OK;
 }
 
-void report_error(picolInterp* i, int rc) {
+void report_error(picolInterp* interp, int rc) {
     if (rc != PICOL_OK) {
-        printf("[%d] %s\n", rc, i->result);
+        printf("[%d] %s\n", rc, interp->result);
     }
 }
 
 int main(int argc, char** argv) {
     /* Create an interpreter with no core commands. Do not call srand(). */
-    picolInterp* i = picolCreateInterp2(0, 0);
+    picolInterp* interp = picolCreateInterp2(0, 0);
     /* Manually register only one built-in. */
-    picolRegisterCmd(i, "puts", picol_puts, NULL);
+    picolRegisterCmd(interp, "puts", picol_puts, NULL);
     /* Register our custom command. */
-    picolRegisterCmd(i, "square", picol_square, NULL);
+    picolRegisterCmd(interp, "square", picol_square, NULL);
     int rc = 0;
-    rc = picolEval(i, "puts [square]"); /* Wrong usage. */
-    report_error(i, rc);
-    rc = picolEval(i, "puts [square foo]"); /* Wrong usage. */
-    report_error(i, rc);
-    rc = picolEval(i, "puts [square 5]"); /* Correct usage. */
-    report_error(i, rc);
+    rc = picolEval(interp, "puts [square]"); /* Wrong usage. */
+    report_error(interp, rc);
+    rc = picolEval(interp, "puts [square foo]"); /* Wrong usage. */
+    report_error(interp, rc);
+    rc = picolEval(interp, "puts [square 5]"); /* Correct usage. */
+    report_error(interp, rc);
     return rc & 0xFF;
 }
