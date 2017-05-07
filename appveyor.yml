@@ -1,6 +1,6 @@
 version: "0.2.3.{build}"
 install:
-  - ps: Invoke-WebRequest http://kitcreator.rkeene.org/kits/73e51976aa01502eb5b4365a35ac35ad38f46414/tclkit.exe -OutFile tclsh.exe
+  - ps: Invoke-WebRequest http://kitcreator.rkeene.org/kits/a61ed4e85dc94265fe77a6b24417b576daec7671/tclkit.exe -OutFile tclsh.exe
 build_script:
   - cmd: set default_path=%PATH%
 
