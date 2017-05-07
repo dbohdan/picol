@@ -1351,7 +1351,17 @@ COMMAND(abs) {
     SCAN_INT(x, argv[1]);
     return picolSetIntResult(interp, abs(x));
 }
-#if TCL_PLATFORM_PLATFORM == TCL_PLATFORM_UNIX
+#if TCL_PLATFORM_PLATFORM == TCL_PLATFORM_UNIX || \
+    TCL_PLATFORM_PLATFORM == TCL_PLATFORM_WINDOWS
+#ifdef _MSC_VER
+COMMAND(after) {
+    unsigned int ms;
+    ARITY2(argc == 2, "after ms");
+    SCAN_INT(ms, argv[1]);
+    Sleep(ms);
+    return picolSetResult(interp, "");
+}
+#else
 COMMAND(after) {
     unsigned int ms;
     struct timespec t, rem;
@@ -1369,14 +1379,7 @@ COMMAND(after) {
     }
     return picolSetResult(interp, "");
 }
-#elif TCL_PLATFORM_PLATFORM == TCL_PLATFORM_WINDOWS
-COMMAND(after) {
-    unsigned int ms;
-    ARITY2(argc == 2, "after ms");
-    SCAN_INT(ms, argv[1]);
-    Sleep(ms);
-    return picolSetResult(interp, "");
-}
+#endif
 #endif
 COMMAND(append) {
     picolVar* v;
