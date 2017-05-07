@@ -5,6 +5,7 @@
 Yes, it is.
 set patchlevel 0.2.3
 set thisfile [info script]
+set tcl tclsh ;# The Tcl 8.x interpreter binary.
 
 # lappend argv -l
 set n 0; set r 0 ;# counters for tests, errors
@@ -17,6 +18,12 @@ set test_config(picol) 0
 if {[info exists tcl_platform(engine)] \
         && [expr {$tcl_platform(engine) eq {Picol}}]} {
     set test_config(picol) 1
+}
+set test_config(tcl85) 0
+if {[string match 8.5.* [info patchlevel]]} {
+    puts {Warning: It is recommended that you run the test suite with Tcl 8.6.}
+    puts {         Some important tests will be skipped in Tcl 8.5.}
+    set test_config(tcl85) 1
 }
 
 set test_config(unix) [expr {$tcl_platform(platform) eq {unix}}]
@@ -369,11 +376,9 @@ test format.1   {format %c 65} -> A
 test format.2   {format %o 4711} -> 11147
 test format.3   {format %X 255} -> FF
 test format.4   {format %010d 255} -> 0000000255
+test format.5   {format %-+-+-+d 127} -> +127
 if {$test_config(picol)} {
-    test format.5   {format %#-010u 255} -> {255       }
-}
-test format.6   {format %-+-+-+d 127} -> +127
-if {$test_config(picol)} {
+    test format.6   {format %#-010u 255} -> {255       }
     test format.7   {format %n 0} -> {bad format string "%n"}
     test format.8   {format %-0n 0} -> {bad format string "%-0n"}
     test format.9   {format %0-n 0} -> {bad format string "%0-n"}
@@ -400,7 +405,7 @@ test global.6   {proc f x {global glo; set glo $x}; f 56} -> 56
 test global.7   {proc f x {global a b; set a 1; lsort [info vars]};f y} -> {a b x}
 if {$test_config(picol)} {
     set globals {
-        a x glo match r n thisfile patchlevel _script_ auto_path \
+        a x glo match r n tcl thisfile patchlevel _script_ auto_path \
         argc argv argv0 errorInfo globals \
     }
     if {$test_config(arrays)} {
@@ -546,21 +551,25 @@ test llength.7   {llength {a b c d e}} -> 5
 test llength.8   {llength "   \t  \n                          "} -> 0
 test llength.9   {llength "   \t  \n         a                "} -> 1
 
-test lmap.1  {set x ""; lmap i {} {append x ($i)}; set x}        -> {}
-test lmap.2  {set x ""; lmap i {a b c d e} {append x $i};set x}  -> abcde
-test lmap.3  {lmap i {a "b c" {d e} f} {lindex -$i-}}            -> {-a- {-b c-} {-d e-} -f-}
-test lmap.4  {lmap {i j} {1 2 3 4 5 6} {lindex $i$j}}            -> {12 34 56}
-test lmap.5  {lmap {i j k} {1 2 3 4 5 6} {expr {$i + $j + $k}}}  -> {6 15}
+if {!$::test_config(tcl85)} {
+    test lmap.1  {set x ""; lmap i {} {append x ($i)}; set x}        -> {}
+    test lmap.2  {set x ""; lmap i {a b c d e} {append x $i};set x}  -> abcde
+    test lmap.3  {lmap i {a "b c" {d e} f} {lindex -$i-}}            -> {-a- {-b c-} {-d e-} -f-}
+    test lmap.4  {lmap {i j} {1 2 3 4 5 6} {lindex $i$j}}            -> {12 34 56}
+    test lmap.5  {lmap {i j k} {1 2 3 4 5 6} {expr {$i + $j + $k}}}  -> {6 15}
+}
 
 test lrange.1    {lrange {a b c d e f g} 1 3} -> {b c d}
 test lrange.2    {lrange {a b c d e f g} 3 end} -> {d e f g}
 test lrange.3    {lrange {a b c d e f g} 3 99} -> {d e f g}
 test lrange.4    {lrange {do re mi fa so la si} 0 2} -> {do re mi}
 
-test lrepeat.1   {lrepeat 0} -> {}
-test lrepeat.2   {lrepeat 0 a b c} -> {}
-test lrepeat.3   {lrepeat 1 a b c} -> {a b c}
-test lrepeat.4   {lrepeat 99} -> {}
+if {!$::test_config(tcl85)} {
+    test lrepeat.1   {lrepeat 0} -> {}
+    test lrepeat.2   {lrepeat 0 a b c} -> {}
+    test lrepeat.3   {lrepeat 99} -> {}
+}
+test lrepeat.4   {lrepeat 1 a b c} -> {a b c}
 test lrepeat.5   {lrepeat 3 a b c} -> {a b c a b c a b c}
 
 test lreplace.1  {lreplace {a b c d} 2 2 x} -> {a b x d}
@@ -572,16 +581,18 @@ test lreplace.6  {lreplace {a b c d} 1 2 B C}   -> {a B C d}
 test lreplace.7  {lreplace {a b c d} 1 end B C D}   -> {a B C D}
 test lreplace.8  {lreplace " \t \n a \n " 0 0 b} -> b
 test lreplace.9  {lreplace {} 0 0 a} -> a
-test lreplace.10 {lreplace {a b} 2 2 c} -> {a b c}
-test lreplace.11 {lreplace {a b c} 99 99 d} -> {list doesn't contain element 99}
-test lreplace.12 {lreplace {a b c} 99 end d} -> {list doesn't contain element 99}
-test lreplace.13 {lreplace {a b c} 2 3 d e} -> {a b d e}
-test lreplace.14 {lreplace {a b c} 3 3 d e} -> {a b c d e}
-test lreplace.15 {lreplace " \t \n a \n b " 2 2 c} -> {a b c}
-test lreplace.16 {lreplace {} -5 -1 a} -> a
-test lreplace.17 {lreplace {c b} -5 0 a} -> {a b}
-test lreplace.18 {lreplace {f x} -5 end c d} -> {c d}
-test lreplace.19 {lreplace {b c} -5 -1 a} -> {a b c}
+test lreplace.10 {lreplace {a b c} 99 99 d} -> {list doesn't contain element 99}
+test lreplace.11 {lreplace {a b c} 99 end d} -> {list doesn't contain element 99}
+test lreplace.12 {lreplace {a b c} 2 3 d e} -> {a b d e}
+test lreplace.13 {lreplace {} -5 -1 a} -> a
+test lreplace.14 {lreplace {c b} -5 0 a} -> {a b}
+test lreplace.15 {lreplace {f x} -5 end c d} -> {c d}
+test lreplace.16 {lreplace {b c} -5 -1 a} -> {a b c}
+if {!$::test_config(tcl85)} {
+    test lreplace.17 {lreplace {a b} 2 2 c} -> {a b c}
+    test lreplace.18 {lreplace {a b c} 3 3 d e} -> {a b c d e}
+    test lreplace.19 {lreplace " \t \n a \n b " 2 2 c} -> {a b c}
+}
 
 test lreverse.1  {lreverse {}} -> {}
 test lreverse.2  {lreverse a} -> a
@@ -773,48 +784,50 @@ if {$test_config(picol)} {
     } -> {string too long}
 }
 
-test try.1   {try {lindex foo}} -> foo
-test try.2   {try {lindex foo} on error x {lindex bar}} -> foo
-test try.3   {try {lindex foo} finally {lindex bar}} -> foo
-test try.4   {try {error fail} on error e {lindex baz}} -> baz
-test try.5   {try {error fail} on error e {lindex baz} finally {lindex bar}} -> baz
-test try.6   {try {error fail} on error e {lindex $e} finally {lindex bar}} -> fail
-test try.7   {try {} finally {set x 5}; set x} -> 5
-test try.8   {try {error fail} finally {set x 5}; set x} -> fail
-test try.9   {try {error fail} finally {error whoa}} -> whoa
-test try.10  {try {error fail} on error x {error whoa}} -> whoa
-test try.11  {catch {try {error fail} on error x {error whoa} finally {set x 7}}; set x} -> 7
-test try.12  {try {} finally {error whoa}} -> whoa
-test try.13  {for {set i 0} {$i < 10} {incr i} {try break}; set i} -> 0
-test try.14  {for {set i 0} {$i < 10} {incr i} {try {} finally break}; set i} -> 0
-test try.15  {for {set i 0} {$i < 10} {incr i} {try {error fail} on error x break}; set i} -> 0
-test try.16  {for {set i 0} {$i < 10} {incr i} {try {} on error x break}; set i} -> 10
-test try.17  {
-    for {set i 0} {$i < 10} {incr i} {
-        try {
-            error fail
-        } on error x {
-            continue
+if {!$::test_config(tcl85)} {
+    test try.1   {try {lindex foo}} -> foo
+    test try.2   {try {lindex foo} on error x {lindex bar}} -> foo
+    test try.3   {try {lindex foo} finally {lindex bar}} -> foo
+    test try.4   {try {error fail} on error e {lindex baz}} -> baz
+    test try.5   {try {error fail} on error e {lindex baz} finally {lindex bar}} -> baz
+    test try.6   {try {error fail} on error e {lindex $e} finally {lindex bar}} -> fail
+    test try.7   {try {} finally {set x 5}; set x} -> 5
+    test try.8   {try {error fail} finally {set x 5}; set x} -> fail
+    test try.9   {try {error fail} finally {error whoa}} -> whoa
+    test try.10  {try {error fail} on error x {error whoa}} -> whoa
+    test try.11  {catch {try {error fail} on error x {error whoa} finally {set x 7}}; set x} -> 7
+    test try.12  {try {} finally {error whoa}} -> whoa
+    test try.13  {for {set i 0} {$i < 10} {incr i} {try break}; set i} -> 0
+    test try.14  {for {set i 0} {$i < 10} {incr i} {try {} finally break}; set i} -> 0
+    test try.15  {for {set i 0} {$i < 10} {incr i} {try {error fail} on error x break}; set i} -> 0
+    test try.16  {for {set i 0} {$i < 10} {incr i} {try {} on error x break}; set i} -> 10
+    test try.17  {
+        for {set i 0} {$i < 10} {incr i} {
+            try {
+                error fail
+            } on error x {
+                continue
+            }
+            set i 99
         }
-        set i 99
+        set i
+    } -> 10
+    test try.18  {try break finally {lindex bar}} -> {}
+    test try.19  {try continue finally {lindex bar}} -> {}
+    test try.20  {try break on error x {lindex baz}} -> {}
+    test try.21  {try continue on error x {lindex baz}} -> {}
+    if {$test_config(picol)} {
+        test try.22  {try {} foinally {}} -> {bad argument "foinally": expected "finally"}
+        test try.23  {try {} an era x {}} -> {bad argument "an": expected "on"}
+        test try.24  {try {} on era x {}} -> {bad argument "era": expected "error"}
+        test try.25  {try {} on error x {} foinally {}} -> {bad argument "foinally": expected "finally"}
+        test try.26  {try} -> {wrong # args: should be "try body ?on error varName handler? ?finally script?"}
+        test try.27  {try {} on} -> {wrong # args: should be "try body ?on error varName handler? ?finally script?"}
+        test try.28  {try {} on error} -> {bad argument "on": expected "finally"}
+        test try.29  {try {} on error x} -> {wrong # args: should be "try body ?on error varName handler? ?finally script?"}
+        test try.30  {try {} finally} -> {wrong # args: should be "try body ?on error varName handler? ?finally script?"}
+        test try.31  {try {} on error x {} finally} -> {wrong # args: should be "try body ?on error varName handler? ?finally script?"}
     }
-    set i
-} -> 10
-test try.18  {try break finally {lindex bar}} -> {}
-test try.19  {try continue finally {lindex bar}} -> {}
-test try.20  {try break on error x {lindex baz}} -> {}
-test try.21  {try continue on error x {lindex baz}} -> {}
-if {$test_config(picol)} {
-    test try.22  {try {} foinally {}} -> {bad argument "foinally": expected "finally"}
-    test try.23  {try {} an era x {}} -> {bad argument "an": expected "on"}
-    test try.24  {try {} on era x {}} -> {bad argument "era": expected "error"}
-    test try.25  {try {} on error x {} foinally {}} -> {bad argument "foinally": expected "finally"}
-    test try.26  {try} -> {wrong # args: should be "try body ?on error varName handler? ?finally script?"}
-    test try.27  {try {} on} -> {wrong # args: should be "try body ?on error varName handler? ?finally script?"}
-    test try.28  {try {} on error} -> {bad argument "on": expected "finally"}
-    test try.29  {try {} on error x} -> {wrong # args: should be "try body ?on error varName handler? ?finally script?"}
-    test try.30  {try {} finally} -> {wrong # args: should be "try body ?on error varName handler? ?finally script?"}
-    test try.31  {try {} on error x {} finally} -> {wrong # args: should be "try body ?on error varName handler? ?finally script?"}
 }
 
 test unset.1     {set foo 1;unset foo;info exists foo} -> 0
@@ -844,21 +857,24 @@ test while.3     {set i 10; while {$i > 5} {incr i -1}; set i} -> 5
 if {$test_config(picol) && $test_config(io)} {
     #-------- A somewhat complicated way to get the output from another process.
     proc eval-in-tclsh script {
-        set f [open temp.tcl w]
-        puts $f $script
-        close $f        
-    }
-    eval-in-tclsh {
-        puts [lsort [info commands]]
+        set tempFile temp.tcl
+        try {
+            set f [open $tempFile w]
+            puts $f $script
+            close $f
+            return [exec $::tcl $tempFile]
+        } finally {
+            file delete $tempFile
+        }
     }
 
-    if {[catch {set output [exec tclsh temp.tcl]}]} {
-        puts {warning: can't run tclsh; the test suite won't be tested}
-        puts {         against mainline Tcl and no statistics will be}
-        puts {         reported}
+    if {[catch {set output [eval-in-tclsh {puts [lsort [info commands]]}]}]} {
+        puts -nonewline "Warning: Can't run \"$tcl\"; "
+        puts {the test suite won't be tested against}
+        puts {         mainline Tcl and no statistics will be reported.}
     } else {
         puts "tclsh $thisfile -m $match"
-        foreach x [split [exec tclsh $thisfile -m $match] \n] {
+        foreach x [split [exec $tcl $thisfile -m $match] \n] {
             puts "    $x"
         }
         #-|- Test the test suite for Tcl compliance. :)
