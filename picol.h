@@ -39,7 +39,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#define PICOL_PATCHLEVEL "0.2.2"
+#define PICOL_PATCHLEVEL "0.2.3"
 
 /* MSVC compatibility. */
 #ifdef _MSC_VER
@@ -239,12 +239,16 @@ COMMAND(incr);
 COMMAND(info);
 COMMAND(join);
 COMMAND(lappend);
+COMMAND(lassign);
 COMMAND(lindex);
 COMMAND(linsert);
 COMMAND(list);
 COMMAND(llength);
+COMMAND(lmap);
 COMMAND(lrange);
+COMMAND(lrepeat);
 COMMAND(lreplace);
+COMMAND(lreverse);
 COMMAND(lsearch);
 COMMAND(lsort);
 COMMAND(not);
@@ -260,6 +264,7 @@ COMMAND(string);
 COMMAND(subst);
 COMMAND(switch);
 COMMAND(trace);
+COMMAND(try);
 COMMAND(unset);
 COMMAND(uplevel);
 COMMAND(variable);
@@ -303,6 +308,8 @@ int picolGetToken(picolInterp *interp, picolParser *p);
 int picol_InNi(picolInterp *interp, int argc, char **argv, void *pd);
 int picolIsDirectory(char* path);
 int picolIsInt(char* str);
+int picolLmap(picolInterp* interp, char* vars, char* list, char* body,
+              int accumulate);
 int picolLsort(picolInterp *interp, int argc, char **argv, void *pd);
 int picolMatch(char* pat, char* str);
 int picol_Math(picolInterp *interp, int argc, char **argv, void *pd);
@@ -1033,8 +1040,7 @@ int picolCondition(picolInterp* interp, char* str) {
         return picolErr(interp, "NULL condition");
     }
 }
-int picolIsDirectory(char* path)
-{
+int picolIsDirectory(char* path) {
     struct stat path_stat;
     if (stat(path, &path_stat) == 0) {
         return S_ISDIR(path_stat.st_mode);
@@ -1906,26 +1912,29 @@ COMMAND(for) {
         }
     }
 }
-COMMAND(foreach) {
+int picolLmap(picolInterp* interp, char* vars, char* list, char* body,
+              int accumulate) {
     /* Only iterating over a single list is currently supported. */
-    char buf[MAXSTR] = "", buf2[MAXSTR];
+    char buf[MAXSTR] = "", buf2[MAXSTR], result[MAXSTR] = "";
     char* cp, *varp;
     int rc, done=0;
-    ARITY2(argc == 4, "foreach varList list command");
-    if (*argv[2] == '\0') {
+    if (*list == '\0') {
         return PICOL_OK;          /* empty data list */
     }
-    varp = picolParseList(argv[1], buf2);
-    cp   = picolParseList(argv[2], buf);
+    varp = picolParseList(vars, buf2);
+    cp   = picolParseList(list, buf);
     while (cp || varp) {
         picolSetVar(interp, buf2, buf);
         varp = picolParseList(varp, buf2);
         if (!varp) {                        /* end of var list reached */
-            rc = picolEval(interp, argv[argc-1]);
+            rc = picolEval(interp, body);
             if (rc == PICOL_ERR || rc == PICOL_BREAK) {
                 return rc;
             } else {
-                varp = picolParseList(argv[1], buf2); /* cycle back to start */
+                if (accumulate) {
+                    LAPPEND(result, interp->result);
+                }
+                varp = picolParseList(vars, buf2); /* cycle back to start */
             }
             done = 1;
         } else {
@@ -1941,7 +1950,11 @@ COMMAND(foreach) {
             strcpy(buf, ""); /* empty string when data list exhausted */
         }
     }
-    return picolSetResult(interp, "");
+    return picolSetResult(interp, result);
+}
+COMMAND(foreach) {
+    ARITY2(argc == 4, "foreach varList list command");
+    return picolLmap(interp, argv[1], argv[2], argv[3], 0);
 }
 COMMAND(format) {
     /* Limited to a single integer or string argument so far. */
@@ -2273,6 +2286,24 @@ COMMAND(lappend) {
     picolSetVar(interp, argv[1], buf);
     return picolSetResult(interp, buf);
 }
+COMMAND(lassign) {
+    char result[MAXSTR] = "", element[MAXSTR];
+    char* cp;
+    int i = 2;
+    ARITY2(argc >= 2, "lassign list ?varName ...?");
+    FOREACH(element, cp, argv[1]) {
+        if (i < argc) {
+            picolSetVar(interp, argv[i], element);
+        } else {
+            LAPPEND(result, element);
+        }
+        i++;
+    }
+    for (; i < argc; i++) {
+        picolSetVar(interp, argv[i], "");
+    }
+    return picolSetResult(interp, result);
+}
 COMMAND(lindex) {
     char buf[MAXSTR] = "", *cp;
     int n = 0, idx;
@@ -2337,6 +2368,10 @@ COMMAND(llength) {
     }
     return picolSetIntResult(interp, n);
 }
+COMMAND(lmap) {
+    ARITY2(argc == 4, "lmap varList list command");
+    return picolLmap(interp, argv[1], argv[2], argv[3], 1);
+}
 COMMAND(lrange) {
     char buf[MAXSTR] = "", buf2[MAXSTR] = "", *cp;
     int from, to, a = 0, toend = 0;
@@ -2354,6 +2389,18 @@ COMMAND(lrange) {
         a++;
     }
     return picolSetResult(interp, buf2);
+}
+COMMAND(lrepeat) {
+    char result[MAXSTR] = "";
+    int count, i, j;
+    ARITY2(argc >= 2, "lrepeat count ?element ...?");
+    SCAN_INT(count, argv[1]);
+    for (i = 0; i < count; i++) {
+        for (j = 2; j < argc; j++) {
+            LAPPEND(result, argv[j]);
+        }
+    }
+    return picolSetResult(interp, result);
 }
 COMMAND(lreplace) {
     char buf[MAXSTR] = "";
@@ -2392,6 +2439,31 @@ COMMAND(lreplace) {
     }
 
     return picolSetResult(interp, buf2);
+}
+COMMAND(lreverse) {
+    char result[MAXSTR] = "", element[MAXSTR] = "";
+    char* cp;
+    int element_len, result_len = 0, i, needs_braces;
+    ARITY2(argc == 2, "lreverse list");
+    FOREACH(element, cp, argv[1]) {
+        element_len = strlen(element);
+        needs_braces = picolNeedsBraces(element);
+        memmove(result + element_len + needs_braces*2 + 1,
+                result,
+                result_len + 1);
+        for (i = needs_braces; i < element_len + needs_braces; i++) {
+            result[i] = element[i - needs_braces];
+        }
+        if (needs_braces) {
+            result[i] = '}';
+            result[0] = '{';
+            i++;
+        }
+        result[i] = ' ';
+        result_len += element_len + needs_braces*2 + 1;
+    }
+    result[result_len - 1] = '\0';
+    return picolSetResult(interp, result);
 }
 COMMAND(lsearch) {
     char buf[MAXSTR] = "", *cp;
@@ -3084,6 +3156,56 @@ COMMAND(time) {
     dt = (clock()-t0)*1000/n;
     return picolSetFmtResult(interp, "%d clicks per iteration", dt);
 }
+COMMAND(try) {
+    int body_rc, handler_rc, finally_rc;
+    char body_result[MAXSTR], handler_result[MAXSTR];
+    ARITY2(argc == 2 || argc == 4 || argc == 6 || argc == 8,
+           "try body ?on error varName handler? ?finally script?");
+    /*        0    1   2     3       4       5         6      7 */
+    if ((argc == 4) && !EQ(argv[2], "finally")) {
+        return picolErr1(interp,
+                         "bad argument \"%s\": expected \"finally\"",
+                         argv[2]);
+    }
+    if ((argc == 6 || argc == 8) && !EQ(argv[2], "on")) {
+        return picolErr1(interp,
+                         "bad argument \"%s\": expected \"on\"",
+                         argv[2]);
+    }
+    if ((argc == 6 || argc == 8) && !EQ(argv[3], "error")) {
+        return picolErr1(interp,
+                         "bad argument \"%s\": expected \"error\"",
+                         argv[3]);
+    }
+    if ((argc == 8) && !EQ(argv[6], "finally")) {
+        return picolErr1(interp,
+                         "bad argument \"%s\": expected \"finally\"",
+                         argv[6]);
+    }
+    body_rc = picolEval(interp, argv[1]);
+    strcpy(body_result, interp->result);
+    /* Run the error handler if we were given one and there was an error. */
+    if ((argc == 6 || argc == 8) && body_rc == PICOL_ERR) {
+        picolSetVar(interp, argv[4], interp->result);
+        handler_rc = picolEval(interp, argv[5]);
+        strcpy(handler_result, interp->result);
+    }
+    /* Run the "finally" script. If it fails, return its result. */
+    if (argc == 4 || argc == 8) {
+        finally_rc = picolEval(interp, argv[argc == 4 ? 3 : 7]);
+        if (finally_rc != PICOL_OK) {
+            return finally_rc;
+        }
+    }
+    /* Return the error handler result if there was an error. */
+    if ((argc == 6 || argc == 8) && body_rc == PICOL_ERR) {
+        picolSetResult(interp, handler_result);
+        return handler_rc;
+    }
+    /* Return the result of evaluating the body. */
+    picolSetResult(interp, body_result);
+    return body_rc;
+}
 COMMAND(trace) {
     ARITY2(argc==2 || argc == 6, "trace add|remove ?execution * mode cmd?");
     if (EQ(argv[1], "add")) {
@@ -3202,12 +3324,16 @@ void picolRegisterCoreCmds(picolInterp* interp) {
     picolRegisterCmd(interp, "info",     picol_info, NULL);
     picolRegisterCmd(interp, "join",     picol_join, NULL);
     picolRegisterCmd(interp, "lappend",  picol_lappend, NULL);
+    picolRegisterCmd(interp, "lassign",  picol_lassign, NULL);
     picolRegisterCmd(interp, "lindex",   picol_lindex, NULL);
     picolRegisterCmd(interp, "linsert",  picol_linsert, NULL);
     picolRegisterCmd(interp, "list",     picol_list, NULL);
     picolRegisterCmd(interp, "llength",  picol_llength, NULL);
+    picolRegisterCmd(interp, "lmap",     picol_lmap, NULL);
     picolRegisterCmd(interp, "lrange",   picol_lrange, NULL);
+    picolRegisterCmd(interp, "lrepeat",  picol_lrepeat, NULL);
     picolRegisterCmd(interp, "lreplace", picol_lreplace, NULL);
+    picolRegisterCmd(interp, "lreverse", picol_lreverse, NULL);
     picolRegisterCmd(interp, "lsearch",  picol_lsearch, NULL);
     picolRegisterCmd(interp, "lset",     picol_lset, NULL);
     picolRegisterCmd(interp, "lsort",    picol_lsort, NULL);
@@ -3226,6 +3352,7 @@ void picolRegisterCoreCmds(picolInterp* interp) {
     picolRegisterCmd(interp, "switch",   picol_switch, NULL);
     picolRegisterCmd(interp, "time",     picol_time, NULL);
     picolRegisterCmd(interp, "trace",    picol_trace, NULL);
+    picolRegisterCmd(interp, "try",      picol_try, NULL);
     picolRegisterCmd(interp, "unset",    picol_unset, NULL);
     picolRegisterCmd(interp, "uplevel",  picol_uplevel, NULL);
     picolRegisterCmd(interp, "variable", picol_variable, NULL);
