@@ -1798,12 +1798,13 @@ COMMAND(file) {
     } else if (SUBCMD("isdirectory") || SUBCMD("isfile")) {
         int result = picolIsDirectory(argv[2]);
         if (result < 0) {
-            return picolErr1(interp, "can't check path \"%s\"", argv[2]);
+            picolSetBoolResult(interp, 0);
+        } else {
+            if (SUBCMD("isfile")) {
+                result = !result;
+            }
+            picolSetBoolResult(interp, result);
         }
-        if (SUBCMD("isfile")) {
-            result = !result;
-        }
-        picolSetBoolResult(interp, result);
 #endif
     } else if (SUBCMD("join")) {
         strcpy(buf, argv[2]);
@@ -2416,7 +2417,7 @@ COMMAND(lreplace) {
     }
 
     if (from < 0 && to < 0) {
-        for (j=4; j<argc; j++) {
+        for (j = 4; j < argc; j++) {
             LAPPEND(buf2, argv[j]);
         }
         done = 1;
@@ -2431,6 +2432,9 @@ COMMAND(lreplace) {
             done = 1;
         }
         a++;
+    }
+    if (from > a) {
+        return picolErr1(interp, "list doesn't contain element %s", argv[2]);
     }
     if (!done) {
         for (j = 4; j < argc; j++) {

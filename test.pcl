@@ -240,9 +240,10 @@ if {$test_config(io)} {
 
     test file.isdir.1  {file isdirectory test.pcl} -> 0
     test file.isdir.2  {file isdirectory globtest} -> 1
-    test file.isdir.3  {catch {file isdirectory no_such_thing}} -> 1
+    test file.isdir.3  {file isdirectory no_such_thing} -> 0
     test file.isfile.1 {file isfile test.pcl} -> 1
     test file.isfile.2 {file isfile globtest} -> 0
+    test file.isfile.3 {file isfile no_such_thing} -> 0
 
     test file.delete.1 {file delete no_such_thing} -> {} ;# No error.
     test file.delete.2 {
@@ -250,7 +251,10 @@ if {$test_config(io)} {
         file delete disposable
     } -> {}
     if {$test_config(unix)} {
-        test file.delete.3 {file delete /dev/null/blah} -> {error deleting "/dev/null/blah"}
+        test file.delete.3 {
+            catch {file delete /dev/null/blah} error
+            string match {error deleting "/dev/null/blah"*} $error
+        } -> 1
     }
     test file.delete.4 {
         catch {exec mkdir directory}
@@ -326,7 +330,9 @@ test foreach.4  {foreach i {a "b c" {d "x" e} f} {append x $i};set x} -> {ab cd 
 test foreach.5  {foreach {i j} {2 3 5 4 5 9} {append x $i/$j,};set x}      -> 2/3,5/4,5/9,
 test foreach.6  {foreach {i j} {2 3 5 4 5 9 0} {append x $i/$j,};set x}      -> 2/3,5/4,5/9,0/,
 test foreach.7  {foreach {i j k} {2 3 5 4 5 9 8} {append x $i+$j=$k,};set x} -> 2+3=5,4+5=9,8+=,
-test foreach.8  {catch {foreach a {1 2 3} b {x y z} {}}} -> 1
+if {$test_config(picol)} {
+    test foreach.8  {catch {foreach a {1 2 3} b {x y z} {}}} -> 1
+}
 test foreach.9  {catch {foreach {}}} -> 1
 
 test format.0   {format hello} -> hello
@@ -334,12 +340,16 @@ test format.1   {format %c 65} -> A
 test format.2   {format %o 4711} -> 11147
 test format.3   {format %X 255} -> FF
 test format.4   {format %010d 255} -> 0000000255
-test format.5   {format %#-010u 255} -> {255       }
+if {$test_config(picol)} {
+    test format.5   {format %#-010u 255} -> {255       }
+}
 test format.6   {format %-+-+-+d 127} -> +127
-test format.7   {format %n 0} -> {bad format string "%n"}
-test format.8   {format %-0n 0} -> {bad format string "%-0n"}
-test format.9   {format %0-n 0} -> {bad format string "%0-n"}
-test format.10   {format {%s %s} hi} -> {bad format string "%s %s"}
+if {$test_config(picol)} {
+    test format.7   {format %n 0} -> {bad format string "%n"}
+    test format.8   {format %-0n 0} -> {bad format string "%-0n"}
+    test format.9   {format %0-n 0} -> {bad format string "%0-n"}
+    test format.10  {format {%s %s} hi} -> {bad format string "%s %s"}
+}
 
 if {$test_config(glob)} {
     test glob.1 {lsort [glob globtest/*]} -> {globtest/Makefile {globtest/foo bar} globtest/test1 globtest/test2}
@@ -534,13 +544,15 @@ test lreplace.7  {lreplace {a b c d} 1 end B C D}   -> {a B C D}
 test lreplace.8  {lreplace " \t \n a \n " 0 0 b} -> b
 test lreplace.9  {lreplace {} 0 0 a} -> a
 test lreplace.10 {lreplace {a b} 2 2 c} -> {a b c}
-test lreplace.11 {lreplace {a b c} 99 99 d} -> {a b c d}
-test lreplace.12 {lreplace {a b c} 99 end d} -> {a b c d}
-test lreplace.13 {lreplace " \t \n a \n b " 2 2 c} -> {a b c}
-test lreplace.14 {lreplace {} -5 -1 a} -> a
-test lreplace.15 {lreplace {c b} -5 0 a} -> {a b}
-test lreplace.16 {lreplace {f x} -5 end c d} -> {c d}
-test lreplace.17 {lreplace {b c} -5 -1 a} -> {a b c}
+test lreplace.11 {lreplace {a b c} 99 99 d} -> {list doesn't contain element 99}
+test lreplace.12 {lreplace {a b c} 99 end d} -> {list doesn't contain element 99}
+test lreplace.13 {lreplace {a b c} 2 3 d e} -> {a b d e}
+test lreplace.14 {lreplace {a b c} 3 3 d e} -> {a b c d e}
+test lreplace.15 {lreplace " \t \n a \n b " 2 2 c} -> {a b c}
+test lreplace.16 {lreplace {} -5 -1 a} -> a
+test lreplace.17 {lreplace {c b} -5 0 a} -> {a b}
+test lreplace.18 {lreplace {f x} -5 end c d} -> {c d}
+test lreplace.19 {lreplace {b c} -5 -1 a} -> {a b c}
 
 test lreverse.1  {lreverse {}} -> {}
 test lreverse.2  {lreverse a} -> a
