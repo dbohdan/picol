@@ -288,7 +288,11 @@ if {$test_config(io)} {
         lappend exists [catch {file delete directory}]
         lappend exists [file exists directory/file]
         file delete directory/file
-        after 50 ;# Prevents a heisenbug on Windows with MSVC builds.
+        # The following works around a heisenbug on Windows.
+        for {set i 0} {[file exists directory/file]} {incr i} {
+            if {$i > 100} break
+            after 10
+        }
         file delete directory
         lappend exists [file exists directory/file]
         set exists
@@ -836,12 +840,17 @@ test while.1     {set i 10; while {$i} {incr i -1}} -> ""
 test while.2     {set i 10; while {$i} {incr i -1}; set i} -> 0
 test while.3     {set i 10; while {$i > 5} {incr i -1}; set i} -> 5
 
-#-- These tests for Picol only, tclsh please skip
+#-- These tests are for Picol only. Skip them in Tcl 8.x.
 if {$test_config(picol) && $test_config(io)} {
-    #----------- a somewhat complicated way to get output from another process.
-    set f [open temp.tcl w]
-    puts $f {puts [lsort [info commands]]}
-    close $f
+    #-------- A somewhat complicated way to get the output from another process.
+    proc eval-in-tclsh script {
+        set f [open temp.tcl w]
+        puts $f $script
+        close $f        
+    }
+    eval-in-tclsh {
+        puts [lsort [info commands]]
+    }
 
     if {[catch {set output [exec tclsh temp.tcl]}]} {
         puts {warning: can't run tclsh; the test suite won't be tested}
@@ -849,8 +858,10 @@ if {$test_config(picol) && $test_config(io)} {
         puts {         reported}
     } else {
         puts "tclsh $thisfile -m $match"
-        exec tclsh $thisfile -m $match
-        #-|- testing the test suite for Tcl compliance :)
+        foreach x [split [exec tclsh $thisfile -m $match] \n] {
+            puts "    $x"
+        }
+        #-|- Test the test suite for Tcl compliance. :)
 
         set miss {}
         
@@ -863,15 +874,17 @@ if {$test_config(picol) && $test_config(io)} {
         set nc  [llength [info commands]]
         set now [clock format [clock seconds] -format %H:%M:%S]
         puts -nonewline "Picol [info pa] at $now has $nc commands. "
-        puts "Lines of code: [exec wc -l picol.h]"
+        puts "Lines of code: [eval-in-tclsh {
+            puts [llength [split [read [open picol.h]] \n]]
+        }]"
         puts "Still missing [llength $miss] commands: $miss"
     }
 
     file delete temp.tcl
 }
-    #puts "[info pa] pwd: [pwd] pid: [pid]"
-#--------------------- factorial demo, to compare [time] results
-for {set i 6} {$i <= 12} {incr i} {
-#    puts "fac [format %2d $i]:[format %10d [fac $i]], [time {fac $i} 111]"
-}
+
+# --------------------- A factorial test to compare the performance with [time].
+# for {set i 6} {$i <= 12} {incr i} {
+#     puts "fac [format %2d $i]:[format %10d [fac $i]], [time {fac $i} 111]"
+# }
 puts "[info script] [info patchlevel]: ---------------- tested $n, failed $r"
