@@ -1798,7 +1798,7 @@ COMMAND(file) {
         if (fp) {
             fclose(fp);
         }
-    } else if (SUBCMD("isdirectory") || SUBCMD("isfile")) {
+    } else if (SUBCMD("isdir") || SUBCMD("isdirectory") || SUBCMD("isfile")) {
         int result = picolIsDirectory(argv[2]);
         if (result < 0) {
             picolSetBoolResult(interp, 0);
@@ -2452,6 +2452,9 @@ COMMAND(lreverse) {
     char* cp;
     int element_len, result_len = 0, i, needs_braces;
     ARITY2(argc == 2, "lreverse list");
+    if (argv[1][0] == '\0') {
+        return picolSetResult(interp, "");
+    }
     FOREACH(element, cp, argv[1]) {
         element_len = strlen(element);
         needs_braces = picolNeedsBraces(element);

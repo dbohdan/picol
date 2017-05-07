@@ -187,18 +187,20 @@ if {$test_config(io)} {
         test exec.3  {exec echo {He said, "She said, 'Hello!'"}} -> {He said, "She said, 'Hello!'"}
     }
     if {$test_config(windows)} {
-        test exec.6  {exec echo Hello, World!} -> {Hello, World!}
+        test exec.4  {exec cmd.exe /c echo Hello, World!} -> {Hello, World!}
         test exec.5  {exec picol.exe qargv.pcl a b c} -> {{a b c}}
         test exec.6  {exec picol.exe qargv.pcl {a b c}} -> {{{a b c}}}
-        test exec.7  {exec echo {Hello, World!}} -> {"Hello, World!"}
+        test exec.7  {exec cmd.exe /c echo {Hello, World!}} -> {"Hello, World!"}
         test exec.8  {exec picol.exe qargv.pcl {He said, "She said, 'Hello!'"}} -> \
                 {{{He said, "She said, 'Hello!'"}}}
         test exec.9  {exec picol.exe qargv.pcl \
                 {They said, 'Hello!'} {"Hasta la vista, baby!"} Tab\ttab} -> \
                 [list [list {They said, 'Hello!'} {"Hasta la vista, baby!"} Tab\ttab]]
         test exec.10 {exec picol.exe qargv.pcl &whoami} -> &whoami
-        test exec.11 {exec echo {\n} {\\\n} {\"}} -> {\n \\\n "\\\""}
-        test exec.12 {exec picol.exe qargv.pcl {\n} {\\\n} {\"}} -> {{{\n} {\\\n} {\"}}}
+        test exec.11 {exec picol.exe qargv.pcl {\n} {\\\n} {\"}} -> {{{\n} {\\\n} {\"}}}
+        if {$test_config(picol)} {
+            test exec.12 {exec cmd.exe /c echo {\n} {\\\n} {\"}} -> {\n \\\n "\\\""}
+        }
     }
 }
 
@@ -241,10 +243,18 @@ if {$test_config(io)} {
     test file.isdir.1  {file isdirectory test.pcl} -> 0
     test file.isdir.2  {file isdirectory globtest} -> 1
     test file.isdir.3  {file isdirectory no_such_thing} -> 0
+    test file.isdir.4  {file isdir globtest} -> 1
+    test file.isdir.5  {file isdir no_such_thing} -> 0
     test file.isfile.1 {file isfile test.pcl} -> 1
     test file.isfile.2 {file isfile globtest} -> 0
     test file.isfile.3 {file isfile no_such_thing} -> 0
 
+    if {[file isfile directory/file]} {
+        file delete directory/file
+    }
+    if {[file isdir directory]} {
+        file delete directory
+    }
     test file.delete.1 {file delete no_such_thing} -> {} ;# No error.
     test file.delete.2 {
         close [open disposable w]
@@ -257,17 +267,32 @@ if {$test_config(io)} {
         } -> 1
     }
     test file.delete.4 {
-        catch {exec mkdir directory}
+        set exists [file isdir directory]
+        if {$::test_config(windows)} {
+            catch {exec cmd.exe /c mkdir directory}
+        } else {
+            catch {exec mkdir directory}
+        }
+        lappend exists [file isdir directory]
         file delete directory
-    } -> {}
+        lappend exists [file isdir directory]
+    } -> {0 1 0}
     test file.delete.5 {
-        catch {exec mkdir directory}
+        set exists [file exists directory/file]
+        if {$::test_config(windows)} {
+            catch {exec cmd.exe /c mkdir directory}
+        } else {
+            catch {exec mkdir directory}
+        }
         close [open directory/file w]
-        set error [catch {file delete directory}]
+        lappend exists [catch {file delete directory}]
+        lappend exists [file exists directory/file]
         file delete directory/file
+        after 50 ;# Prevents a heisenbug on Windows with MSVC builds.
         file delete directory
-        set error
-    } -> 1
+        lappend exists [file exists directory/file]
+        set exists
+    } -> {0 1 1 0}
 
     test file.1     {set f [open t.t w];puts $f hello;set x [tell $f];close $f; set x
                         } -> $test_config(hello_file_length)
@@ -599,7 +624,11 @@ if {$test_config(picol) && $test_config(io)} {
 
 if {$test_config(io)} {
     if {$test_config(windows)} {
-        set root C:\\
+        if {$test_config(picol)} {
+            set root C:\\
+        } else {
+            set root C:/
+        }
     } else {
         set root /
     }
@@ -817,7 +846,7 @@ if {$test_config(picol) && $test_config(io)} {
     if {[catch {set output [exec tclsh temp.tcl]}]} {
         puts {warning: can't run tclsh; the test suite won't be tested}
         puts {         against mainline Tcl and no statistics will be}
-        puts {         displayed}
+        puts {         reported}
     } else {
         puts "tclsh $thisfile -m $match"
         exec tclsh $thisfile -m $match
