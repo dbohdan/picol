@@ -1,7 +1,8 @@
 #!/usr/bin/env picol
-# test.pcl - test suite for the Picol interpreter
-# with many extensions by suchenwi. Call with "-l" to display all test cases \
-this comment extended? yes
+# test.pcl - A test suite for the Picol interpreter
+# with many extensions by suchenwi and dbohdan. Call with "-l" to display all
+# test cases. Is this comment extended? \
+Yes, it is.
 set patchlevel 0.2.3
 set thisfile [info script]
 

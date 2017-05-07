@@ -1,6 +1,6 @@
 /* Tcl in ~ 500 lines of code by Salvatore antirez Sanfilippo. BSD licensed
  * 2007-04-01 Added by suchenwi: many more commands, see below.
- * 2016-01    Misc. fixes and improvements by dbohdan. See Fossil timeline.
+ * 2016-2017  Misc. improvements and fixes by dbohdan. See Fossil timeline.
  *
  * This file provides both the interface and the implementation for Picol.
  * To instantiate the implementation put the line
