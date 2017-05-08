@@ -17,8 +17,8 @@ examples-test: examples
 	./examples/hello
 
 clean:
-	-rm picol picol.exe
-	-rm examples/command examples/command.exe
-	-rm examples/hello examples/hello.exe
+	-rm picol picol.exe interp.obj
+	-rm examples/command examples/command.exe command.obj
+	-rm examples/hello examples/hello.exe hello.obj
 
 .PHONY: clean examples examples-test test

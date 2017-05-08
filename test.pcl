@@ -3,7 +3,7 @@
 # with many extensions by suchenwi and dbohdan. Call with "-l" to display all
 # test cases. Is this comment extended? \
 Yes, it is.
-set patchlevel 0.2.4
+set patchlevel 0.3.0
 set thisfile [info script]
 set tcl tclsh ;# The Tcl 8.x interpreter binary.
 
@@ -270,10 +270,43 @@ test expr.3     {expr 3 + 4 + 5}       -> 12
 test expr.4     {expr {3 + 4 + 7}}     -> 14
 test expr.5     {set x 8; expr {3 + 4 + $x}} -> 15
 test expr.6     {expr 42} -> 42
+test expr.7     {expr 0x00 + 0} -> 0
+test expr.8     {expr 0xFF + 0} -> 255
+test expr.9     {expr 0xab + 0} -> 171
+test expr.10    {expr 0x01 + 0x02} -> 3
+test expr.11    {expr 0x15 + 1} -> 22
+test expr.12    {expr 0b1000 + 0b0111} -> 15
+test expr.13    {expr 0o777 + 1} -> 512
+test expr.14    {expr -0xFF + 0} -> -255
+test expr.15    {expr -0xFF + 0} -> -255
+test expr.16    {expr -0b1011 + 0} -> -11
+test expr.17    {expr -0x122 + 0} -> -290
+if {$test_config(picol)} {
+    test expr.18    {expr 0abcdef + 0} -> {expected integer but got "0abcdef"}
+    test expr.19    {expr 0xZZZ + 0} -> {expected integer but got "0xZZZ"}
+    test expr.20    {expr 0o9 + 0} -> {expected integer but got "0o9"}
+    test expr.21    {expr 0b00103 + 0} -> {expected integer but got "0b00103"}
+    test expr.22    {expr 0000255 + 0} -> 255
+    test expr.23    {expr -0000255 + 0} -> -255
+}
 
 test fac.1      {proc fac x {if [< $x 2] {return $x} else {* $x [fac [- $x 1]]}}; fac 5} -> 120
 test fac.1a     {proc fac x {if {$x < 2} {set x} else {* $x [fac [- $x 1]]}}; fac 6} -> 720
 test fac.2      {fac 12} ->  479001600
+if {$test_config(picol)} {
+    test fac.3      {
+        proc fac x {
+            try {
+                if {$x <= 1} {
+                    return 1
+                } else {
+                    apply {y {% [* $y [fac [- $y 1]]] 0xFFFF}} $x 
+                }
+            }
+        }
+        fac 99
+    } -> {too many nested evaluations (infinite loop?)}
+}
 
 if {$test_config(io)} {
     test file.ex.1  {file exists test.pcl} -> 1
@@ -455,8 +488,8 @@ if {$test_config(picol)} {
         lappend globals tcl_platform(engine) tcl_platform(maxLength) \
                 tcl_platform(platform) test_config(arrays) test_config(glob) \
                 test_config(hello_file_length) test_config(interp) \
-                test_config(io) test_config(picol) test_config(unix) \
-                test_config(windows)
+                test_config(io) test_config(newline) test_config(picol) \
+                test_config(tcl85) test_config(unix) test_config(windows)
     }
     test global.8  {proc g3 {} {lsort [info globals]}; g3} -> [lsort $globals]
     unset globals
@@ -719,11 +752,12 @@ test set.2       {set x 24; set x}         -> 24
 test set.3       {set x_y 35; set x_y}     -> 35
 test set.4       {set x_y 37; return $x_y} -> 37
 
-test source.1    {source globtest/test1} -> {}
-if {$test_config(windows)} {
-    test source.2    {source globtest\\test1} -> {}
-    test source.3    {source [pwd]\\globtest\\test1} -> {}
-
+if {$test_config(io)} {
+    test source.1    {source globtest/test1} -> {}
+    if {$test_config(windows)} {
+        test source.2    {source globtest\\test1} -> {}
+        test source.3    {source [pwd]\\globtest\\test1} -> {}
+    }
 }
 
 test split.1     {split aa:bb:cd:efg :}     -> {aa bb cd efg}

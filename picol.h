@@ -15,13 +15,18 @@
 #ifndef PICOL_CONFIGURATION
 #define PICOL_CONFIGURATION
 
-#define MAXSTR 4096
+#define PICOL_MAX_STR    4096
+#define PICOL_MAX_LEVEL  20
 /* Optional features. Define as zero to disable. */
-#define PICOL_FEATURE_ARRAYS  1
-#define PICOL_FEATURE_GLOB    1
-#define PICOL_FEATURE_INTERP  1
-#define PICOL_FEATURE_IO      1
-#define PICOL_FEATURE_PUTS    1
+#define PICOL_FEATURE_ARRAYS    1
+#ifdef _MSC_VER
+#    define PICOL_FEATURE_GLOB  0
+#else
+#    define PICOL_FEATURE_GLOB  1
+#endif
+#define PICOL_FEATURE_INTERP    1
+#define PICOL_FEATURE_IO        1
+#define PICOL_FEATURE_PUTS      1
 
 #endif /* PICOL_CONFIGURATION */
 
@@ -39,14 +44,11 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#define PICOL_PATCHLEVEL "0.2.4"
+#define PICOL_PATCHLEVEL "0.3.0"
 
 /* MSVC compatibility. */
 #ifdef _MSC_VER
 #   include <windows.h>
-#   undef  PICOL_FEATURE_GLOB
-#   define PICOL_FEATURE_GLOB 0
-#   define MAXRECURSION 75
 #   define PICOL_GETCWD _getcwd
 #   define PICOL_GETPID GetCurrentProcessId
 #   define PICOL_POPEN  _popen
@@ -54,7 +56,6 @@
 #   define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
 #else
 #   include <unistd.h>
-#   define MAXRECURSION 160
 #   define PICOL_GETCWD getcwd
 #   define PICOL_GETPID getpid
 #   define PICOL_POPEN  popen
@@ -127,9 +128,10 @@
 #define PARSED(_t)        do {p->end = p->p-1; p->type = _t;} while (0)
 #define RETURN_PARSED(_t) do {PARSED(_t); return PICOL_OK;} while (0)
 
-#define SCAN_INT(v,x)     do {if (picolIsInt(x)) {v = atoi(x);} else {\
-                          return picolErr1(interp, "expected integer " \
-                          "but got \"%s\"", x);}} while (0)
+#define SCAN_INT(v,x)     do {int base = picolIsInt(x); if (base > 0) \
+                          {v = picolScanInt(x, base);} \
+                          else { return picolErr1(interp, "expected integer " \
+                          "but got \"%s\"", x); }} while (0)
 
 #define SCAN_PTR(v,x)     do {void*_p; if ((_p=picolIsPtr(x))) {v = _p;} else \
                           {return picolErr1(interp, "expected pointer " \
@@ -142,20 +144,20 @@ enum {PT_ESC, PT_STR, PT_CMD, PT_VAR, PT_SEP, PT_EOL, PT_EOF, PT_XPND};
 
 /* ------------------------------------------------------------------- types */
 typedef struct picolParser {
-  char*  text;
-  char*  p;           /* current text position */
-  size_t len;         /* remaining length */
-  char*  start;       /* token start */
-  char*  end;         /* token end */
-  int    type;        /* token type, PT_... */
-  int    insidequote; /* True if inside " " */
-  int    expand;      /* true after {*} */
+    char*  text;
+    char*  p;           /* current text position */
+    size_t len;         /* remaining length */
+    char*  start;       /* token start */
+    char*  end;         /* token end */
+    int    type;        /* token type, PT_... */
+    int    insidequote; /* True if inside " " */
+    int    expand;      /* true after {*} */
 } picolParser;
 
 typedef struct picolVar {
-  char*  name;
-  char*  val;
-  struct picolVar* next;
+    char*  name;
+    char*  val;
+    struct picolVar* next;
 } picolVar;
 
 struct picolInterp; /* forward declaration */
@@ -163,32 +165,33 @@ typedef int (*picol_Func)(struct picolInterp *interp, int argc, char **argv, \
                           void *pd);
 
 typedef struct picolCmd {
-  char*            name;
-  picol_Func       func;
-  void*            privdata;
-  struct picolCmd* next;
+    char*            name;
+    picol_Func       func;
+    void*            privdata;
+    struct picolCmd* next;
 } picolCmd;
 
 typedef struct picolCallFrame {
-  picolVar*              vars;
-  char*                  command;
-  struct picolCallFrame* parent; /* parent is NULL at top level */
+    picolVar*              vars;
+    char*                  command;
+    struct picolCallFrame* parent; /* parent is NULL at top level */
 } picolCallFrame;
 
 typedef struct picolInterp {
-  int             level;              /* Level of nesting */
-  picolCallFrame* callframe;
-  picolCmd*       commands;
-  char*           current;        /* currently executed command */
-  char*           result;
-  int             trace; /* 1 to display each command, 0 if not */
+    int             level;              /* Level of nesting */
+    int             maxlevel;
+    picolCallFrame* callframe;
+    picolCmd*       commands;
+    char*           current;        /* currently executed command */
+    char*           result;
+    int             trace; /* 1 to display each command, 0 if not */
 } picolInterp;
 
 #define DEFAULT_ARRSIZE 16
 
 typedef struct picolArray {
-  picolVar* table[DEFAULT_ARRSIZE];
-  int       size;
+    picolVar* table[DEFAULT_ARRSIZE];
+    int       size;
 } picolArray;
 
 /* Ease of use macros. */
@@ -324,6 +327,7 @@ int picolParseSep(picolParser *p);
 int picolParseString(picolParser *p);
 int picolParseVar(picolParser *p);
 int picolRegisterCmd(picolInterp *interp, char *name, picol_Func f, void *pd);
+int picolScanInt(char* str, int base);
 int picolSetFmtResult(picolInterp* interp, char* fmt, int result);
 int picolSetIntVar(picolInterp *interp, char *name, int value);
 int picolSetResult(picolInterp *interp, char *s);
@@ -544,7 +548,7 @@ int picolSetFmtResult(picolInterp* interp, char* fmt, int result) {
     return picolSetResult(interp, buf);
 }
 int picolErr(picolInterp* interp, char* str) {
-    char buf[MAXSTR] = "";
+    char buf[PICOL_MAX_STR] = "";
     picolCallFrame* cf;
     APPEND(buf, str);
     if (interp->current) {
@@ -564,7 +568,7 @@ int picolErr(picolInterp* interp, char* str) {
 }
 int picolErr1(picolInterp* interp, char* format, char* arg) {
     /* The format line should contain exactly one %s specifier. */
-    char buf[MAXSTR];
+    char buf[PICOL_MAX_STR];
     sprintf(buf, format, arg);
     return picolErr(interp, buf);
 }
@@ -583,7 +587,7 @@ picolVar* picolGetVar2(picolInterp* interp, char* name, int glob) {
     }
 #if PICOL_FEATURE_ARRAYS
     {
-        char buf[MAXSTR], buf2[MAXSTR], *cp, *cp2;
+        char buf[PICOL_MAX_STR], buf2[PICOL_MAX_STR], *cp, *cp2;
         /* array element syntax? */
         if ((cp = strchr(name, '('))) {
             picolArray* ap;
@@ -720,6 +724,7 @@ int picolGetToken(picolInterp* interp, picolParser* p) {
 }
 void picolInitInterp(picolInterp* interp) {
     interp->level     = 0;
+    interp->maxlevel  = PICOL_MAX_LEVEL;
     interp->callframe = calloc(1, sizeof(picolCallFrame));
     interp->result    = strdup("");
 }
@@ -803,7 +808,7 @@ char* picolParseList(char* start, char* trg) {
     return cp;
 }
 void picolEscape(char* str) {
-    char buf[MAXSTR], *cp, *cp2;
+    char buf[PICOL_MAX_STR], *cp, *cp2;
     int ichar;
     for (cp = str, cp2 = buf; *cp; cp++) {
         if (*cp == '\\') {
@@ -847,7 +852,8 @@ int picolEval2(picolInterp* interp, char* t, int mode) { /*------------ EVAL! */
     /* mode==0: subst only, mode==1: full eval */
     picolParser p;
     int argc = 0, j;
-    char**      argv = NULL, buf[MAXSTR*2];
+    char** argv = NULL;
+    char buf[PICOL_MAX_STR*2];
     int tlen, rc = PICOL_OK;
     picolSetResult(interp, "");
     picolInitParser(&p, t);
@@ -963,7 +969,7 @@ int picolEval2(picolInterp* interp, char* t, int mode) { /*------------ EVAL! */
                 argc++;
                 p.expand = 0;
             } else if (strlen(t)) {
-                char buf2[MAXSTR], *cp;
+                char buf2[PICOL_MAX_STR], *cp;
                 FOREACH(buf2, cp, t) {
                     argv       = realloc(argv, sizeof(char*)*(argc+1));
                     argv[argc] = strdup(buf2);
@@ -974,7 +980,7 @@ int picolEval2(picolInterp* interp, char* t, int mode) { /*------------ EVAL! */
             }
         } else if (p.expand) {
             /* slice in the words separately */
-            char buf2[MAXSTR], *cp;
+            char buf2[PICOL_MAX_STR], *cp;
             FOREACH(buf2, cp, t) {
                 argv       = realloc(argv, sizeof(char*)*(argc+1));
                 argv[argc] = strdup(buf2);
@@ -1001,7 +1007,7 @@ err:
 }
 int picolCondition(picolInterp* interp, char* str) {
     if (str) {
-        char buf[MAXSTR], buf2[MAXSTR], *argv[3], *cp;
+        char buf[PICOL_MAX_STR], buf2[PICOL_MAX_STR], *argv[3], *cp;
         int a = 0, rc;
         rc = picolSubst(interp, str);
         if (rc != PICOL_OK) {
@@ -1054,19 +1060,68 @@ int picolIsDirectory(char* path) {
 }
 int picolIsInt(char* str) {
     char* cp = str;
-    /* allow leading minus */
-    if (*cp == '-') cp++;
+    int base = 10, rem = strlen(str);
+
+    if (rem == 0) return 0;
+
+    /* Allow a leading minus. */
+    if (*cp == '-') {
+        cp++; rem--;
+    }
+    if (rem == 0) return 0;
+
+    /* Parse the optional base marker. */
+    if (*cp == '0' && rem >= 2) {
+        char b = *(cp + 1);
+        if (b == 'b' || b == 'B') {
+            base = 2;
+        } else if (b == 'o' || b == 'O') {
+            base = 8;
+        } else if (b == 'x' || b == 'X') {
+            base = 16;
+        }
+        if (base != 10) {
+            cp += 2;
+        }
+    }
+
+    /* Validate the number itself. */
     for (; *cp; cp++) {
-        if (!isdigit(*cp)) {
+        char c = *cp;
+        int n;
+        if (c >= 'A' && c <= 'Z') {
+            c = c - 'A' + 'a';
+        }
+        if (c >= '0' && c <= '9') {
+            n = c - '0';
+        } else if (c >= 'a' && c <= 'z') {
+            n = c - 'a' + 10;
+        } else {
+            return 0;
+        }
+        if (n >= base) {
             return 0;
         }
     }
-    return 1;
+
+    return base;
 }
 void* picolIsPtr(char* str) {
     void* p = NULL;
     sscanf(str, "%p", &p);
     return (p && strlen(str) >= 3 ? p : NULL);
+}
+int picolScanInt(char* str, int base) {
+    int sign = 1;
+    if (*str == '-') {
+        str++; sign = -1;
+    }
+    if (base == 10) {
+        while (*str == '0') { str++; }
+    } else {
+        str += 2;
+    }
+    return sign*strtol(str, NULL, base);
 }
 void picolDropCallFrame(picolInterp* interp) {
     picolCallFrame* cf = interp->callframe;
@@ -1085,16 +1140,17 @@ void picolDropCallFrame(picolInterp* interp) {
 }
 int picolCallProc(picolInterp* interp, int argc, char** argv, void* pd) {
     char** x=pd, *alist=x[0], *body=x[1], *p=strdup(alist), *tofree;
-    char buf[MAXSTR];
+    char buf[PICOL_MAX_STR];
     picolCallFrame* cf = calloc(1, sizeof(*cf));
     int a = 0, done = 0, errcode = PICOL_OK;
     if (!cf) {
         printf("could not allocate callframe\n");
         exit(1);
     }
-    cf->parent   = interp->callframe;
+    cf->parent = interp->callframe;
     interp->callframe = cf;
-    if (interp->level>MAXRECURSION) {
+    if (interp->level > interp->maxlevel) {
+        picolDropCallFrame(interp);
         return picolErr(interp, "too many nested evaluations (infinite loop?)");
     }
     interp->level++;
@@ -1189,8 +1245,8 @@ int picolReplace(char* str, char* from, char* to, int nocase) {
     int toLen = strlen(to);
 
     int fromIndex = 0;
-    char result[MAXSTR] = "\0";
-    char buf[MAXSTR] = "\0";
+    char result[PICOL_MAX_STR] = "\0";
+    char buf[PICOL_MAX_STR] = "\0";
     int resultLen = 0;
     int bufLen = 0;
     int count = 0;
@@ -1228,7 +1284,7 @@ int picolReplace(char* str, char* from, char* to, int nocase) {
 
             for (j = 0; j < toLen; j++) {
                 result[resultLen + j] = to[j];
-                if (resultLen + j >= MAXSTR - 1) {
+                if (resultLen + j >= PICOL_MAX_STR - 1) {
                     break;
                 }
             }
@@ -1238,27 +1294,27 @@ int picolReplace(char* str, char* from, char* to, int nocase) {
             bufLen = 0;
             count++;
 
-            if (resultLen >= MAXSTR - 1) {
+            if (resultLen >= PICOL_MAX_STR - 1) {
                 break;
             }
         }
     }
 
-    if (resultLen < MAXSTR - 1) {
+    if (resultLen < PICOL_MAX_STR - 1) {
         for (j = 0; j < bufLen; j++) {
             result[resultLen + j] = buf[j];
         }
         resultLen += bufLen;
         result[resultLen] = '\0';
     } else {
-        result[MAXSTR - 1] = '\0';
+        result[PICOL_MAX_STR - 1] = '\0';
     }
 
     strcpy(str, result);
     return count;
 }
 int picolQuoteForShell(char* dest, int argc, char** argv) {
-    char command[MAXSTR] = "\0";
+    char command[PICOL_MAX_STR] = "\0";
     unsigned int j;
     unsigned int k;
     unsigned int offset = 0;
@@ -1270,7 +1326,7 @@ int picolQuoteForShell(char* dest, int argc, char** argv) {
     int backslashes = 0;
     int m;
     int length;
-    char command_unquoted[MAXSTR] = "\0";
+    char command_unquoted[PICOL_MAX_STR] = "\0";
     for (j = 1; j < argc; j++) {
         ADDCHAR(' ');
         length = strlen(argv[j]);
@@ -1386,7 +1442,7 @@ COMMAND(after) {
 #endif
 COMMAND(append) {
     picolVar* v;
-    char buf[MAXSTR] = "";
+    char buf[PICOL_MAX_STR] = "";
     int a;
     ARITY2(argc > 1, "append varName ?value value ...?");
     v = picolGetVar(interp, argv[1]);
@@ -1401,7 +1457,7 @@ COMMAND(append) {
 }
 COMMAND(apply) {
     char* procdata[2], *cp;
-    char buf[MAXSTR], buf2[MAXSTR];
+    char buf[PICOL_MAX_STR], buf2[PICOL_MAX_STR];
     ARITY2(argc >= 2, "apply {argl body} ?arg ...?");
     cp = picolParseList(argv[1], buf);
     picolParseList(cp, buf2);
@@ -1420,7 +1476,7 @@ int picolHash(char* key, int modul) {
     return hash % modul;
 }
 picolArray* picolArrCreate(picolInterp* interp, char* name) {
-    char buf[MAXSTR];
+    char buf[PICOL_MAX_STR];
     picolArray* ap = calloc(1, sizeof(picolArray));
     sprintf(buf, "%p", (void*)ap);
     picolSetVar(interp, name, buf);
@@ -1478,7 +1534,7 @@ picolVar* picolArrSet(picolArray* ap, char* key, char* value) {
     return v;
 }
 picolVar* picolArrSet1(picolInterp* interp, char* name, char* value) {
-    char buf[MAXSTR], *cp;
+    char buf[PICOL_MAX_STR], *cp;
     picolArray* ap;
     picolVar*   v;
     cp = strchr(name, '(');
@@ -1533,7 +1589,7 @@ char* picolArrStat(picolArray* ap, char* buf) {
 COMMAND(array) {
     picolVar*   v;
     picolArray* ap = NULL;
-    char buf[MAXSTR] = "", buf2[MAXSTR], *cp;
+    char buf[PICOL_MAX_STR] = "", buf2[PICOL_MAX_STR], *cp;
     /* default: array size */
     int mode = 0;
     ARITY2(argc > 2,
@@ -1615,7 +1671,7 @@ char* picolConcat(char* buf, int argc, char** argv) {
     return buf;
 }
 COMMAND(concat) {
-    char buf[MAXSTR];
+    char buf[PICOL_MAX_STR];
     ARITY2(argc > 0, "concat ?arg...?");
     return picolSetResult(interp, picolConcat(buf, argc, argv));
 }
@@ -1670,7 +1726,7 @@ COMMAND(clock) {
     return PICOL_OK;
 }
 COMMAND(eval) {
-    char buf[MAXSTR];
+    char buf[PICOL_MAX_STR];
     ARITY2(argc >= 2, "eval arg ?arg ...?");
     return picolEval(interp, picolConcat(buf, argc, argv));
 }
@@ -1687,9 +1743,9 @@ COMMAND(error) {
 #if PICOL_FEATURE_IO
 COMMAND(exec) {
     /* This is far from the real thing, but it may be useful. */
-    char command[MAXSTR] = "\0";
+    char command[PICOL_MAX_STR] = "\0";
     char buf[256] = "\0";
-    char output[MAXSTR] = "\0";
+    char output[PICOL_MAX_STR] = "\0";
     FILE* fd;
     int status;
     int length;
@@ -1735,7 +1791,7 @@ COMMAND(exit) {
 COMMAND(expr) {
     /* Only a simple case is supported: two or more operands with the same
     operator between them. */
-    char buf[MAXSTR] = "";
+    char buf[PICOL_MAX_STR] = "";
     int a;
     ARITY2((argc%2)==0, "expr int1 op int2 ...");
     if (argc==2) {
@@ -1758,7 +1814,7 @@ COMMAND(expr) {
     return picolEval(interp, buf);
 }
 COMMAND(file) {
-    char buf[MAXSTR] = "\0", *cp;
+    char buf[PICOL_MAX_STR] = "\0", *cp;
     int a;
     ARITY2(argc >= 3, "file option ?arg ...?");
     if (SUBCMD("dirname")) {
@@ -1836,7 +1892,7 @@ COMMAND(file) {
         }
         picolSetResult(interp, buf);
     } else if (SUBCMD("split")) {
-        char fragment[MAXSTR];
+        char fragment[PICOL_MAX_STR];
         char* start = argv[2];
         if (*start == '/') {
             APPEND(buf, "/");
@@ -1929,7 +1985,8 @@ COMMAND(for) {
 int picolLmap(picolInterp* interp, char* vars, char* list, char* body,
               int accumulate) {
     /* Only iterating over a single list is currently supported. */
-    char buf[MAXSTR] = "", buf2[MAXSTR], result[MAXSTR] = "";
+    char buf[PICOL_MAX_STR] = "", buf2[PICOL_MAX_STR];
+    char result[PICOL_MAX_STR] = "";
     char* cp, *varp;
     int rc, done=0;
     if (*list == '\0') {
@@ -1975,7 +2032,7 @@ COMMAND(format) {
     int value;
     unsigned int j = 0;
     int length = 0;
-    char buf[MAXSTR];
+    char buf[PICOL_MAX_STR];
     ARITY2(argc == 2 || argc == 3, "format formatString ?arg?");
     if (argc == 2) {
         return picolSetResult(interp, argv[1]); /* identity */
@@ -2017,7 +2074,7 @@ COMMAND(format) {
 }
 #if PICOL_FEATURE_IO
 COMMAND(gets) {
-    char buf[MAXSTR], *getsrc;
+    char buf[PICOL_MAX_STR], *getsrc;
     FILE* fp = stdin;
     ARITY2(argc == 2 || argc == 3, "gets channelId ?varName?");
     picolSetResult(interp, "-1");
@@ -2044,9 +2101,9 @@ COMMAND(gets) {
 #if PICOL_FEATURE_GLOB
 COMMAND(glob) {
     /* implicit -nocomplain. */
-    char buf[MAXSTR] = "\0";
-    char file_path[MAXSTR] = "\0";
-    char old_wd[MAXSTR] = "\0";
+    char buf[PICOL_MAX_STR] = "\0";
+    char file_path[PICOL_MAX_STR] = "\0";
+    char old_wd[PICOL_MAX_STR] = "\0";
     char* new_wd;
     char* pattern;
     int append_slash = 0;
@@ -2062,7 +2119,7 @@ COMMAND(glob) {
                              "bad option \"%s\": must be -directory or -dir",
                              argv[1]);
         }
-        PICOL_GETCWD(old_wd, MAXSTR);
+        PICOL_GETCWD(old_wd, PICOL_MAX_STR);
         new_wd = argv[2];
         pattern = argv[3];
         if (chdir(new_wd)) {
@@ -2129,7 +2186,7 @@ COMMAND(if) {
     return picolSetResult(interp, "");
 }
 int picol_InNi(picolInterp* interp, int argc, char** argv, void* pd) {
-    char buf[MAXSTR], *cp;
+    char buf[PICOL_MAX_STR], *cp;
     int in = EQ(argv[0], "in");
     ARITY2(argc == 3, "in|ni element list");
     /* ARITY2 "ni element list" */
@@ -2157,7 +2214,7 @@ COMMAND(incr) {
     return picolSetIntResult(interp, value);
 }
 COMMAND(info) {
-    char buf[MAXSTR] = "", *pat = "*";
+    char buf[PICOL_MAX_STR] = "", *pat = "*";
     picolCmd* c = interp->commands;
     int procs = SUBCMD("procs");
     ARITY2(argc == 2 || argc == 3,
@@ -2270,7 +2327,8 @@ COMMAND(interp) {
 }
 #endif
 COMMAND(join) {
-    char buf[MAXSTR] = "", buf2[MAXSTR]="", *with = " ", *cp, *cp2 = NULL;
+    char buf[PICOL_MAX_STR] = "", buf2[PICOL_MAX_STR]="", *with = " ";
+    char *cp, *cp2 = NULL;
     ARITY2(argc == 2 || argc == 3, "join list ?joinString?");
     if (argc == 3) {
         with = argv[2];
@@ -2288,7 +2346,7 @@ COMMAND(join) {
     return picolSetResult(interp, buf2);
 }
 COMMAND(lappend) {
-    char buf[MAXSTR] = "";
+    char buf[PICOL_MAX_STR] = "";
     int a;
     picolVar* v;
     ARITY2(argc >= 2, "lappend varName ?value value ...?");
@@ -2302,7 +2360,7 @@ COMMAND(lappend) {
     return picolSetResult(interp, buf);
 }
 COMMAND(lassign) {
-    char result[MAXSTR] = "", element[MAXSTR];
+    char result[PICOL_MAX_STR] = "", element[PICOL_MAX_STR];
     char* cp;
     int i = 2;
     ARITY2(argc >= 2, "lassign list ?varName ...?");
@@ -2320,7 +2378,7 @@ COMMAND(lassign) {
     return picolSetResult(interp, result);
 }
 COMMAND(lindex) {
-    char buf[MAXSTR] = "", *cp;
+    char buf[PICOL_MAX_STR] = "", *cp;
     int n = 0, idx;
     ARITY2((argc == 2) || (argc == 3), "lindex list [index]");
     /* Act as an identity function if no index is given. */
@@ -2336,7 +2394,7 @@ COMMAND(lindex) {
     return PICOL_OK;
 }
 COMMAND(linsert) {
-    char buf[MAXSTR] = "", buf2[MAXSTR]="", *cp;
+    char buf[PICOL_MAX_STR] = "", buf2[PICOL_MAX_STR]="", *cp;
     int pos = -1, j=0, a, atend=0;
     int inserted = 0;
     ARITY2(argc >= 3, "linsert list index element ?element ...?");
@@ -2366,7 +2424,7 @@ COMMAND(linsert) {
     return picolSetResult(interp, buf2);
 }
 COMMAND(list) {
-    char buf[MAXSTR] = "";
+    char buf[PICOL_MAX_STR] = "";
     int a;
     /* ARITY2 "list ?value ...?" for documentation */
     for (a=1; a<argc; a++) {
@@ -2375,7 +2433,7 @@ COMMAND(list) {
     return picolSetResult(interp, buf);
 }
 COMMAND(llength) {
-    char buf[MAXSTR], *cp;
+    char buf[PICOL_MAX_STR], *cp;
     int n = 0;
     ARITY2(argc == 2, "llength list");
     FOREACH(buf, cp, argv[1]) {
@@ -2388,7 +2446,7 @@ COMMAND(lmap) {
     return picolLmap(interp, argv[1], argv[2], argv[3], 1);
 }
 COMMAND(lrange) {
-    char buf[MAXSTR] = "", buf2[MAXSTR] = "", *cp;
+    char buf[PICOL_MAX_STR] = "", buf2[PICOL_MAX_STR] = "", *cp;
     int from, to, a = 0, toend = 0;
     ARITY2(argc == 4, "lrange list first last");
     SCAN_INT(from, argv[2]);
@@ -2406,7 +2464,7 @@ COMMAND(lrange) {
     return picolSetResult(interp, buf2);
 }
 COMMAND(lrepeat) {
-    char result[MAXSTR] = "";
+    char result[PICOL_MAX_STR] = "";
     int count, i, j;
     ARITY2(argc >= 2, "lrepeat count ?element ...?");
     SCAN_INT(count, argv[1]);
@@ -2418,8 +2476,8 @@ COMMAND(lrepeat) {
     return picolSetResult(interp, result);
 }
 COMMAND(lreplace) {
-    char buf[MAXSTR] = "";
-    char buf2[MAXSTR] = "";
+    char buf[PICOL_MAX_STR] = "";
+    char buf2[PICOL_MAX_STR] = "";
     char* cp;
     int from, to = INT_MAX, a = 0, done = 0, j, toend = 0;
     ARITY2(argc >= 4, "lreplace list first last ?element element ...?");
@@ -2459,7 +2517,7 @@ COMMAND(lreplace) {
     return picolSetResult(interp, buf2);
 }
 COMMAND(lreverse) {
-    char result[MAXSTR] = "", element[MAXSTR] = "";
+    char result[PICOL_MAX_STR] = "", element[PICOL_MAX_STR] = "";
     char* cp;
     int element_len, result_len = 0, i, needs_braces;
     ARITY2(argc == 2, "lreverse list");
@@ -2487,7 +2545,7 @@ COMMAND(lreverse) {
     return picolSetResult(interp, result);
 }
 COMMAND(lsearch) {
-    char buf[MAXSTR] = "", *cp;
+    char buf[PICOL_MAX_STR] = "", *cp;
     int j = 0;
     ARITY2(argc == 3, "lsearch list pattern");
     FOREACH(buf, cp, argv[1]) {
@@ -2499,7 +2557,7 @@ COMMAND(lsearch) {
     return picolSetResult(interp, "-1");
 }
 COMMAND(lset) {
-    char buf[MAXSTR] = "", buf2[MAXSTR]="", *cp;
+    char buf[PICOL_MAX_STR] = "", buf2[PICOL_MAX_STR]="", *cp;
     picolVar* var;
     int pos, a=0;
     ARITY2(argc == 4, "lset listVar index value");
@@ -2537,7 +2595,8 @@ int qsort_cmp_int(const void* a, const void* b) {
     return (diff > 0 ? 1 : diff < 0 ? -1 : 0);
 }
 COMMAND(lsort) {
-    char buf[MAXSTR] = "_l "; /* dispatch to helper function picolLsort */
+    /* Dispatch to the helper function picolLsort. */
+    char buf[PICOL_MAX_STR] = "_l ";
     ARITY2(argc == 2 || argc == 3, "lsort ?-decreasing|-integer|-unique? list");
     APPEND(buf, argv[1]);
     if (argc==3) {
@@ -2547,7 +2606,7 @@ COMMAND(lsort) {
     return picolEval(interp, buf);
 }
 int picolLsort(picolInterp* interp, int argc, char** argv, void* pd) {
-    char buf[MAXSTR] = "";
+    char buf[PICOL_MAX_STR] = "";
     char** av = argv+1;
     int ac = argc-1, a;
     if (argc<2) {
@@ -2727,7 +2786,7 @@ COMMAND(not) {
 COMMAND(open) {
     char* mode = "r";
     FILE* fp = NULL;
-    char fp_str[MAXSTR];
+    char fp_str[PICOL_MAX_STR];
     ARITY2(argc == 2 || argc == 3, "open fileName ?access?");
     if (argc == 3) {
         mode = argv[2];
@@ -2810,8 +2869,8 @@ COMMAND(puts) {
 #if PICOL_FEATURE_IO
 COMMAND(pwd) {
     ARITY(argc == 1);
-    char buf[MAXSTR] = "\0";
-    return picolSetResult(interp, PICOL_GETCWD(buf, MAXSTR));
+    char buf[PICOL_MAX_STR] = "\0";
+    return picolSetResult(interp, PICOL_GETCWD(buf, PICOL_MAX_STR));
 }
 #endif
 COMMAND(rand) {
@@ -2822,7 +2881,7 @@ COMMAND(rand) {
 }
 #if PICOL_FEATURE_IO
 COMMAND(read) {
-    char buf[MAXSTR*2];
+    char buf[PICOL_MAX_STR*2];
     int buf_size = sizeof(buf) - 1;
     int size = buf_size; /* Size argument value. */
     int actual_size = 0;
@@ -2831,12 +2890,12 @@ COMMAND(read) {
     SCAN_PTR(fp, argv[1]); /* caveat usor */
     if (argc == 3) {
         SCAN_INT(size, argv[2]);
-        if (size > MAXSTR - 1) {
+        if (size > PICOL_MAX_STR - 1) {
             return picolErr1(interp, "size %s too large", argv[2]);
         }
     }
     actual_size = fread(buf, 1, size, fp);
-    if (actual_size > MAXSTR - 1) {
+    if (actual_size > PICOL_MAX_STR - 1) {
         return picolErr(interp, "read contents too long");
     } else {
         buf[actual_size] = '\0';
@@ -2920,7 +2979,7 @@ COMMAND(set) {
     }
 }
 int picolSource(picolInterp* interp, char* filename) {
-    char buf[MAXSTR*64];
+    char buf[PICOL_MAX_STR*64];
     int rc;
     FILE* fp = fopen(filename, "r");
     if (!fp) {
@@ -2942,7 +3001,7 @@ COMMAND(source) {
 #endif
 COMMAND(split) {
     char* split = " ", *cp, *start;
-    char buf[MAXSTR] = "", buf2[MAXSTR] = "";
+    char buf[PICOL_MAX_STR] = "", buf2[PICOL_MAX_STR] = "";
     ARITY2(argc == 2 || argc == 3, "split string ?splitChars?");
     if (argc==3) {
         split = argv[2];
@@ -2992,7 +3051,7 @@ char* picolToUpper(char* str) {
     return str;
 }
 COMMAND(string) {
-    char buf[MAXSTR] = "\0";
+    char buf[PICOL_MAX_STR] = "\0";
     ARITY2(argc >= 3, "string option string ?arg..?");
     if (SUBCMD("length")) {
         picolSetIntResult(interp, strlen(argv[2]));
@@ -3042,9 +3101,9 @@ COMMAND(string) {
         char* charMap;
         char* str;
         char* cp;
-        char from[MAXSTR] = "\0";
-        char to[MAXSTR] = "\0";
-        char result[MAXSTR] = "\0";
+        char from[PICOL_MAX_STR] = "\0";
+        char to[PICOL_MAX_STR] = "\0";
+        char result[PICOL_MAX_STR] = "\0";
         int nocase = 0;
 
         if (argc == 4) {
@@ -3166,7 +3225,7 @@ COMMAND(subst) {
     return picolSubst(interp, argv[1]);
 }
 COMMAND(switch) {
-    char* cp, buf[MAXSTR] = "";
+    char* cp, buf[PICOL_MAX_STR] = "";
     int fallthrough = 0, a;
     ARITY2(argc > 2, "switch string pattern body ... ?default body?");
     if (argc==3) { /* braced body variant */
@@ -3215,7 +3274,7 @@ COMMAND(time) {
 }
 COMMAND(try) {
     int body_rc, handler_rc, finally_rc;
-    char body_result[MAXSTR], handler_result[MAXSTR];
+    char body_result[PICOL_MAX_STR], handler_result[PICOL_MAX_STR];
     ARITY2(argc == 2 || argc == 4 || argc == 6 || argc == 8,
            "try body ?on error varName handler? ?finally script?");
     /*        0    1   2     3       4       5         6      7 */
@@ -3291,7 +3350,7 @@ COMMAND(unset) {
     return picolSetResult(interp, "");
 }
 COMMAND(uplevel) {
-    char buf[MAXSTR];
+    char buf[PICOL_MAX_STR];
     int rc, delta;
     picolCallFrame* cf = interp->callframe;
     ARITY2(argc >= 3, "uplevel level command ?arg...?");
@@ -3308,7 +3367,7 @@ COMMAND(uplevel) {
     return rc;
 }
 COMMAND(variable) {
-    char buf[MAXSTR]; /* limited to :: namespace so far */
+    char buf[PICOL_MAX_STR]; /* limited to :: namespace so far */
     int a, rc = PICOL_OK;
     ARITY2(argc>1, "variable ?name value...? name ?value?");
     for (a = 1; a < argc && rc == PICOL_OK; a++) {
@@ -3455,7 +3514,7 @@ picolInterp* picolCreateInterp2(int register_core_cmds, int randomize) {
     /* Maximum string length. */
     char maxLength[8];
     /* Subtract one for the final '\0', which scripts don't see. */
-    sprintf(maxLength, "%d", MAXSTR - 1);
+    sprintf(maxLength, "%d", PICOL_MAX_STR - 1);
     picolInitInterp(interp);
     if (register_core_cmds) {
         picolRegisterCoreCmds(interp);
@@ -3468,7 +3527,9 @@ picolInterp* picolCreateInterp2(int register_core_cmds, int randomize) {
                  "tcl_platform(platform)",
                  TCL_PLATFORM_PLATFORM_STRING,
                  1);
-    picolSetVar2(interp, "tcl_platform(engine)", TCL_PLATFORM_ENGINE_STRING, 1);
+    picolSetVar2(interp,
+                 "tcl_platform(engine)",
+                 TCL_PLATFORM_ENGINE_STRING, 1);
     picolSetVar2(interp, "tcl_platform(maxLength)", maxLength, 1);
     return interp;
 }
