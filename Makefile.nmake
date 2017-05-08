@@ -1,4 +1,4 @@
-all: picol.exe examples\hello.exe examples\command.exe
+all: picol.exe examples\hello.exe examples\command.exe examples\regexp-lib.exe
 
 picol.exe: interp.c picol.h
     cl /Fepicol.exe interp.c
@@ -6,3 +6,7 @@ examples\hello.exe: examples\hello.c picol.h
     cl /Feexamples\hello.exe /I. examples\hello.c
 examples\command.exe: examples\command.c picol.h
     cl /Feexamples\command.exe /I. examples\command.c
+regexp.obj: vendor\regexp.c
+    cl /c /Feregexp.obj vendor\regexp.c
+examples\regexp-lib.exe: examples\regexp-lib.c regexp.obj picol.h
+    cl /Feexamples\regexp-lib.exe regexp.obj /I. examples\regexp-lib.c

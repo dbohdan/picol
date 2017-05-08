@@ -1,0 +1,7 @@
+The regexp.h/regexp.c library is by Tor Andersson
+(https://github.com/ccxvii/minilibs).
+
+The library collection it is from carries the following note: "These libraries
+are in the public domain (or the equivalent where that is not possible). You
+can do anything you want with them. You have no legal obligation to do
+anything else, although I appreciate attribution."
