@@ -15,8 +15,12 @@
 #ifndef PICOL_CONFIGURATION
 #define PICOL_CONFIGURATION
 
-#define PICOL_MAX_STR    4096
-#define PICOL_MAX_LEVEL  20
+#define PICOL_MAX_STR        4096
+#ifdef _MSC_VER
+#    define PICOL_MAX_LEVEL  10
+#else
+#    define PICOL_MAX_LEVEL  35
+#endif
 /* Optional features. Define as zero to disable. */
 #define PICOL_FEATURE_ARRAYS    1
 #ifdef _MSC_VER
