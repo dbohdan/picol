@@ -39,7 +39,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#define PICOL_PATCHLEVEL "0.2.3"
+#define PICOL_PATCHLEVEL "0.2.4"
 
 /* MSVC compatibility. */
 #ifdef _MSC_VER
@@ -219,6 +219,7 @@ COMMAND(after);
 #endif
 COMMAND(append);
 COMMAND(apply);
+COMMAND(bitwise_not);
 COMMAND(break);
 COMMAND(catch);
 COMMAND(clock);
@@ -251,6 +252,8 @@ COMMAND(lreplace);
 COMMAND(lreverse);
 COMMAND(lsearch);
 COMMAND(lsort);
+COMMAND(max);
+COMMAND(min);
 COMMAND(not);
 COMMAND(pid);
 COMMAND(proc);
@@ -1592,6 +1595,13 @@ COMMAND(break)    {
     ARITY(argc == 1);
     return PICOL_BREAK;
 }
+COMMAND(bitwise_not) {
+    /* Implements the [~ int] command. */
+    int res;
+    ARITY2(argc == 2, "~ number");
+    SCAN_INT(res, argv[1]);
+    return picolSetIntResult(interp, ~res);
+}
 char* picolConcat(char* buf, int argc, char** argv) {
     int a;
     /* The caller is responsible for supplying a large enough buffer. */
@@ -2047,9 +2057,10 @@ COMMAND(glob) {
     if (argc == 2) {
         pattern = argv[1];
     } else {
-        if (!EQ(argv[1], "-directory")) {
-            return picolErr1(interp, "bad option \"%s\": must be -directory",
-                    argv[1]);
+        if (!EQ(argv[1], "-directory") && !EQ(argv[1], "-dir")) {
+            return picolErr1(interp,
+                             "bad option \"%s\": must be -directory or -dir",
+                             argv[1]);
         }
         PICOL_GETCWD(old_wd, MAXSTR);
         new_wd = argv[2];
@@ -2613,6 +2624,28 @@ int picol_Math(picolInterp* interp, int argc, char** argv, void* pd) {
     else if (EQ(argv[0], "||")) {
         FOLD(c=0, c = c || a, 1);
     }
+    /*ARITY2"& ?arg...?"*/
+    else if (EQ(argv[0], "&")) {
+        FOLD(c=INT_MAX, c = c & a, 1);
+    }
+    /*ARITY2"| ?arg...?"*/
+    else if (EQ(argv[0], "|")) {
+        FOLD(c=0, c = c | a, 1);
+    }
+    /*ARITY2"^ ?arg...?"*/
+    else if (EQ(argv[0], "^")) {
+        FOLD(c=0, c = c ^ a, 1);
+    }
+    /*ARITY2"<< a b" */
+    else if (EQ(argv[0], "<<" )) {
+        ARITY(argc==3);
+        c = a << b;
+    }
+    /*ARITY2">> a b" */
+    else if (EQ(argv[0], ">>" )) {
+        ARITY(argc==3);
+        c = a >> b;
+    }
     /*ARITY2"> a b" */
     else if (EQ(argv[0], ">" )) {
         ARITY(argc==3);
@@ -2645,6 +2678,20 @@ int picol_Math(picolInterp* interp, int argc, char** argv, void* pd) {
     }
     return picolSetIntResult(interp, c);
 }
+COMMAND(max) {
+    int a, c, p;
+    ARITY2(argc >= 2, "max number ?number ...?");
+    SCAN_INT(a, argv[1]);
+    FOLD(c = a, c = c > a ? c : a, 1);
+    return picolSetIntResult(interp, c);
+}
+COMMAND(min) {
+    int a, c, p;
+    ARITY2(argc >= 2, "min number ?number ...?");
+    SCAN_INT(a, argv[1]);
+    FOLD(c = a, c = c < a ? c : a, 1);
+    return picolSetIntResult(interp, c);
+}
 int picolNeedsBraces(char* str) {
     int i;
     int length = 0;
@@ -2672,7 +2719,7 @@ int picolNeedsBraces(char* str) {
 COMMAND(not) {
     /* Implements the [! int] command. */
     int res;
-    ARITY2(argc == 2, "! expression");
+    ARITY2(argc == 2, "! number");
     SCAN_INT(res, argv[1]);
     return picolSetBoolResult(interp, !res);
 }
@@ -3302,7 +3349,7 @@ void picolRegisterCoreCmds(picolInterp* interp) {
     char* name[] = {
         "+", "-", "*", "**", "/", "%",
         ">", ">=", "<", "<=", "==", "!=",
-        "&&", "||"
+        "&&", "||", "&", "|", "^", "<<", ">>"
     };
     for (j = 0; j < (int)(sizeof(name)/sizeof(char*)); j++) {
         picolRegisterCmd(interp, name[j], picol_Math, NULL);
@@ -3347,6 +3394,8 @@ void picolRegisterCoreCmds(picolInterp* interp) {
     picolRegisterCmd(interp, "lsearch",  picol_lsearch, NULL);
     picolRegisterCmd(interp, "lset",     picol_lset, NULL);
     picolRegisterCmd(interp, "lsort",    picol_lsort, NULL);
+    picolRegisterCmd(interp, "max",      picol_max, NULL);
+    picolRegisterCmd(interp, "min",      picol_min, NULL);
     picolRegisterCmd(interp, "ne",       picol_EqNe, NULL);
     picolRegisterCmd(interp, "ni",       picol_InNi, NULL);
     picolRegisterCmd(interp, "pid",      picol_pid, NULL);
@@ -3368,6 +3417,7 @@ void picolRegisterCoreCmds(picolInterp* interp) {
     picolRegisterCmd(interp, "variable", picol_variable, NULL);
     picolRegisterCmd(interp, "while",    picol_while, NULL);
     picolRegisterCmd(interp, "!",        picol_not, NULL);
+    picolRegisterCmd(interp, "~",        picol_bitwise_not, NULL);
     picolRegisterCmd(interp, "_l",       picolLsort, NULL);
 #if PICOL_FEATURE_ARRAYS
     picolRegisterCmd(interp, "array",    picol_array, NULL);

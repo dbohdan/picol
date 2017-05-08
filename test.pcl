@@ -3,7 +3,7 @@
 # with many extensions by suchenwi and dbohdan. Call with "-l" to display all
 # test cases. Is this comment extended? \
 Yes, it is.
-set patchlevel 0.2.3
+set patchlevel 0.2.4
 set thisfile [info script]
 set tcl tclsh ;# The Tcl 8.x interpreter binary.
 
@@ -43,14 +43,16 @@ set test_config(io) [expr {[info commands open] eq {open}}]
 # Do not check for [puts]. [puts] is mandatory to run the tests.
 
 if !$test_config(picol) { #----------------------- compatibility mode for tclsh
-    foreach i {/ % == != > < >= <=} {proc $i {a b} "expr {\$a $i \$b}"}
-    foreach i {+ * && ||} {proc $i args "expr \[join \$args $i\]+0"}
+    foreach i {/ % == != > < >= <= << >>} {proc $i {a b} "expr {\$a $i \$b}"}
+    foreach i {+ * && || & | ^} {proc $i args "expr \[join \$args $i\]+0"}
+    foreach i {min max} {proc $i args "expr $i\(\[join \$args ,\])"}
     proc - {a1 args} {
         if {$args eq ""} {return [expr -$a1]}
         foreach a $args {set a1 [expr $a1-$a]}
         return $a1 
     }
     proc !   x {expr !$x}
+    proc ~   x {expr ~$x}
     proc abs x {expr abs($x)}
     interp alias {} eq {} string equal
     interp alias {} ne {} string compare
@@ -78,7 +80,7 @@ test +.3        {+ 3}     -> 3
 test +.4         +        -> 0
 test *.1        {* 3 4}   -> 12
 test *.2        {* 3 4 5} -> 60
-if $test_config(picol) {
+if {$test_config(picol)} {
     test **.1 {** 2 4}  -> 16
     test **.2 {** 47 0} ->  1
 }
@@ -100,6 +102,44 @@ test <.3        {< 1 2}  -> 1
 test <=.1       {<= 1 2} -> 1
 test <=.2       {<= 2 2} -> 1
 test <=.3       {<= 3 2} -> 0
+
+test &.1        {& 0 0} -> 0
+test &.2        {& 0 1} -> 0
+test &.3        {& 255 15} -> 15
+test &.4        {& 255 15 3} -> 3
+if {$::test_config(picol)} {
+    test &.5        {&} -> 2147483647
+}
+test |.1        {| 0 0} -> 0
+test |.2        {| 0 1} -> 1
+test |.3        {| 255 15} -> 255
+test |.4        {| 1 2 4} -> 7
+if {$::test_config(picol)} {
+    test |.5        {|} -> 0
+}
+test ^.1        {^ 0 0} -> 0
+test ^.2        {^ 0 1} -> 1
+test ^.3        {^ 255 15} -> 240
+test ^.4        {^ 1 2 4} -> 7
+if {$::test_config(picol)} {
+    test ^.5        {^} -> 0
+}
+test <<.1       {<< 0 0} -> 0
+test <<.2       {<< 0 1} -> 0
+test <<.3       {<< 1 0} -> 1
+test <<.4       {<< 1 1} -> 2
+test <<.5       {<< 1 5} -> 32
+if {$::test_config(picol)} {
+    test <<.6       {<< 1 32} -> 1
+}
+test >>.1       {>> 0 0} -> 0
+test >>.2       {>> 0 1} -> 0
+test >>.3       {>> 1 0} -> 1
+test >>.4       {>> 32 3} -> 4
+test >>.5       {>> 65536 3} -> 8192
+test ~.1        {~ 0} -> -1
+test ~.2        {~ 1234} -> -1235
+test ~.3        {~ -9876} -> 9875
 
 test abs.1      {abs -47} -> 47
 test abs.2      {abs 0}   -> 0
@@ -391,6 +431,7 @@ if {$test_config(glob)} {
     test glob.3 {lsort [glob -directory globtest test*]} -> {globtest/test1 globtest/test2}
     test glob.4 {lsort [glob */test*]} -> {globtest/test1 globtest/test2}
     test glob.5 {lsort [glob -directory globtest *foo*]} -> {{globtest/foo bar}}
+    test glob.6 {lsort [glob -dir globtest *foo*]} -> {{globtest/foo bar}}
 }
 
 set glo 42
@@ -620,6 +661,13 @@ test lsort.5     {lsort  {10 3 5 2}} -> {10 2 3 5}
 test lsort.6     {lsort -integer {10 3 2 5}} -> {2 3 5 10}
 test lsort.7     {lsort -unique {cc a dd cc b}} -> {a b cc dd}
 test lsort.8     {lsort -unique} -> -unique
+
+test max.1       {max 0} -> 0
+test max.2       {max 0 1} -> 1
+test max.3       {max -5 2 99 -100 47 52} -> 99
+test min.1       {min 0} -> 0
+test min.2       {min 0 1} -> 0
+test min.3       {min -5 2 99 -100 47 52} -> -100
 
 test parser.1    {set a \
 123; incr a} -> 124
@@ -895,8 +943,6 @@ if {$test_config(picol) && $test_config(io)} {
         }]"
         puts "Still missing [llength $miss] commands: $miss"
     }
-
-    file delete temp.tcl
 }
 
 # --------------------- A factorial test to compare the performance with [time].
