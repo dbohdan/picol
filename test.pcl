@@ -130,7 +130,12 @@ test <<.3       {<< 1 0} -> 1
 test <<.4       {<< 1 1} -> 2
 test <<.5       {<< 1 5} -> 32
 if {$::test_config(picol)} {
-    test <<.6       {<< 1 32} -> 1
+    test <<.6       {
+        catch {<< 1 99} err
+        string match \
+                {can't shift integer left by more than ?? bit(s) (99 given)} \
+                $err
+    } -> 1
 }
 test >>.1       {>> 0 0} -> 0
 test >>.2       {>> 0 1} -> 0
@@ -175,12 +180,54 @@ if {$test_config(arrays)} {
     test array.13   {set (foo) bar; array get ""}      -> {foo bar}
     test array.14   {set (1) a; set (2) $(1); set (2)} -> a
     test array.15   {set (1) b; set k 1; set (2) [set ($k)]; set (2)} -> b
+    test array.16   {set a 12345678; array exists a} -> 0
+    test array.17   {set a 12345678; array get a} -> {}
+    test array.18   {set a 12345678; array set a {k v}} -> {can't set "a(k)": variable isn't array}
+    test array.19   {array statistics blah} -> {"blah" isn't an array}
+    test array.20   {set a 12345678; array statistics a} -> {"a" isn't an array}
+    test array.21   {lset a(5) 0 value} -> {can't read "a(5)": no such variable}
+    test array.22   {set a 12345678; lassign {a b c} a(foo) a(bar) a(baz)} -> {can't set "a(foo)": variable isn't array}
+    test array.23   {set a 12345678; lassign {} a(foo) a(bar) a(baz)} -> {can't set "a(foo)": variable isn't array}
+    test array.24   {set a 12345678; try {error KABOOM} on error a(foo) {}} -> {can't set "a(foo)": variable isn't array}
+    test array.25   {set a 12345678; append a(foo) yo} -> {can't set "a(foo)": variable isn't array}
+    test array.26   {set a 12345678; catch {error BLAM} a(foo)} -> {can't set "a(foo)": variable isn't array}
+    test array.27   {set a 12345678; lmap a(foo) a {}} -> {can't set "a(foo)": variable isn't array}
+    test array.28   {set a 12345678; lappend a(foo) a} -> {can't set "a(foo)": variable isn't array}
+    test array.29   {set a 12345678; set a(5) 99} -> {can't set "a(5)": variable isn't array}
+    test array.30   {set a(0)} -> {can't read "a(0)": no such variable}
+    test array.31   {set a(k1) v1; set a(k2) v2; unset a(k1); array get a} -> {k2 v2}
+    test array.32   {set a(k1) v1; set a(k2) v2; unset a(k2); array get a} -> {k1 v1}
+    test array.33   {set a(5) 0; unset a(5); array get a} -> {}
+    test array.34   {set a(5) 0; unset a(7)} -> {can't unset "a(7)": no such element in array}
+    test array.35   {unset a(5)} -> {can't unset "a(5)": no such variable}
+    test array.36   {array set a {k1 v1 k2 v2 k3 v3}; unset a; array statistics a} -> {"a" isn't an array}
+    test array.37   {set a(5) hello; set a(5) hi; set a(5)} -> {hi}
+    test array.37   {
+        set a 12345678
+        catch {set a(0)} err
+        # A workaround for Tcl 8.6 throw a more specific error in this case
+        # ('can't read "a(0)": variable isn't array').
+        string match {can't read "a(0)":*} $err
+    } -> 1
+    test array.38   {
+        set a 12345678
+        catch {lindex $a(5)} err
+        string match {can't read "a(5)":*} $err
+    } -> 1
+    test array.39   {
+        set a 12345678
+        catch {lset a(5) 0 value} err
+        string match {can't read "a(5)":*} $err
+    } -> 1
+#   test array.xx   {set ::a 12345678; proc f ::a(foo) {}; f x} -> {can't set "a(foo)": variable isn't array}
 }
 
 test catch.1    {catch {* 6 7}} -> 0
 test catch.2    {catch {/ 1 0}} -> 1
 test catch.3    {/ 1 0} -> "divide by zero"
-if $test_config(picol) {test catch.4 {catch {+ a b} res;set res} -> {expected integer but got "a"}}
+if $test_config(picol) {
+    test catch.4 {catch {+ a b} res;set res} -> {expected integer but got "a"}
+}
 
 if {$test_config(unix)} {
     set hour [string range [clock format 0 -format %z] 1 2]
@@ -209,7 +256,6 @@ if {$test_config(arrays)} {
         # Do not return the value of the corresponding environment variable
         # when a key is missing in an array that is not ::env.
         test env.6   {array set ::a {}; catch {set b $::a(PATH)}}  -> 1
-        unset ::a
         test env.7   {catch {set b $env(FOO))}}   -> 1
         # Do not populate ::env when other arrays are accessed.
         test env.8   {array names ::env}          -> PICOL
@@ -292,7 +338,7 @@ if {$test_config(picol)} {
 
 test fac.1      {proc fac x {if [< $x 2] {return $x} else {* $x [fac [- $x 1]]}}; fac 5} -> 120
 test fac.1a     {proc fac x {if {$x < 2} {set x} else {* $x [fac [- $x 1]]}}; fac 6} -> 720
-test fac.2      {fac 12} ->  479001600
+test fac.2      {fac 10} -> 3628800
 if {$test_config(picol)} {
     test fac.3      {
         proc fac x {
@@ -388,20 +434,38 @@ if {$test_config(io)} {
         close $f
         set l
     } -> hello
+    test file.5     {
+        read 12345678
+    } -> {can not find channel named "12345678"}
+    test file.6     {
+        gets 12345678
+    } -> {can not find channel named "12345678"}
+    test file.7     {
+        set f [open t.t]
+        close $f
+        catch {read $f} err
+        lrange $err 0 4
+    } -> {can not find channel named}
+    test file.8     {
+        set f [open t.t]
+        close $f
+        catch {close $f} err
+        lrange $err 0 4
+    } -> {can not find channel named}
     if {$test_config(picol)} {
-        test file.5     {
+        test file.9     {
             set f [open picol.h rb]
             set res [lindex [read $f $::tcl_platform(maxLength)] 1]
             close $f
             set res
         } -> Tcl
-        test file.6     {
+        test file.10    {
             set f [open picol.h rb]
             catch {read $f} res
             close $f
             set res
         } -> {read contents too long}
-        test file.7     {
+        test file.11    {
             set f [open picol.h rb]
             catch [list read $f [expr {$::tcl_platform(maxLength) + 1}]] res
             close $f
@@ -409,19 +473,19 @@ if {$test_config(io)} {
         } -> [list size [expr {$::tcl_platform(maxLength) + 1}] too large]
     }
 }
-test file.8     {file dirname /foo/bar/grill.txt} -> /foo/bar
-test file.9     {file tail /foo/bar/grill.txt}    -> grill.txt
-test file.10    {file join foo}              -> foo
-test file.11    {file join foo bar}          -> foo/bar
-test file.12    {file join foo /bar}         -> /bar
+test file.12    {file dirname /foo/bar/grill.txt} -> /foo/bar
+test file.13    {file tail /foo/bar/grill.txt}    -> grill.txt
+test file.14    {file join foo}              -> foo
+test file.15    {file join foo bar}          -> foo/bar
+test file.16    {file join foo /bar}         -> /bar
 if {$::tcl_platform(platform) eq {windows}} {
-    test file.13    {file join foo C:/bar grill} -> C:/bar/grill
+    test file.17    {file join foo C:/bar grill} -> C:/bar/grill
 }
-test file.14    {file split {/foo/space station/bar}} -> {/ foo {space station} bar}
-test file.15    {file split {/foo/space station/bar/}} -> {/ foo {space station} bar}
-test file.16    {file split {foo/space station/bar}} -> {foo {space station} bar}
-test file.17    {file split foo///bar} -> {foo bar}
-test file.18    {file split foo} -> foo
+test file.18    {file split {/foo/space station/bar}} -> {/ foo {space station} bar}
+test file.19    {file split {/foo/space station/bar/}} -> {/ foo {space station} bar}
+test file.20    {file split {foo/space station/bar}} -> {foo {space station} bar}
+test file.21    {file split foo///bar} -> {foo bar}
+test file.22    {file split foo} -> foo
 
 test for.1      {for {set i 0} {[< $i 4]} {incr i} {append r -$i}; set r
                 } -> -0-1-2-3
@@ -485,11 +549,14 @@ if {$test_config(picol)} {
     if {$test_config(arrays)} {
         lappend globals env tcl_platform test_config
     } else {
-        lappend globals tcl_platform(engine) tcl_platform(maxLength) \
-                tcl_platform(platform) test_config(arrays) test_config(glob) \
+        lappend globals tcl_platform(byteOrder) tcl_platform(engine) \
+                tcl_platform(maxLength) tcl_platform(platform) \
+                tcl_platform(pointerSize) tcl_platform(wordSize) \
+                test_config(arrays) test_config(glob) \
                 test_config(hello_file_length) test_config(interp) \
                 test_config(io) test_config(newline) test_config(picol) \
-                test_config(tcl85) test_config(unix) test_config(windows)
+                test_config(tcl85) test_config(unix) \
+                test_config(windows)
     }
     test global.8  {proc g3 {} {lsort [info globals]}; g3} -> [lsort $globals]
     unset globals
@@ -551,6 +618,7 @@ if {$test_config(interp)} {
     test interp.3    {interp eval $::F {llength {a b c d}}} -> 4
     test interp.4    {interp alias $::F ll {} llength}      -> ll
     test interp.5    {interp eval $::F {ll {a b c d e}}}    -> 5
+    test interp.6    {interp eval 12345678 {lindex BAM!}} -> {could not find interpreter "12345678"}
 }
 
 test join.1      {join {a b c d} ##}  -> a##b##c##d
@@ -743,8 +811,10 @@ test scan.5      {scan [format %c 196] %c} -> 196
 
 if {$test_config(io)} {
     test tell.1  {set ::f [open t.t];gets $::f line; tell $::f} -> $test_config(hello_file_length)
+    test tell.2  {tell 12345678} -> {can not find channel named "12345678"}
     test seek.1  {seek $::f 0; tell $::f} -> 0
     test seek.2  {seek $::f 2; gets $::f} -> llo
+    test seek.3  {seek 12345678 0xFF} -> {can not find channel named "12345678"}
 }
 
 test set.1       {set x 42}                -> 42
@@ -866,6 +936,15 @@ if {$test_config(picol)} {
     } -> {string too long}
 }
 
+test time.1      {
+    scan [time {lindex 0}] %d t
+    && [>= $t 0] [< $t 1000]
+} -> 1
+test time.2      {
+    scan [time {after 10} 5] %d t
+    && [>= $t 0] [< $t 50000]
+} -> 1
+
 if {!$::test_config(tcl85)} {
     test try.1   {try {lindex foo}} -> foo
     test try.2   {try {lindex foo} on error x {lindex bar}} -> foo
@@ -921,6 +1000,9 @@ if {$test_config(io)} {
 test unknown.3   {proc unknown args {return "? $args"}; bogus} -> "? bogus"
 test unknown.4   {info commands unknown} -> unknown
 rename unknown {}
+
+test unset.1     {set a 5; unset a; info exists a} -> 0
+test unset.2     {unset a} -> {can't unset "a": no such variable}
 
 test uplevel.1   {uplevel 1 set glo} -> 56
 test uplevel.2   {proc f x {uplevel 1 set gg $x}; f 55; set gg} -> 55
