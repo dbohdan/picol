@@ -911,6 +911,45 @@ test str.match.12 {string match ?foo foo} -> 0
 test str.match.13 {string match f?o* foolish} -> 1
 test str.match.14 {string match f foo} -> 0
 test str.match.15 {string match "" ""} -> 1
+test str.match.16 {string match {\*\*\?\*} **?*} -> 1
+test str.match.17 {string match {\*\*\?\*} **a*} -> 0
+test str.match.18 {string match {\*\*\?\*} x*?*} -> 0
+test str.match.19 {string match {\*\*\?\*} **?x} -> 0
+test str.match.20 {string match {\\\\} {\\}} -> 1
+test str.match.21 {string match {\\} {\\}} -> 0
+test str.match.22 {string match * {}} -> 1
+test str.match.23 {string match ** dasdasdsadfdsafs} -> 1
+test str.match.24 {string match ** {}} -> 1
+test str.match.25 {string match ** dasdasdsadfdsafs} -> 1
+test str.match.26 {string match foobar* foobarbaz} -> 1
+test str.match.27 {string match foobar* foobar} -> 1
+test str.match.28 {string match foobar* foo} -> 0
+test str.match.29 {string match *barbaz foobarbaz} -> 1
+test str.match.30 {string match *barbaz barbaz} -> 1
+test str.match.31 {string match *barbaz baz} -> 0
+test str.match.32 {string match *bar* foobarbaz} -> 1
+test str.match.33 {string match *bar* bar} -> 1
+test str.match.34 {string match *bar* a} -> 0
+test str.match.35 {string match *baaar* aa} -> 0
+test str.match.36 {string match *bar* ba} -> 0
+test str.match.37 {string match *bar* ar} -> 0
+test str.match.39 {string match *a* {}} -> 0
+test str.match.40 {string match *a* a} -> 1
+test str.match.41 {string match *a* aa} -> 1
+test str.match.42 {string match *a* aaa} -> 1
+test str.match.43 {string match *aa* a} -> 0
+test str.match.44 {string match *aa* aa} -> 1
+test str.match.45 {string match *aa* aaa} -> 1
+test str.match.46 {string match \n \n} -> 1
+test str.match.47 {string match {\n} \n} -> 0
+test str.match.48 {string match {\\a} \\a} -> 1
+test str.match.49 {string match {*\\\\} {\\}} -> 1
+test str.match.50 {string match {\\\\*} {\\}} -> 1
+test str.match.51 {string match {*\\\\*} {\\}} -> 1
+if {$test_config(picol)} {
+    test str.match.52 {string match a*b aasdfab} -> {unsupported pattern: "a*b"}
+    test str.match.53 {string match -nocase a*b aasdfab} -> {unsupported pattern: "a*b"}
+}
 
 test str.range.1 {string range abcde 1 3} -> bcd
 test str.range.2 {string range abcde 1 0} -> ""

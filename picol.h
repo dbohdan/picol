@@ -1201,7 +1201,7 @@ void picolDropCallFrame(picolInterp* interp) {
     free(cf);
 }
 int picolValidPtrAdd(picolInterp* interp, int type, void* ptr) {
-    picolPtr* p;int i;
+    picolPtr* p;
 
     p = interp->validptrs;
     while (p != NULL) {
@@ -1210,7 +1210,6 @@ int picolValidPtrAdd(picolInterp* interp, int type, void* ptr) {
             return 2;
         }
         p = p->next;
-        i++;
     }
 
     p = calloc(1, sizeof(picolPtr));
@@ -1267,6 +1266,7 @@ int picolCallProc(picolInterp* interp, int argc, char** argv, void* pd) {
     cf->parent = interp->callframe;
     interp->callframe = cf;
     if (interp->level > interp->maxlevel) {
+        free(p);
         picolDropCallFrame(interp);
         return picolErr(interp, "too many nested evaluations (infinite loop?)");
     }
@@ -1321,42 +1321,80 @@ arityerr:
     return picolErr1(interp, "wrong # args for \"%s\"", argv[0]);
 }
 int picolWildEq(char* pat, char* str, int n) {
-    /* allow '?' in pattern */
-    for (; *pat && *str && n; pat++, str++, n--) {
-        if (!(*pat==*str || *pat=='?')) {
+    /* Check if the first n characters of str match the pattern pat where
+       a '?' in pat matches any character. */
+    int escaped = 0;
+    for (; *pat != '\0' && *str != '\0' && n != 0; pat++, str++, n--) {
+        if (*pat == '\\') {
+            escaped = 1;
+            pat++;
+        }
+        if (!(*pat == *str || (!escaped && *pat == '?'))) {
             return 0;
         }
+        escaped = 0;
     }
-    return (n==0 || *pat == *str || *pat == '?');
+    return (n == 0 || *pat == *str || (!escaped && *pat == '?'));
 }
 int picolMatch(char* pat, char* str) {
-    /* An incomplete implementation of [string match]. It only handles some
-       common special cases. */
-    size_t lpat  = strlen(pat)-1, res;
-    char*  mypat = strdup(pat);
-    if (*pat=='\0' && *str=='\0') {
-        return 1;
-    }
-    /* strip last char */
-    mypat[lpat] = '\0';
-    if (*pat == '*') {
-        if (pat[lpat] == '*') {
-            /* <*>, <*xx*> case */
-            res = (size_t)strstr(str, mypat+1);
-            /* TODO: WildEq */
-        } else {
-            /* <*xx> case */
-            res = picolWildEq(pat+1, str+strlen(str)-lpat, -1);
+    /* An incomplete implementation of [string match]. It only handles these
+       common special cases: <string>, *<string>, <string>* and *<string>*
+       where the string may contain '?' to match any character. Other patterns
+       are rejected with an error. Escape '*' or '?' with '\' to match the
+       literal character.
+    */
+    int pat_type = 0; /* 0 - no asterisk, 1 - left, 2 - right, 3 - both. */
+    int escaped = 0, escaped_count = 0, pat_len, i;
+
+    /*  Validate the pattern and detect its type. */
+    for (i = 0; pat[i] != '\0'; i++) {
+        if (pat_type > 1) {
+            return -1; /* Invalid pattern: unescaped '*' in the middle. */
         }
-    } else if (pat[lpat] == '*') {
-        /* <xx*> case */
-        res = picolWildEq(mypat, str, lpat);
-    } else {
-        /* <xx> case */
-        res = picolWildEq(pat, str, -1);
+        if (pat[i] == '*') {
+            if (i == 0) {
+                pat_type = 1;
+            } else if (!escaped) {
+                pat_type = pat_type + 2;
+            }
+        }
+        if (!escaped && pat[i] == '\\') {
+            escaped = 1;
+            escaped_count++;
+        } else {
+            escaped = 0;
+        }
     }
-    free(mypat);
-    return res;
+    pat_len = i - escaped_count;
+
+    if (pat_type == 0) { /* <string> */
+        return picolWildEq(pat, str, -1);
+    } else if (pat_type == 1) { /* *<string> */
+        int str_len;
+        if (pat_len == 1) { /* The pattern is just "*". */
+            return 1;
+        }
+        str_len = strlen(str);
+        if (str_len < pat_len - 1) {
+            return 0;
+        }
+        return picolWildEq(pat + 1, str + str_len - (pat_len - 1), -1);
+    } else if (pat_type == 2) { /* <string>* */
+        return picolWildEq(pat, str, pat_len - 1);
+    } else { /* pat_type == 3, *<string>* */
+        int offset = 0, res = 0, str_len = strlen(str);
+        if (pat_len == 2) { /* The pattern is just "**". */
+            return 1;
+        }
+        if (str_len < pat_len - 2) {
+            return 0;
+        }
+        for (offset = 0; offset < str_len - (pat_len - 2) + 1; offset++) {
+            res |= picolWildEq(pat + 1, str + offset, pat_len - 2);
+            if (res) break;
+        }
+        return res;        
+    }
 }
 int picolReplace(char* str, char* from, char* to, int nocase) {
     int strLen = strlen(str);
@@ -1675,7 +1713,7 @@ char* picolArrGet(picolArray* ap, char* pat, char* buf, int mode) {
     picolVar* v;
     for (j = 0; j < PICOL_ARR_BUCKETS; j++) {
         for (v = ap->table[j]; v != NULL; v = v->next) {
-            if (picolMatch(pat, v->name)) {
+            if (picolMatch(pat, v->name) > 0) {
                 /* mode==1: array names */
                 LAPPEND_X(buf, v->name);
                 if (mode==2) {
@@ -2103,7 +2141,7 @@ COMMAND(file) {
             if (EQ(argv[a], "")) {
                 continue;
             }
-            if ((picolMatch("/*", argv[a]) || picolMatch("?:/*", argv[a]))) {
+            if (picolMatch("/*", argv[a]) || picolMatch("?:/*", argv[a])) {
                 strcpy(buf, argv[a]);
             } else {
                 if (!EQ(buf, "") && !picolMatch("*/", buf)) {
@@ -2476,7 +2514,7 @@ COMMAND(info) {
             while (cf->parent) cf = cf->parent;
         }
         for (v = cf->vars; v; v = v->next) {
-            if (picolMatch(pat, v->name)) {
+            if (picolMatch(pat, v->name) > 0) {
                 LAPPEND(buf, v->name);
             }
         }
@@ -2499,7 +2537,7 @@ COMMAND(info) {
         }
     } else if (SUBCMD("commands") || procs) {
         for (; c; c = c->next)
-            if ((!procs||c->privdata)&&picolMatch(pat, c->name)) {
+            if ((!procs||c->privdata) && (picolMatch(pat, c->name) > 0)) {
                 LAPPEND(buf, c->name);
             }
         picolSetResult(interp, buf);
@@ -2820,7 +2858,7 @@ COMMAND(lsearch) {
     int j = 0;
     ARITY2(argc == 3, "lsearch list pattern");
     FOREACH(buf, cp, argv[1]) {
-        if (picolMatch(argv[2], buf)) {
+        if (picolMatch(argv[2], buf) > 0) {
             return picolSetIntResult(interp, j);
         }
         j++;
@@ -3205,6 +3243,8 @@ COMMAND(rename) {
         if (EQ(c->name, argv[1])) {
             if (last == NULL && EQ(argv[2], "")) {
                 interp->commands = c->next; /* delete first */
+                free(c->name);
+                free(c);
             } else if (EQ(argv[2], "")) {
                 last->next = c->next; /* delete other */
             } else {
@@ -3429,12 +3469,27 @@ COMMAND(string) {
 
         return picolSetResult(interp, result);
     } else if (SUBCMD("match")) {
-        if (argc == 4)
-            return picolSetBoolResult(interp, picolMatch(argv[2], argv[3]));
-        else if (argc == 5 && EQ(argv[2], "-nocase")) {
-            picolToUpper(argv[3]);
+        int res = 0;
+        if (argc == 4) {
+            res = picolMatch(argv[2], argv[3]);
+            if (res < 0) {
+                return picolErr1(interp,
+                                 "unsupported pattern: \"%s\"",
+                                 argv[2]);
+            }
+            return picolSetBoolResult(interp, res);
+        } else if (argc == 5 && EQ(argv[2], "-nocase")) {
+            char* uppercase_pat = strdup(argv[3]);
+            picolToUpper(uppercase_pat);
             picolToUpper(argv[4]);
-            return picolSetBoolResult(interp, picolMatch(argv[3], argv[4]));
+            res = picolMatch(uppercase_pat, argv[4]);
+            free(uppercase_pat);
+            if (res < 0) {
+                return picolErr1(interp,
+                                 "unsupported pattern: \"%s\"",
+                                 argv[3]);
+            }
+            return picolSetBoolResult(interp, res);
         } else {
             return picolErr(interp, "usage: string match pat str");
         }
