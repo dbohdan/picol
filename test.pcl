@@ -40,6 +40,8 @@ set test_config(arrays) [expr {[info commands array] eq {array}}]
 set test_config(glob) [expr {[info commands glob] eq {glob}}]
 set test_config(interp) [expr {[info commands interp] eq {interp}}]
 set test_config(io) [expr {[info commands open] eq {open}}]
+# The optional [regexp] extension. See the directory extensions/.
+set test_config(regexp) [expr {[info commands regexp] eq {regexp}}]
 # Do not check for [puts]. [puts] is mandatory to run the tests.
 
 if !$test_config(picol) { #----------------------- compatibility mode for tclsh
@@ -555,7 +557,7 @@ if {$test_config(picol)} {
                 test_config(arrays) test_config(glob) \
                 test_config(hello_file_length) test_config(interp) \
                 test_config(io) test_config(newline) test_config(picol) \
-                test_config(tcl85) test_config(unix) \
+                test_config(regexp) test_config(tcl85) test_config(unix) \
                 test_config(windows)
     }
     test global.8  {proc g3 {} {lsort [info globals]}; g3} -> [lsort $globals]
@@ -798,6 +800,27 @@ if {$test_config(io)} {
     }
     test pwd.1   {set old_path [pwd]; cd $::root; set result [pwd]; cd $old_path; set result} -> $root
     unset root
+}
+
+if {$test_config(regexp)} {
+    test regexp.1  {regexp bar foo} -> 0
+    test regexp.2  {regexp foo foo} -> 1
+    test regexp.3  {
+        regexp ^(a+)(b+)\$ aaabb _ a b
+        list $a $b
+    } -> {aaa bb}
+    test regexp.4  {
+        regexp {} {} m a
+        list [info exists m] [info exists a] [info exists b]
+    } -> {1 1 0}
+    test regexp.5  {
+        set re {(-?)(?:0*(([1-9][0-9]+)|(0)))}
+        set result {}
+        regexp $re -0001234 m a b
+        lappend result $m $a $b
+        regexp $re -0 m a b
+        lappend result $m $a $b
+    } -> [list -0001234 - 1234   -0 - 0]
 }
 
 test rename.1    {rename h gg; gg 6} -> 36

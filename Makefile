@@ -1,30 +1,31 @@
 CFLAGS = -Wall
 
-picol: interp.c picol.h
-	$(CC) interp.c -o $@ $(CFLAGS)
+picol: interp.c picol.h vendor/regexp.o
+	$(CC) vendor/regexp.o interp.c -o $@ $(CFLAGS)
 
 test: picol
 	./picol test.pcl
 
-examples: examples/command examples/hello examples/regexp-lib
-examples/command: examples/command.c picol.h
+vendor/regexp.o: vendor/regexp.h vendor/regexp.c
+	$(CC) -c vendor/regexp.c -o $@ $(CFLAGS)
+
+examples: examples/command examples/hello examples/regexp-ext
+examples/command: examples/command.c picol.h extensions/regexp-wrapper.h
 	$(CC) -I. examples/command.c -o $@ $(CFLAGS)
 examples/hello: examples/hello.c picol.h
 	$(CC) -I. examples/hello.c -o $@ $(CFLAGS)
-vendor/regexp.o: vendor/regexp.h vendor/regexp.c
-	$(CC) -c vendor/regexp.c -o $@ $(CFLAGS)
-examples/regexp-lib: examples/regexp-lib.c vendor/regexp.o picol.h
-	$(CC) -I. vendor/regexp.o examples/regexp-lib.c -o $@ $(CFLAGS)
+examples/regexp-ext: examples/regexp-ext.c vendor/regexp.o picol.h extensions/regexp-wrapper.h
+	$(CC) -I. vendor/regexp.o examples/regexp-ext.c -o $@ $(CFLAGS)
 
 examples-test: examples
 	./examples/command
 	./examples/hello
-	./examples/regexp-lib
+	./examples/regexp-ext
 
 clean:
 	-rm picol picol.exe interp.obj
 	-rm examples/command examples/command.exe command.obj
 	-rm examples/hello examples/hello.exe hello.obj
-	-rm examples/regexp-lib examples/regexp-lib.exe vendor/regexp.o regexp.obj regexp-lib.obj
+	-rm examples/regexp-ext examples/regexp-ext.exe vendor/regexp.o regexp.obj regexp-ext.obj
 
 .PHONY: clean examples examples-test test

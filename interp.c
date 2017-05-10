@@ -2,6 +2,9 @@
 
 #define PICOL_IMPLEMENTATION
 #include "picol.h"
+#include "vendor/regexp.h"
+#define REGEXP_WRAPPER_IMPLEMENTATION
+#include "extensions/regexp-wrapper.h"
 
 int set_interp_argv(picolInterp* interp, int offset, int argc, char** argv) {
     char buf[PICOL_MAX_STR] = "";
@@ -16,6 +19,7 @@ int set_interp_argv(picolInterp* interp, int offset, int argc, char** argv) {
 
 int main(int argc, char** argv) {
     picolInterp* interp = picolCreateInterp();
+    picolRegisterCmd(interp, "regexp", picol_regexp, NULL);
     char buf[PICOL_MAX_STR] = "";
     int rc = 0;
     FILE* fp = fopen("init.pcl", "r");
@@ -26,7 +30,7 @@ int main(int argc, char** argv) {
     /* The array ::env is lazily populated with the environment variables'
        values. */
     picolEval(interp, "array set env {}");
-    if (fp) {
+    if (fp != NULL) {
         fclose(fp);
         rc = picolSource(interp, "init.pcl");
         if (rc != PICOL_OK) {
@@ -51,7 +55,7 @@ int main(int argc, char** argv) {
         rc = picolEval(interp, argv[2]);
         if (rc != PICOL_OK) {
             picolVar *v = picolGetVar(interp, "::errorInfo");
-            if (v) {
+            if (v != NULL) {
                 puts(v->val);
             }
         } else {
@@ -63,7 +67,7 @@ int main(int argc, char** argv) {
         rc = picolSource(interp, argv[1]);
         if (rc != PICOL_OK) {
             picolVar *v = picolGetVar(interp, "::errorInfo");
-            if (v) {
+            if (v != NULL) {
                 puts(v->val);
             }
         }

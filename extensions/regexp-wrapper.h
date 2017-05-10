@@ -1,9 +1,8 @@
-/* Picol use example: regexp library. */
+#ifndef REGEXP_WRAPPER_H
+COMMAND(regexp);
+#endif /* REGEXP_WRAPPER_H */
 
-#define PICOL_IMPLEMENTATION
-#include "picol.h"
-#include "vendor/regexp.h"
-
+#ifdef REGEXP_WRAPPER_IMPLEMENTATION
 COMMAND(regexp) {
     ARITY2(argc >= 3, "regexp exp string ?matchVar? ?subMatchVar ...?");
     Reprog* p;
@@ -32,25 +31,11 @@ COMMAND(regexp) {
             match[n] = '\0';
             picolSetVar(interp, argv[i + 3], match);
         }
+        for (i = m.nsub; i + 3 < argc; i++) {
+            picolSetVar(interp, argv[i + 3], "");
+        }
     }
     regfree(p);
     return picolSetBoolResult(interp, result);
 }
-
-void eval_and_report(picolInterp* interp, char* command) {
-    printf("   command: %s\n", command);
-    int rc = picolEval(interp, command);
-    printf("    result: [%d] %s\n", rc, interp->result);
-}
-
-int main(int argc, char** argv) {
-    picolInterp* interp = picolCreateInterp();
-    picolRegisterCmd(interp, "regexp", picol_regexp, NULL);
-    eval_and_report(interp, "regexp {***++} foo");
-    eval_and_report(interp, "regexp bar foo");
-    eval_and_report(interp, "regexp foo foo");
-    eval_and_report(interp, "regexp (a+)(b+) aaabb match sub1 sub2 s");
-    picolEval(interp,
-              "puts \"     match: $match\nsubmatches: [list $sub1 $sub2]\"");
-    return 0;
-}
+#endif /* REGEXP_WRAPPER_IMPLEMENTATION */
