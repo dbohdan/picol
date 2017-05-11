@@ -190,10 +190,12 @@ if {$test_config(arrays)} {
     test array.21   {lset a(5) 0 value} -> {can't read "a(5)": no such variable}
     test array.22   {set a 12345678; lassign {a b c} a(foo) a(bar) a(baz)} -> {can't set "a(foo)": variable isn't array}
     test array.23   {set a 12345678; lassign {} a(foo) a(bar) a(baz)} -> {can't set "a(foo)": variable isn't array}
-    test array.24   {set a 12345678; try {error KABOOM} on error a(foo) {}} -> {can't set "a(foo)": variable isn't array}
-    test array.25   {set a 12345678; append a(foo) yo} -> {can't set "a(foo)": variable isn't array}
-    test array.26   {set a 12345678; catch {error BLAM} a(foo)} -> {can't set "a(foo)": variable isn't array}
-    test array.27   {set a 12345678; lmap a(foo) a {}} -> {can't set "a(foo)": variable isn't array}
+    test array.24   {set a 12345678; append a(foo) yo} -> {can't set "a(foo)": variable isn't array}
+    if {!$test_config(tcl85)} {
+        test array.25   {set a 12345678; try {error KABOOM} on error a(foo) {}} -> {can't set "a(foo)": variable isn't array}
+        test array.26   {set a 12345678; catch {error BLAM} a(foo)} -> {can't set "a(foo)": variable isn't array}
+        test array.27   {set a 12345678; lmap a(foo) a {}} -> {can't set "a(foo)": variable isn't array}
+    }
     test array.28   {set a 12345678; lappend a(foo) a} -> {can't set "a(foo)": variable isn't array}
     test array.29   {set a 12345678; set a(5) 99} -> {can't set "a(5)": variable isn't array}
     test array.30   {set a(0)} -> {can't read "a(0)": no such variable}
