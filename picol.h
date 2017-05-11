@@ -2114,7 +2114,7 @@ COMMAND(file) {
         fp = fopen(argv[2], "r");
         if (SUBCMD("size")) {
             if (fp == NULL) {
-                return picolErr1(interp, "no file \"%s\"", argv[2]);
+                return picolErr1(interp, "could not open \"%s\"", argv[2]);
             }
             fseek(fp, 0, 2);
             picolSetIntResult(interp, ftell(fp));
@@ -2257,7 +2257,7 @@ int picolLmap(picolInterp* interp, char* vars, char* list, char* body,
     char buf[PICOL_MAX_STR] = "", buf2[PICOL_MAX_STR];
     char result[PICOL_MAX_STR] = "";
     char* cp, *varp;
-    int rc, set_rc, done=0;
+    int rc, set_rc, done = 0;
     if (*list == '\0') {
         return PICOL_OK;          /* empty data list */
     }
@@ -2266,15 +2266,17 @@ int picolLmap(picolInterp* interp, char* vars, char* list, char* body,
     while (cp || varp) {
         set_rc = picolSetVar(interp, buf2, buf);
         if (set_rc != PICOL_OK) {
-            return PICOL_OK;
+            return set_rc;
         }
         varp = picolParseList(varp, buf2);
         if (varp == NULL) {                        /* end of var list reached */
             rc = picolEval(interp, body);
-            if (rc == PICOL_ERR || rc == PICOL_BREAK) {
+            if (rc == PICOL_ERR) {
                 return rc;
-            } else {
-                if (accumulate) {
+            } else if (rc == PICOL_BREAK) {
+                break;
+            } else { /* rc == PICOL_OK || rc == PICOL_CONTINUE */
+                if (accumulate && rc != PICOL_CONTINUE) {
                     LAPPEND(result, interp->result);
                 }
                 varp = picolParseList(vars, buf2); /* cycle back to start */
