@@ -85,9 +85,18 @@
 #    define PICOL_TCL_PLATFORM_PLATFORM         PICOL_TCL_PLATFORM_WINDOWS
 #    define PICOL_TCL_PLATFORM_PLATFORM_STRING  "windows"
 #    include <windows.h>
-#elif defined(_POSIX_VERSION)
+#elif defined(_POSIX_VERSION) && !defined(__MSDOS__)
+/*        A workaround for DJGPP ^^^, which defines _POSIX_VERSION. */
 #    define PICOL_TCL_PLATFORM_PLATFORM         PICOL_TCL_PLATFORM_UNIX
 #    define PICOL_TCL_PLATFORM_PLATFORM_STRING  "unix"
+#    if !defined(PICOL_CAN_USE_CLOCK_GETTIME)
+#        if _POSIX_C_SOURCE >= 199309L && (!defined(__GNU_LIBRARY__) || \
+            (__GLIBC__ >= 2 && __GLIBC_MINOR__ >= 17))
+#            define PICOL_CAN_USE_CLOCK_GETTIME 1
+#        else
+#            define PICOL_CAN_USE_CLOCK_GETTIME 0
+#        endif
+#    endif
 #else
 #    define PICOL_TCL_PLATFORM_PLATFORM         PICOL_TCL_PLATFORM_UNKNOWN
 #    define PICOL_TCL_PLATFORM_PLATFORM_STRING  "unknown"
@@ -1205,7 +1214,7 @@ int picolValidPtrAdd(picolInterp* interp, int type, void* ptr) {
 
     p = interp->validptrs;
     while (p != NULL) {
-        // Adding a valid pointer should be idempotent.
+        /* Adding a valid pointer should be idempotent. */
         if (p->type == type && p->ptr == ptr) {
             return 2;
         }
@@ -1393,7 +1402,7 @@ int picolMatch(char* pat, char* str) {
             res |= picolWildEq(pat + 1, str + offset, pat_len - 2);
             if (res) break;
         }
-        return res;        
+        return res;
     }
 }
 int picolReplace(char* str, char* from, char* to, int nocase) {
@@ -2011,8 +2020,7 @@ COMMAND(exec) {
     int length;
 
     if (picolQuoteForShell(command, argc, argv) == -1) {
-        picolSetResult(interp, "string too long");
-        return PICOL_ERR;
+        return picolErr(interp, "string too long");
     }
 
     fd = PICOL_POPEN(command, "r");
@@ -3197,8 +3205,8 @@ COMMAND(puts) {
 #endif /* PICOL_FEATURE_PUTS */
 #if PICOL_FEATURE_IO
 COMMAND(pwd) {
-    ARITY(argc == 1);
     char buf[PICOL_MAX_STR] = "\0";
+    ARITY(argc == 1);
     return picolSetResult(interp, PICOL_GETCWD(buf, PICOL_MAX_STR));
 }
 #endif
@@ -3617,8 +3625,10 @@ COMMAND(time) {
     int j, n = 1, rc;
 #if PICOL_TCL_PLATFORM_PLATFORM == PICOL_TCL_PLATFORM_WINDOWS
     int win_start;
+#elif PICOL_CAN_USE_CLOCK_GETTIME
+    struct timespec ts_start, ts_end;
 #else
-    struct timespec start, end;
+    clock_t start;
 #endif
     double dt;
     char buf[PICOL_MAX_STR];
@@ -3626,8 +3636,10 @@ COMMAND(time) {
     if (argc==3) SCAN_INT(n, argv[2]);
 #if PICOL_TCL_PLATFORM_PLATFORM == PICOL_TCL_PLATFORM_WINDOWS
     win_start = GetTickCount();
+#elif PICOL_CAN_USE_CLOCK_GETTIME
+    clock_gettime(CLOCK_MONOTONIC, &ts_start);
 #else
-    clock_gettime(CLOCK_MONOTONIC, &start);
+    start = clock();
 #endif
     for (j = 0; j < n; j++) {
         if ((rc = picolEval(interp, argv[1])) != PICOL_OK) {
@@ -3636,10 +3648,15 @@ COMMAND(time) {
     }
 #if PICOL_TCL_PLATFORM_PLATFORM == PICOL_TCL_PLATFORM_WINDOWS
     dt = 1000.0*(double)(GetTickCount() - win_start);
+#elif PICOL_CAN_USE_CLOCK_GETTIME
+    clock_gettime(CLOCK_MONOTONIC, &ts_end);
+    dt = 1000000.0*(double)(ts_end.tv_sec  - ts_start.tv_sec) +
+             0.001*(double)(ts_end.tv_nsec - ts_start.tv_nsec);
 #else
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    dt = 1000000.0*(double)(end.tv_sec  - start.tv_sec) +
-             0.001*(double)(end.tv_nsec - start.tv_nsec);
+    /* Very inaccurate. In particular, due to how clock() works you won't be
+       able to measure the approximate duration of an [after ms] interval for
+       testing. */
+    dt = (double)(clock() - start)*1000000.0/CLOCKS_PER_SEC;
 #endif
     sprintf(buf, "%.1f microseconds per iteration", dt/n);
     return picolSetResult(interp, buf);
