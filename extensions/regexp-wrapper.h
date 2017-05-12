@@ -4,12 +4,12 @@ COMMAND(regexp);
 
 #ifdef REGEXP_WRAPPER_IMPLEMENTATION
 COMMAND(regexp) {
-    ARITY2(argc >= 3, "regexp exp string ?matchVar? ?subMatchVar ...?");
     Reprog* p;
     Resub m;
     int i, result;
     const char* err;
     char match[PICOL_MAX_STR];
+    ARITY2(argc >= 3, "regexp exp string ?matchVar? ?subMatchVar ...?");
     p = regcomp(argv[1], 0, &err);
     if (p == NULL) {
         return picolErr1(interp, "can't compile regexp: %s", (char*) err);

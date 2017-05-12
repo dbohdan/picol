@@ -7,8 +7,9 @@
 #include "extensions/regexp-wrapper.h"
 
 void eval_and_report(picolInterp* interp, char* command) {
+    int rc;
     printf("   command: %s\n", command);
-    int rc = picolEval(interp, command);
+    rc = picolEval(interp, command);
     printf("    result: [%d] %s\n", rc, interp->result);
 }
 

@@ -2704,11 +2704,21 @@ COMMAND(lindex) {
     if (argc == 2) {
         return picolSetResult(interp, argv[1]);
     }
-    SCAN_INT(idx, argv[2]);
+    if (EQ(argv[2], "end")) {
+        idx = -1;
+    } else {
+        SCAN_INT(idx, argv[2]);
+        if (idx < 0) {
+            return picolSetResult(interp, "");
+        }
+    }
     for (cp=picolParseList(argv[1], buf); cp; cp=picolParseList(cp, buf), n++) {
-        if (n==idx) {
+        if (n == idx) {
             return picolSetResult(interp, buf);
         }
+    }
+    if (idx == -1) {
+        return picolSetResult(interp, buf);
     }
     return PICOL_OK;
 }
@@ -3431,19 +3441,36 @@ COMMAND(string) {
         }
         if (cp != NULL) res = cp - argv[3];
         picolSetIntResult(interp, res);
-
-    } else if (SUBCMD("index")) {
-        int maxi = strlen(argv[2])-1, from;
-        ARITY2(argc == 4, "string index string charIndex");
-        SCAN_INT(from, argv[3]);
-        if (from < 0) {
-            from = 0;
-        } else if (from > maxi) {
-            from = maxi;
+    } else if (SUBCMD("index") || SUBCMD("range")) {
+        int from, to, maxi = strlen(argv[2])-1;
+        if (SUBCMD("index")) {
+            ARITY2(argc == 4, "string index string charIndex");
+        } else {
+            ARITY2(argc == 5, "string range string first last");
         }
-        buf[0] = argv[2][from];
-        picolSetResult(interp, buf);
 
+        if (EQ(argv[3], "end")) {
+            from = maxi;
+        } else {
+            SCAN_INT(from, argv[3]);
+        }
+        if (SUBCMD("index")) {
+            to = from;
+        } else {
+            if (EQ(argv[4], "end")) {
+                to = maxi;
+            } else {
+                SCAN_INT(to, argv[4]);
+            }
+        }
+
+        from = from < 0  ? 0    : from;
+        to   = to > maxi ? maxi : to;
+        if (from <= to) {
+            strncpy(buf, &argv[2][from], to - from + 1);
+            buf[to + 1] = '\0';
+            picolSetResult(interp, buf);
+        }
     } else if (SUBCMD("map")) {
         char* charMap;
         char* str;
@@ -3506,29 +3533,6 @@ COMMAND(string) {
     } else if (SUBCMD("is")) {
         ARITY2(argc == 4 && EQ(argv[2], "int"), "string is int str");
         picolSetBoolResult(interp, picolIsInt(argv[3]));
-    } else if (SUBCMD("range")) {
-        int from, to, maxi = strlen(argv[2]);
-        ARITY2(argc == 5, "string range string first last");
-        SCAN_INT(from, argv[3]);
-        if (EQ(argv[4], "end")) {
-            to = maxi;
-        } else {
-            SCAN_INT(to, argv[4]);
-        }
-        if (from < 0) {
-            from = 0;
-        } else if (from > maxi) {
-            from = maxi;
-        }
-        if (to < 0) {
-            to = 0;
-        } else if (to > maxi) {
-            to = maxi;
-        }
-        strncpy(buf, &argv[2][from], to-from+1);
-        buf[to] = '\0';
-        picolSetResult(interp, buf);
-
     } else if (SUBCMD("repeat")) {
         int j, n;
         SCAN_INT(n, argv[3]);

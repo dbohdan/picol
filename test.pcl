@@ -664,6 +664,13 @@ if {$test_config(picol)} {
     test lindex.18   {lindex {a "b"c} 2} -> c
 }
 test lindex.19   {lindex {a"b"c} 0} -> {a"b"c}
+test lindex.20   {lindex {0 1 2 3 4 5} end} -> 5
+test lindex.20   {lindex 0 end} -> 0
+test lindex.21   {lindex {} end} -> {}
+test lindex.22   {lindex {} -42} -> {}
+test lindex.23   {lindex {a b c} -1} -> {}
+test lindex.24   {lindex {a b c} -2} -> {}
+test lindex.25   {lindex {a b c} -3} -> {}
 
 test linsert.1   {linsert {a b} 1 c}    -> {a c b}
 test linsert.2   {linsert {a b} 1 c d}  -> {a c d b}
@@ -728,6 +735,11 @@ test lrange.1    {lrange {a b c d e f g} 1 3} -> {b c d}
 test lrange.2    {lrange {a b c d e f g} 3 end} -> {d e f g}
 test lrange.3    {lrange {a b c d e f g} 3 99} -> {d e f g}
 test lrange.4    {lrange {do re mi fa so la si} 0 2} -> {do re mi}
+test lrange.5    {lrange {do re mi fa so la si} -5 -7} -> {}
+test lrange.6    {lrange {do re mi fa so la si} -7 -5} -> {}
+test lrange.7    {lrange {do re mi fa so la si} -5 2} -> {do re mi}
+test lrange.8    {lrange {do re mi fa so la si} 0 -7} -> {}
+test lrange.9    {lrange {do re mi fa so la si} 99 99} -> {}
 
 if {!$::test_config(tcl85)} {
     test lrepeat.1   {lrepeat 0} -> {}
@@ -884,19 +896,23 @@ test split.7     {split "a;b;cc;d" ";"}     -> {a b cc d}
 test split.8     {split abcdef\nghi\nj \n}  -> {abcdef ghi j}
 test split.9     {split abcdefXghiXj X}     -> {abcdef ghi j}
 
-test str.first.1 {string first a abcdefg}   -> 0
-test str.first.2 {string first x abcdefg}   -> -1
-test str.first.3 {string first e abcdefg}   -> 4
-test str.first.4 {string first f abcdefg 2} -> 5
-test str.first.5 {string first a abcdefg 2} -> -1
-test str.index   {string index hello 1}     -> e
-test str.int.1   {string is int 42} -> 1
-test str.int.2   {string is int -1} -> 1
-test str.int.3   {string is int foo} -> 0
-test str.last.1  {string last + a+b+c+d}   -> 5
-test str.last.2  {string last - a+b+c+d}   -> -1
-test str.length  {string length hello}     -> 5
-test str.lower   {string tolower FOO} -> foo
+test str.first.1  {string first a abcdefg}   -> 0
+test str.first.2  {string first x abcdefg}   -> -1
+test str.first.3  {string first e abcdefg}   -> 4
+test str.first.4  {string first f abcdefg 2} -> 5
+test str.first.5  {string first a abcdefg 2} -> -1
+test str.index.1  {string index hello 1}   -> e
+test str.index.2  {string index hello end} -> o
+test str.index.3  {string index {} 2}      -> {}
+test str.index.4  {string index {} end}    -> {}
+test str.index.5  {string index {} -562}   -> {}
+test str.int.1    {string is int 42}  -> 1
+test str.int.2    {string is int -1}  -> 1
+test str.int.3    {string is int foo} -> 0
+test str.last.1   {string last + a+b+c+d} -> 5
+test str.last.2   {string last - a+b+c+d} -> -1
+test str.length   {string length hello}   -> 5
+test str.lower    {string tolower FOO}    -> foo
 
 test str.map.1   {string map {FOO BAR} abcdFOOefgh}           -> abcdBARefgh
 test str.map.2   {string map -nocase {foo BAR} abcdFOOefgh}   -> abcdBARefgh
@@ -972,9 +988,18 @@ if {$test_config(picol)} {
     test str.match.53 {string match -nocase a*b aasdfab} -> {unsupported pattern: "a*b"}
 }
 
-test str.range.1 {string range abcde 1 3} -> bcd
-test str.range.2 {string range abcde 1 0} -> ""
-test str.range.2 {string range abcdefg 0 end} -> "abcdefg"
+test str.range.1   {string range abcde 1 3} -> bcd
+test str.range.2   {string range abcde 1 0} -> ""
+test str.range.3   {string range abcdefg 0 end} -> "abcdefg"
+test str.range.4   {string range abcdefg -5 -7} -> {}
+test str.range.5   {string range abcdefg -7 -5} -> {}
+test str.range.6   {string range abcdefg -2 1} -> ab
+test str.range.7   {string range abcdefg -99 2} -> abc
+test str.range.8   {string range abcdefg  0 -1} -> {}
+test str.range.9   {string range abcdefg  0 99} -> abcdefg
+test str.range.10  {string range abcdefg  0 6} -> abcdefg
+test str.range.11  {string range abcdefg  0 5} -> abcdef
+test str.range.12  {string range abcdefg  99 99} -> {}
 test str.rep.1   {string repeat foo 3}    -> foofoofoo
 test str.rep.2   {string repeat foo 0}    -> ""
 if $test_config(picol) {test str.rep.3  {string repeat foo 10000} -> "string too long"}

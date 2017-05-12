@@ -18,11 +18,12 @@ int set_interp_argv(picolInterp* interp, int offset, int argc, char** argv) {
 }
 
 int main(int argc, char** argv) {
-    picolInterp* interp = picolCreateInterp();
-    picolRegisterCmd(interp, "regexp", picol_regexp, NULL);
     char buf[PICOL_MAX_STR] = "";
     int rc = 0;
-    FILE* fp = fopen("init.pcl", "r");
+    FILE* fp;
+    picolInterp* interp = picolCreateInterp();
+    picolRegisterCmd(interp, "regexp", picol_regexp, NULL);
+    fp = fopen("init.pcl", "r");
     picolSetVar(interp, "argv0", argv[0]);
     picolSetVar(interp, "argv",  "");
     picolSetVar(interp, "argc",  "0");
