@@ -1,33 +1,6 @@
 About Picol
 Richard Suchenwirth, 2007-04-06
 
-Update 2007-05-01: 0.1.22: 1700 loc in picol.c, 126 in picol.h
-New: emulated the auto_load mechanism: picol.c calls unknown if available; init,pcl
-implements it by sourcing tclIndex files as on auto_path; there's one tclIndex that
-prepares auto_index(parray) to source parray.tcl.
-Long and complicated way, but similar to how Tcl does it :)
-Also new: uplevel #0
-
-Update 2007-04-22, 0.1.20: 1719 loc, 88 commands, 277 tests (in test.pcl)
-Added some 8.5 features: {*} (only for $var or [cmd], not for {const..} or "const"), 
-in/ni operators. Also, at startup ./init.pcl is sourced if present (it currently 
-contains workarounds for [glob] and [pwd], which might only work under Cygwin or *n*x).
-
-Update 2007-04-15, 0.1.19:
-Several minor fixes. Most important, added ARITY2 macro to display a "wrong # args" 
-message, but also to be extracted for a little auto-documentation, as I was getting 
-tired of tracking what I've done.
-The attached script help.pcl extracts the usage messages from ./picol.c (or the file 
-specified on command line) to stdout. See help.txt for a snapshot of it.
-Also included is wc-l.pcl as finger exercise  - works mostly like Cygwin's wc -l, 
-just slower :)
-
-Update 2007-04-12 0.1.18:
-lsort empty list crash fixed
-math operators in many cases variadic (FOLD: +, *, -, && new || new), unary minus
-simple ternary [expr] introduced
-
-----
 Picol was originally created by Salvatore Sanfilippo in March 2007. It
 is a small scripting language modeled closely on Tcl (Tool Command
 Language), with very little effort - Salvatore's first published version
@@ -166,4 +139,3 @@ any usability for any purpose, but you know that :)
 For me, the main purpose has been to experiment with C without the
 hassle of complex dependencies. Hacking on Picol, I felt how a student
 at UC Berkeley must have felt in 1988, when Tcl was just a baby...
-
