@@ -4,7 +4,9 @@
 lappend auto_path [file dirname [file join [pwd] [info script]]]
 
 proc unknown args {
-    puts [info level 0]
+    if {[info commands puts] eq {puts}} {
+        puts [info level 0]
+    }
     global auto_index auto_path
     foreach dir $auto_path {
         if [file exists $dir/tclIndex] {source $dir/tclIndex}

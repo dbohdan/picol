@@ -72,10 +72,13 @@
 #    include <glob.h>
 #endif
 
-/* The value for ::tcl_platform(engine). */
+/* The value for ::tcl_platform(engine), which Tcl code can use to distinguish
+   between Tcl implementations. */
 #define PICOL_TCL_PLATFORM_ENGINE_STRING "Picol"
 
-/* The value for ::tcl_platform(platform). */
+/* Crudely detect the platform we're being compiled on. Choose the value for
+   ::tcl_platform(platform) and a corresponding numerical value we can use for
+   conditional compilation accordingly. */
 #define PICOL_TCL_PLATFORM_UNKNOWN  0
 #define PICOL_TCL_PLATFORM_UNIX     1
 #define PICOL_TCL_PLATFORM_WINDOWS  2
@@ -102,10 +105,10 @@
 #    define PICOL_TCL_PLATFORM_PLATFORM_STRING  "unknown"
 #endif
 
-/* ----------- Most macros need the picol_ environment: argc, argv and interp */
+/* ----------- Most macros need the picol_* environment: argc, argv and interp */
 #define APPEND(dst, src) do {if ((strlen(dst)+strlen(src)) > sizeof(dst) - 1) {\
-                        return picolErr(interp, "string too long");} \
-                        strcat(dst, src);} while (0)
+                         return picolErr(interp, "string too long");} \
+                         strcat(dst, src);} while (0)
 
 #define ARITY(x)        do {if (!(x)) {return picolErr1(interp, \
                         "wrong # args for \"%s\"", argv[0]);}} while (0);
@@ -118,25 +121,25 @@
 #define EQ(a,b)         ((*a)==(*b) && !strcmp(a, b))
 
 #define FOLD(init,step,n) do {init; for(p=n;p<argc;p++) { \
-                        SCAN_INT(a, argv[p]);step;}} while (0)
+                          SCAN_INT(a, argv[p]);step;}} while (0)
 
 #define FOREACH(_v,_p,_s) \
                 for(_p = picolParseList(_s,_v); _p; _p = picolParseList(_p,_v))
 
 #define LAPPEND(dst, src) do {\
-                        int needbraces = picolNeedsBraces(src); \
-                        if (*dst != '\0') {APPEND(dst, " ");} \
-                        if (needbraces) {APPEND(dst, "{");} \
-                        APPEND(dst, src); \
-                        if (needbraces) {APPEND(dst, "}");}} while (0)
+                          int needbraces = picolNeedsBraces(src); \
+                          if (*dst != '\0') {APPEND(dst, " ");} \
+                          if (needbraces) {APPEND(dst, "{");} \
+                          APPEND(dst, src); \
+                          if (needbraces) {APPEND(dst, "}");}} while (0)
 
 /* This is the unchecked version, for functions without access to 'interp'. */
 #define LAPPEND_X(dst,src) do {\
-                        int needbraces = picolNeedsBraces(src); \
-                        if (*dst != '\0') strcat(dst, " "); \
-                        if (needbraces) {strcat(dst, "{");} \
-                        strcat(dst, src); \
-                        if (needbraces) {strcat(dst, "}");}} while (0)
+                           int needbraces = picolNeedsBraces(src); \
+                           if (*dst != '\0') strcat(dst, " "); \
+                           if (needbraces) {strcat(dst, "{");} \
+                           strcat(dst, src); \
+                           if (needbraces) {strcat(dst, "}");}} while (0)
 
 #define GET_VAR(_v,_n)    _v = picolGetVar(interp, _n); \
                           if (_v == NULL) return picolErr1(interp, \
@@ -168,7 +171,7 @@ typedef struct picolParser {
     size_t len;         /* remaining length */
     char*  start;       /* token start */
     char*  end;         /* token end */
-    int    type;        /* token type, PT_... */
+    int    type;        /* token type, PICOL_PT_... */
     int    insidequote; /* True if inside " " */
     int    expand;      /* true after {*} */
 } picolParser;
@@ -203,13 +206,13 @@ typedef struct picolPtr {
 } picolPtr;
 
 typedef struct picolInterp {
-    int             level;              /* Level of nesting */
+    int             level;      /* Level of scope nesting */
     int             maxlevel;
     picolCallFrame* callframe;
     picolCmd*       commands;
-    char*           current;        /* currently executed command */
+    char*           current;    /* currently executed command */
     char*           result;
-    int             trace; /* 1 to display each command, 0 if not */
+    int             debug;      /* 1 to display each command, 0 not to */
     picolPtr*       validptrs;
 } picolInterp;
 
@@ -252,6 +255,7 @@ COMMAND(catch);
 COMMAND(clock);
 COMMAND(concat);
 COMMAND(continue);
+COMMAND(debug);
 COMMAND(error);
 COMMAND(eval);
 COMMAND(expr);
@@ -529,7 +533,7 @@ int picolParseString(picolParser* p) {
 int picolParseVar(picolParser* p) {
     int parened = 0;
     p->start = ++p->p;
-    p->len--; /* skip the $ */
+    p->len--; /* skip the '$' */
     if (*p->p == '{') {
         picolParseBrace(p);
         p->type = PICOL_PT_VAR;
@@ -552,10 +556,10 @@ int picolParseVar(picolParser* p) {
         p->len++;
     }
     if (p->start == p->p) {
-        /* It's just a single char string "$" */
+        /* It's just the single char string "$" */
         picolParseString(p);
         p->start--;
-        p->len++; /* back to the $ sign */
+        p->len++; /* back to the '$' character */
         p->type = PICOL_PT_STR;
         return PICOL_OK;
     } else {
@@ -583,25 +587,44 @@ int picolSetFmtResult(picolInterp* interp, char* fmt, int result) {
     sprintf(buf, fmt, result);
     return picolSetResult(interp, buf);
 }
+#define APPEND_BREAK(src) {int src_len = strlen(src); \
+                           if ((len + src_len) > sizeof(buf) - 1) { \
+                           too_long = 1; break;} \
+                           strcat(buf, src); added_len += src_len;}
 int picolErr(picolInterp* interp, char* str) {
     char buf[PICOL_MAX_STR] = "";
-    picolCallFrame* cf;
-    APPEND(buf, str);
-    if (interp->current) {
-        APPEND(buf, "\n    while executing\n\"");
-        APPEND(buf, interp->current);
-        APPEND(buf, "\"");
-    }
-    for (cf = interp->callframe; cf->command && cf->parent; cf = cf->parent) {
-        APPEND(buf, "\n    invoked from within\n\"");
-        APPEND(buf, cf->command);
-        APPEND(buf, "\"");
+    int too_long = 0, len = 0, added_len = 0;
+    do {
+        picolCallFrame* cf;
+        APPEND_BREAK(str);
+        len += added_len; added_len = 0;
+        if (interp->current != NULL) {
+            APPEND_BREAK("\n    while executing\n\"");
+            APPEND_BREAK(interp->current);
+            APPEND_BREAK("\"");
+        }
+        for (cf = interp->callframe;
+             cf->command != NULL && cf->parent != NULL;
+             cf = cf->parent) {
+            len += added_len; added_len = 0;
+            APPEND_BREAK("\n    invoked from within\n\"");
+            APPEND_BREAK(cf->command);
+            APPEND_BREAK("\"");
+        }
+    } while (0);
+    if (too_long) {
+        /* Truncate the error message after the last complete chunk. */
+        buf[len] = '\0';
+        do {
+            APPEND_BREAK(len > 0 ? "\n..." : "...");
+        } while (0);
     }
     /* Not exactly the same as in Tcl... */
     picolSetVar2(interp, "::errorInfo", buf, 1);
     picolSetResult(interp, str);
     return PICOL_ERR;
 }
+#undef APPEND_BREAK
 int picolErr1(picolInterp* interp, char* format, char* arg) {
     /* The format line should contain exactly one %s specifier. */
     char buf[PICOL_MAX_STR];
@@ -686,7 +709,7 @@ int picolSetVar2(picolInterp* interp, char* name, char* val, int glob) {
 
     if (v != NULL) {
         /* existing variable case */
-        if (v->val) {
+        if (v->val != NULL) {
             /* local value */
             free(v->val);
         } else {
@@ -707,7 +730,9 @@ int picolSetVar2(picolInterp* interp, char* name, char* val, int glob) {
 #endif
         if (glob || global) {
             if (global) name += 2;
-            while (c->parent) c = c->parent;
+            while (c->parent) {
+                c = c->parent;
+            }
         }
         v       = malloc(sizeof(*v));
         v->name = strdup(name);
@@ -986,7 +1011,7 @@ int picolEval2(picolInterp* interp, char* t, int mode) { /*------------ EVAL! */
                         goto err;
                     }
                 }
-                if (interp->current) {
+                if (interp->current != NULL) {
                     free(interp->current);
                 }
 
@@ -1003,18 +1028,21 @@ int picolEval2(picolInterp* interp, char* t, int mode) { /*------------ EVAL! */
 
                 interp->current = strdup(picolList(buf, argc, argv));
 
-                if (interp->trace) {
-                    printf("< %d: %s\n", interp->level, interp->current);
-                    fflush(stdout);
+#if PICOL_FEATURE_PUTS
+                if (interp->debug) {
+                    fprintf(stderr, "< %d: %s\n", interp->level,
+                            interp->current);
+                    fflush(stderr);
                 }
-
+#endif
                 rc = c->func(interp, argc, argv, c->privdata);
-                if (interp->trace) {
-                    printf("> %d: {%s} -> {%s}\n",
-                           interp->level,
-                           picolList(buf, argc, argv),
-                           interp->result);
+#if PICOL_FEATURE_PUTS
+                if (interp->debug) {
+                    fprintf(stderr, "> %d: {%s} -> {%s}\n", interp->level,
+                            picolList(buf, argc, argv), interp->result);
+                    fflush(stderr);
                 }
+#endif
                 if (rc != PICOL_OK) {
                     goto err;
                 }
@@ -1028,7 +1056,7 @@ int picolEval2(picolInterp* interp, char* t, int mode) { /*------------ EVAL! */
             argc = 0;
             continue;
         }
-        /* We have a new token, append to the previous or as new arg? */
+        /* We have a new token. Append to the previous or use as a new arg? */
         if (prevtype == PICOL_PT_SEP || prevtype == PICOL_PT_EOL) {
             if (!p.expand) {
                 argv       = realloc(argv, sizeof(char*)*(argc+1));
@@ -1085,18 +1113,18 @@ int picolCondition(picolInterp* interp, char* str) {
             return rc;
         }
         strcpy(buf2, interp->result);
-        /* ------- try whether the format suits [expr]... */
+        /* ------- Check whether the format suits [expr]... */
         strcpy(buf, "llength ");
         LAPPEND(buf, interp->result);
         rc = picolEval(interp, buf);
         if (rc != PICOL_OK) {
             return rc;
         }
-        if (EQ(interp->result, "3")) {
+        if (EQ(interp->result, "3")) { /* Three elements? */
             FOREACH(buf, cp, buf2) {
                 argv[a++] = strdup(buf);
             }
-            if (picolGetCmd(interp, argv[1])) { /* defined operator in center */
+            if (picolGetCmd(interp, argv[1])) { /* operator in the middle? */
                 strcpy(buf, argv[1]); /* translate to Polish :) */
                 LAPPEND(buf, argv[0]); /* e.g. {1 > 2} -> {> 1 2} */
                 LAPPEND(buf, argv[2]);
@@ -1106,7 +1134,7 @@ int picolCondition(picolInterp* interp, char* str) {
                 rc = picolEval(interp, buf);
                 return rc;
             }
-        } /* ... otherwise, check for inequality to zero */
+        }
         if (*str == '!') {
             /* allow !$x */
             strcpy(buf, "== 0 ");
@@ -1203,7 +1231,7 @@ void picolDropCallFrame(picolInterp* interp) {
         free(v->val);
         free(v);
     }
-    if (cf->command) {
+    if (cf->command != NULL) {
         free(cf->command);
     }
     interp->callframe = cf->parent;
@@ -1324,7 +1352,7 @@ int picolCallProc(picolInterp* interp, int argc, char** argv, void* pd) {
     interp->level--;
     return errcode;
 arityerr:
-    /* remove the called proc callframe */
+    /* remove the called proc's callframe */
     picolDropCallFrame(interp);
     interp->level--;
     return picolErr1(interp, "wrong # args for \"%s\"", argv[0]);
@@ -1376,9 +1404,9 @@ int picolMatch(char* pat, char* str) {
     }
     pat_len = i - escaped_count;
 
-    if (pat_type == 0) { /* <string> */
+    if (pat_type == 0) { /*   <string>   */
         return picolWildEq(pat, str, -1);
-    } else if (pat_type == 1) { /* *<string> */
+    } else if (pat_type == 1) { /*   *<string>   */
         int str_len;
         if (pat_len == 1) { /* The pattern is just "*". */
             return 1;
@@ -1388,9 +1416,9 @@ int picolMatch(char* pat, char* str) {
             return 0;
         }
         return picolWildEq(pat + 1, str + str_len - (pat_len - 1), -1);
-    } else if (pat_type == 2) { /* <string>* */
+    } else if (pat_type == 2) { /*   <string>*   */
         return picolWildEq(pat, str, pat_len - 1);
-    } else { /* pat_type == 3, *<string>* */
+    } else { /* pat_type == 3,   *<string>*   */
         int offset = 0, res = 0, str_len = strlen(str);
         if (pat_len == 2) { /* The pattern is just "**". */
             return 1;
@@ -1446,7 +1474,7 @@ int picolReplace(char* str, char* from, char* to, int nocase) {
             bufLen = 0;
         }
         if (fromIndex == fromLen) {
-            /* Append to to result. */
+            /* Append to[] to result. */
 
             for (j = 0; j < toLen; j++) {
                 result[resultLen + j] = to[j];
@@ -1918,7 +1946,6 @@ COMMAND(break)    {
     return PICOL_BREAK;
 }
 COMMAND(bitwise_not) {
-    /* Implements the [~ int] command. */
     int res;
     ARITY2(argc == 2, "~ number");
     SCAN_INT(res, argv[1]);
@@ -1994,6 +2021,15 @@ COMMAND(clock) {
     }
     return PICOL_OK;
 }
+COMMAND(debug) {
+    int enable;
+    ARITY2(argc == 1 || argc == 2, "debug ?enable?");
+    if (argc == 2) {
+        SCAN_INT(enable, argv[1]);
+        interp->debug = enable;
+    }
+    return picolSetIntResult(interp, interp->debug);
+}
 COMMAND(eval) {
     char buf[PICOL_MAX_STR];
     ARITY2(argc >= 2, "eval arg ?arg ...?");
@@ -2063,7 +2099,7 @@ COMMAND(expr) {
     int a;
     ARITY2((argc%2)==0, "expr int1 op int2 ...");
     if (argc==2) {
-        if (strchr(argv[1], ' ')) { /* braced expression - roll it out */
+        if (strchr(argv[1], ' ')) { /* braced expression - expand it */
             strcpy(buf, "expr ");
             APPEND(buf, argv[1]);
             return picolEval(interp, buf);
@@ -2098,7 +2134,7 @@ COMMAND(file) {
         int del_result = 0;
         if (is_dir < 0) {
             if (is_dir == -2) {
-                /* Tcl 8.x and Jim Tcl don't throw an error if the file
+                /* Tcl 8.x and Jim Tcl do not throw an error if the file
                    to delete doesn't exist. */
                 picolSetResult(interp, "");
                 return 0;
@@ -2198,19 +2234,17 @@ COMMAND(file) {
 #if PICOL_FEATURE_IO
 int picolFileUtil(picolInterp* interp, int argc, char** argv, void* pd) {
     FILE* fp = NULL;
-    int offset = 0;
-    ARITY(argc == 2 || argc==3);
-    /* ARITY2 "close channelId"
-       ARITY2 "eof channelId"
-       ARITY2 "flush channelId"
-       ARITY2 "seek channelId"
-       ARITY2 "tell channelId" (for documentation only) */
+    ARITY(argc == 2 || (EQ(argv[0], "seek") && argc == 3));
+    /* The command may be:
+       - close channelId
+       - eof   channelId
+       - flush channelId
+       - seek  channelId [offset]
+       - tell  channelId
+     */
     SCAN_PTR(fp, argv[1]);
     if (!picolValidPtrFind(interp, PICOL_PTR_CHAN, (void*) fp)) {
         return picolErr1(interp, "can not find channel named \"%s\"", argv[1]);
-    }
-    if (argc==3) {
-        SCAN_INT(offset, argv[2]);
     }
     if (EQ(argv[0], "close")) {
         fclose(fp);
@@ -2225,11 +2259,13 @@ int picolFileUtil(picolInterp* interp, int argc, char** argv, void* pd) {
     } else if (EQ(argv[0], "flush")) {
         fflush(fp);
     } else if (EQ(argv[0], "seek") && argc==3) {
+        int offset = 0;
+        SCAN_INT(offset, argv[2]);
         fseek(fp, offset, SEEK_SET);
     } else if (EQ(argv[0], "tell")) {
         picolSetIntResult(interp, ftell(fp));
     } else {
-        return picolErr(interp, "bad usage of FileUtil");
+        return picolErr(interp, "bad use of picolFileUtil()");
     }
     return PICOL_OK;
 }
@@ -2373,7 +2409,7 @@ COMMAND(gets) {
         if (feof(fp)) {
             buf[0] = '\0';
         } else {
-            buf[strlen(buf)-1] = '\0'; /* chomp newline */
+            buf[strlen(buf) - 1] = '\0'; /* chomp newline */
         }
         if (argc == 2) {
             picolSetResult(interp, buf);
@@ -2483,7 +2519,6 @@ int picol_InNi(picolInterp* interp, int argc, char** argv, void* pd) {
     char buf[PICOL_MAX_STR], *cp;
     int in = EQ(argv[0], "in");
     ARITY2(argc == 3, "in|ni element list");
-    /* ARITY2 "ni element list" */
     FOREACH(buf, cp, argv[2])
     if (EQ(buf, argv[1])) {
         return picolSetBoolResult(interp, in);
@@ -2753,9 +2788,9 @@ COMMAND(linsert) {
     return picolSetResult(interp, buf2);
 }
 COMMAND(list) {
+    /* usage: list ?value ...? */
     char buf[PICOL_MAX_STR] = "";
     int a;
-    /* ARITY2 "list ?value ...?" for documentation */
     for (a=1; a<argc; a++) {
         LAPPEND(buf, argv[a]);
     }
@@ -2926,17 +2961,6 @@ int picolQsortCompInt(const void* a, const void* b) {
     int diff = atoi(*(const char**)a)-atoi(*(const char**)b);
     return (diff > 0 ? 1 : diff < 0 ? -1 : 0);
 }
-COMMAND(lsort) {
-    /* Dispatch to the helper function picolLsort. */
-    char buf[PICOL_MAX_STR] = "_l ";
-    ARITY2(argc == 2 || argc == 3, "lsort ?-decreasing|-integer|-unique? list");
-    APPEND(buf, argv[1]);
-    if (argc==3) {
-        APPEND(buf, " ");
-        APPEND(buf, argv[2]);
-    }
-    return picolEval(interp, buf);
-}
 int picolLsort(picolInterp* interp, int argc, char** argv, void* pd) {
     char buf[PICOL_MAX_STR] = "";
     char** av = argv+1;
@@ -2961,6 +2985,17 @@ int picolLsort(picolInterp* interp, int argc, char** argv, void* pd) {
     }
     picolSetResult(interp, picolList(buf, ac, av));
     return PICOL_OK;
+}
+COMMAND(lsort) {
+    /* Dispatch to the helper function picolLsort. */
+    char buf[PICOL_MAX_STR] = "_l ";
+    ARITY2(argc == 2 || argc == 3, "lsort ?-decreasing|-integer|-unique? list");
+    APPEND(buf, argv[1]);
+    if (argc==3) {
+        APPEND(buf, " ");
+        APPEND(buf, argv[2]);
+    }
+    return picolEval(interp, buf);
 }
 int picol_Math(picolInterp* interp, int argc, char** argv, void* pd) {
     int a = 0, b = 0, c = -1, p;
@@ -3117,7 +3152,6 @@ int picolNeedsBraces(char* str) {
     return 0;
 }
 COMMAND(not) {
-    /* Implements the [! int] command. */
     int res;
     ARITY2(argc == 2, "! number");
     SCAN_INT(res, argv[1]);
@@ -3262,13 +3296,13 @@ COMMAND(rename) {
     for (c = interp->commands; c; last = c, c=c->next) {
         if (EQ(c->name, argv[1])) {
             if (last == NULL && EQ(argv[2], "")) {
-                interp->commands = c->next; /* delete first */
+                interp->commands = c->next;  /* delete the first command */
                 free(c->name);
                 free(c);
             } else if (EQ(argv[2], "")) {
-                last->next = c->next; /* delete other */
+                last->next = c->next;        /* delete an nth command */
             } else {
-                c->name = strdup(argv[2]);   /* overwrite, do not free */
+                c->name = strdup(argv[2]);   /* overwrite, but do not free() */
             }
             found = 1;
             break;
@@ -3285,7 +3319,7 @@ COMMAND(return ) {
     return PICOL_RETURN;
 }
 COMMAND(scan) {
-    /* Limited to one integer/character code so far. */
+    /* Limited to one "%<integer><character>" code so far. */
     int result, rc = 1;
     ARITY2(argc == 3 || argc == 4, "scan string formatString ?varName?");
     if (strlen(argv[2]) != 2 || argv[2][0] != '%') {
@@ -3718,18 +3752,6 @@ COMMAND(try) {
     picolSetResult(interp, body_result);
     return body_rc;
 }
-COMMAND(trace) {
-    ARITY2(argc==2 || argc == 6, "trace add|remove ?execution * mode cmd?");
-    if (EQ(argv[1], "add")) {
-        interp->trace = 1;
-    } else if (EQ(argv[1], "remove")) {
-        interp->trace = 0;
-    } else {
-        return picolErr1(interp, "bad option \"%s\": must be add, or remove",
-                argv[1]);
-    }
-    return PICOL_OK;
-}
 COMMAND(unset) {
     picolVar* v, *lastv = NULL;
     int found = 0;
@@ -3858,6 +3880,9 @@ void picolRegisterCoreCmds(picolInterp* interp) {
     picolRegisterCmd(interp, "clock",    picol_clock, NULL);
     picolRegisterCmd(interp, "concat",   picol_concat, NULL);
     picolRegisterCmd(interp, "continue", picol_continue, NULL);
+#if PICOL_FEATURE_PUTS
+    picolRegisterCmd(interp, "debug",    picol_debug, NULL);
+#endif
     picolRegisterCmd(interp, "eq",       picol_EqNe, NULL);
     picolRegisterCmd(interp, "error",    picol_error, NULL);
     picolRegisterCmd(interp, "eval",     picol_eval, NULL);
@@ -3902,7 +3927,6 @@ void picolRegisterCoreCmds(picolInterp* interp) {
     picolRegisterCmd(interp, "subst",    picol_subst, NULL);
     picolRegisterCmd(interp, "switch",   picol_switch, NULL);
     picolRegisterCmd(interp, "time",     picol_time, NULL);
-    picolRegisterCmd(interp, "trace",    picol_trace, NULL);
     picolRegisterCmd(interp, "try",      picol_try, NULL);
     picolRegisterCmd(interp, "unset",    picol_unset, NULL);
     picolRegisterCmd(interp, "uplevel",  picol_uplevel, NULL);

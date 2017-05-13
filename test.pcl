@@ -109,21 +109,21 @@ test &.1        {& 0 0} -> 0
 test &.2        {& 0 1} -> 0
 test &.3        {& 255 15} -> 15
 test &.4        {& 255 15 3} -> 3
-if {$::test_config(picol)} {
+if {$test_config(picol)} {
     test &.5        {&} -> 2147483647
 }
 test |.1        {| 0 0} -> 0
 test |.2        {| 0 1} -> 1
 test |.3        {| 255 15} -> 255
 test |.4        {| 1 2 4} -> 7
-if {$::test_config(picol)} {
+if {$test_config(picol)} {
     test |.5        {|} -> 0
 }
 test ^.1        {^ 0 0} -> 0
 test ^.2        {^ 0 1} -> 1
 test ^.3        {^ 255 15} -> 240
 test ^.4        {^ 1 2 4} -> 7
-if {$::test_config(picol)} {
+if {$test_config(picol)} {
     test ^.5        {^} -> 0
 }
 test <<.1       {<< 0 0} -> 0
@@ -131,7 +131,7 @@ test <<.2       {<< 0 1} -> 0
 test <<.3       {<< 1 0} -> 1
 test <<.4       {<< 1 1} -> 2
 test <<.5       {<< 1 5} -> 32
-if {$::test_config(picol)} {
+if {$test_config(picol)} {
     test <<.6       {
         catch {<< 1 99} err
         string match \
@@ -250,6 +250,12 @@ test concat.5   {concat {1 2} {3 4}}     -> {1 2 3 4}
 test concat.6   {concat {} {}}           -> ""
 test concat.7   {concat foo {} bar}      -> {foo bar}
 
+if {$test_config(picol)} {
+    test debug.1 {debug 0} -> 0
+    test debug.2 {debug}   -> 0
+    test debug.3 {set res {}; lappend res [debug 1] [debug] [debug 0]; } -> {1 1 0}
+}
+
 if {$test_config(arrays)} {
     test env.1       {catch {set ::env(PICOL)}}   -> 1
     test env.2       {set ::env(PICOL) world}     -> world
@@ -270,7 +276,11 @@ if {$test_config(arrays)} {
     test env.12      {info exists ::env(HTAP)}    -> 0
 }
 
-test errorinfo.1 {proc f x {/ $x 0}; catch {f 5} res; set res} -> "divide by zero"
+test errorinfo.1 {proc f x {/ $x 0}; catch {f 5} res; set res}     -> {divide by zero}
+test errorinfo.2 {proc f x {/ $x 0}; catch {f 5}; lrange $::errorInfo 0 2} -> {divide by zero}
+if {!$test_config(tcl85)} {
+    test errorinfo.3 {proc f x {/ $x 0}; try {f 5}; lrange $::errorInfo 0 2} -> {divide by zero}
+}
 test escape.1    {set f hello\x41world} -> helloAworld
 test escape.2    {set f {hello\x41world}} -> hello\\x41world
 test eval.1      {set a {\t}; eval [list set b $a]} -> {\t}
@@ -482,7 +492,7 @@ test file.13    {file tail /foo/bar/grill.txt}    -> grill.txt
 test file.14    {file join foo}              -> foo
 test file.15    {file join foo bar}          -> foo/bar
 test file.16    {file join foo /bar}         -> /bar
-if {$::tcl_platform(platform) eq {windows}} {
+if {$tcl_platform(platform) eq {windows}} {
     test file.17    {file join foo C:/bar grill} -> C:/bar/grill
 }
 test file.18    {file split {/foo/space station/bar}} -> {/ foo {space station} bar}
@@ -704,7 +714,7 @@ test llength.7   {llength {a b c d e}} -> 5
 test llength.8   {llength "   \t  \n                          "} -> 0
 test llength.9   {llength "   \t  \n         a                "} -> 1
 
-if {!$::test_config(tcl85)} {
+if {!$test_config(tcl85)} {
     test lmap.1   {set x ""; lmap i {} {append x ($i)}; set x}        -> {}
     test lmap.2   {set x ""; lmap i {a b c d e} {append x $i};set x}  -> abcde
     test lmap.3   {lmap i {a "b c" {d e} f} {lindex -$i-}}            -> {-a- {-b c-} {-d e-} -f-}
@@ -741,7 +751,7 @@ test lrange.7    {lrange {do re mi fa so la si} -5 2} -> {do re mi}
 test lrange.8    {lrange {do re mi fa so la si} 0 -7} -> {}
 test lrange.9    {lrange {do re mi fa so la si} 99 99} -> {}
 
-if {!$::test_config(tcl85)} {
+if {!$test_config(tcl85)} {
     test lrepeat.1   {lrepeat 0} -> {}
     test lrepeat.2   {lrepeat 0 a b c} -> {}
     test lrepeat.3   {lrepeat 99} -> {}
@@ -765,7 +775,7 @@ test lreplace.13 {lreplace {} -5 -1 a} -> a
 test lreplace.14 {lreplace {c b} -5 0 a} -> {a b}
 test lreplace.15 {lreplace {f x} -5 end c d} -> {c d}
 test lreplace.16 {lreplace {b c} -5 -1 a} -> {a b c}
-if {!$::test_config(tcl85)} {
+if {!$test_config(tcl85)} {
     test lreplace.17 {lreplace {a b} 2 2 c} -> {a b c}
     test lreplace.18 {lreplace {a b c} 3 3 d e} -> {a b c d e}
     test lreplace.19 {lreplace " \t \n a \n b " 2 2 c} -> {a b c}
@@ -929,7 +939,7 @@ test str.map.12  {string map {{} { }} hello}      -> hello
 if {$test_config(picol)} {
     set long {x xxxxxxxxxx x xxxxxxxxxx x xxxxxxxxxx x xxxxxxxxxx x xxxxxxxxxx}
     test str.map.13  {string length [string map $::long xxxxxxxxxx]} -> \
-            $::tcl_platform(maxLength)
+                     $tcl_platform(maxLength)
     unset long
 }
 
@@ -1053,7 +1063,7 @@ test time.2      {
     && [>= $t 0] [< $t 50000]
 } -> 1
 
-if {!$::test_config(tcl85)} {
+if {!$test_config(tcl85)} {
     test try.1   {try {lindex foo}} -> foo
     test try.2   {try {lindex foo} on error x {lindex bar}} -> foo
     test try.3   {try {lindex foo} finally {lindex bar}} -> foo
