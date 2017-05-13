@@ -30,6 +30,7 @@
 #define PICOL_FEATURE_ARRAYS    1
 #if defined(_MSC_VER) || defined(__MINGW64_VERSION_MAJOR)
 /*                       ^^^ MinGW-w64 lacks glob.h. */
+#    define PICOL_FEATURE_GLOB  0
 #else
 #    define PICOL_FEATURE_GLOB  1
 #endif
