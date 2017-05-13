@@ -19,13 +19,17 @@
 #ifdef _MSC_VER
 #    define PICOL_MAX_LEVEL  10
 #else
-#    define PICOL_MAX_LEVEL  35
+#    define PICOL_MAX_LEVEL  30
+#endif
+
+#ifdef __MINGW32__
+#    include <_mingw.h> /* For __MINGW64_VERSION_MAJOR. */
 #endif
 
 /* Optional features. Define as zero to disable. */
 #define PICOL_FEATURE_ARRAYS    1
-#ifdef _MSC_VER
-#    define PICOL_FEATURE_GLOB  0
+#if defined(_MSC_VER) || defined(__MINGW64_VERSION_MAJOR)
+/*                       ^^^ MinGW-w64 lacks glob.h. */
 #else
 #    define PICOL_FEATURE_GLOB  1
 #endif
@@ -619,14 +623,14 @@ int picolErr(picolInterp* interp, char* str) {
             APPEND_BREAK(len > 0 ? "\n..." : "...");
         } while (0);
     }
-    /* Not exactly the same as in Tcl... */
+    /* Not exactly the same as in Tcl. */
     picolSetVar2(interp, "::errorInfo", buf, 1);
     picolSetResult(interp, str);
     return PICOL_ERR;
 }
 #undef APPEND_BREAK
 int picolErr1(picolInterp* interp, char* format, char* arg) {
-    /* The format line should contain exactly one %s specifier. */
+    /* The format line should contain exactly one "%s" specifier. */
     char buf[PICOL_MAX_STR];
     sprintf(buf, format, arg);
     return picolErr(interp, buf);
@@ -667,7 +671,7 @@ picolVar* picolGetVar2(picolInterp* interp, char* name, int glob) {
                 !picolValidPtrFind(interp, PICOL_PTR_ARRAY, (void*)ap)) {
                 return NULL;
             }
-            /* copy the key from after the opening paren */
+            /* copy the key that starts after the opening paren */
             strcpy(buf2, cp +1);
             cp = strchr(buf2, ')');
             if (cp == NULL) {
@@ -1047,7 +1051,7 @@ int picolEval2(picolInterp* interp, char* t, int mode) { /*------------ EVAL! */
                     goto err;
                 }
             }
-            /* Prepare for the next command */
+            /* Prepare for the next command. */
             for (j = 0; j < argc; j++) {
                 free(argv[j]);
             }
@@ -1056,7 +1060,8 @@ int picolEval2(picolInterp* interp, char* t, int mode) { /*------------ EVAL! */
             argc = 0;
             continue;
         }
-        /* We have a new token. Append to the previous or use as a new arg? */
+        /* We have a new token. Append it to the previous or use it as a
+           new arg. */
         if (prevtype == PICOL_PT_SEP || prevtype == PICOL_PT_EOL) {
             if (!p.expand) {
                 argv       = realloc(argv, sizeof(char*)*(argc+1));
@@ -1238,9 +1243,7 @@ void picolDropCallFrame(picolInterp* interp) {
     free(cf);
 }
 int picolValidPtrAdd(picolInterp* interp, int type, void* ptr) {
-    picolPtr* p;
-
-    p = interp->validptrs;
+    picolPtr* p = interp->validptrs;
     while (p != NULL) {
         /* Adding a valid pointer should be idempotent. */
         if (p->type == type && p->ptr == ptr) {
@@ -1292,7 +1295,7 @@ int picolValidPtrRemove(picolInterp* interp, int type, void* ptr) {
     }
 }
 int picolCallProc(picolInterp* interp, int argc, char** argv, void* pd) {
-    char** x=pd, *alist=x[0], *body=x[1], *p=strdup(alist), *tofree;
+    char** x = pd, *alist = x[0], *body = x[1], *p = strdup(alist), *tofree;
     char buf[PICOL_MAX_STR];
     picolCallFrame* cf = calloc(1, sizeof(*cf));
     int a = 0, done = 0, errcode = PICOL_OK;
@@ -1347,12 +1350,12 @@ int picolCallProc(picolInterp* interp, int argc, char** argv, void* pd) {
     if (errcode == PICOL_RETURN) {
         errcode = PICOL_OK;
     }
-    /* remove the called proc callframe */
+    /* remove the called proc's callframe on success */
     picolDropCallFrame(interp);
     interp->level--;
     return errcode;
 arityerr:
-    /* remove the called proc's callframe */
+    /* remove the called proc's callframe on error */
     picolDropCallFrame(interp);
     interp->level--;
     return picolErr1(interp, "wrong # args for \"%s\"", argv[0]);
@@ -2303,7 +2306,7 @@ int picolLmap(picolInterp* interp, char* vars, char* list, char* body,
     char* cp, *varp;
     int rc, set_rc, done = 0;
     if (*list == '\0') {
-        return PICOL_OK;          /* empty data list */
+        return PICOL_OK; /* empty data list */
     }
     varp = picolParseList(vars, buf2);
     cp   = picolParseList(list, buf);
@@ -2469,7 +2472,7 @@ COMMAND(glob) {
         LAPPEND(buf, file_path);
     }
     globfree(&pglob);
-    /* Fix result corruption in MinGW 20130722. */
+    /* The following two lines fix a result corruption in MinGW 20130722. */
     pglob.gl_pathc = 0;
     pglob.gl_pathv = NULL;
 
