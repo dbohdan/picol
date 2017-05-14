@@ -1,4 +1,4 @@
-/* Picol use example: regexp library. */
+/* Picol use example: regexp extension. */
 
 #define PICOL_IMPLEMENTATION
 #include "picol.h"
