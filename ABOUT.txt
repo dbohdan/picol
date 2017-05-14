@@ -109,9 +109,11 @@ its result displayed on stdout, and then exit. This feature is known
 from Perl and comes quite handy sometimes:
 
 /_Ricci> picol -e "lsort [info commands]"
-! != % * + - / < <= == > >= _l abs append array break catch clock close concat continue eof eq error eval exec exit file flush for foreach format gets if incr i
-nfo interp join lappend lindex linsert list llength lrange lreplace lsearch lset
- lsort ne open pid proc puts read rename return scan seek set setenv source split string subst switch tell time unset uplevel while
+! != % * + - / < <= == > >= _l abs append array break catch clock close concat
+continue eof eq error eval exec exit file flush for foreach format gets if incr
+info interp join lappend lindex linsert list llength lrange lreplace lsearch
+lset lsort ne open pid proc puts read rename return scan seek set setenv source
+split string subst switch tell time unset uplevel while
 /_Ricci>
 
 
