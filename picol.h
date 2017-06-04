@@ -54,7 +54,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#define PICOL_PATCHLEVEL "0.3.0"
+#define PICOL_PATCHLEVEL "0.3.1"
 
 /* MSVC compatibility. */
 #ifdef _MSC_VER
@@ -618,7 +618,7 @@ int picolErr(picolInterp* interp, char* str) {
         }
     } while (0);
     if (too_long) {
-        /* Truncate the error message after the last complete chunk. */
+        /* Truncate the error message at the last complete chunk. */
         buf[len] = '\0';
         do {
             APPEND_BREAK(len > 0 ? "\n..." : "...");
@@ -682,7 +682,8 @@ picolVar* picolGetVar2(picolInterp* interp, char* name, int glob) {
             *cp = '\0';
             v = picolArrGet1(ap, buf2);
             if (v == NULL) {
-                if (global && EQ(buf, "env")) {
+                if ((global || interp->callframe->parent == NULL)
+                        && EQ(buf, "env")) {
                     cp2 = getenv(buf2);
                     if (cp2 == NULL) {
                         return NULL;

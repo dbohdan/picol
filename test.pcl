@@ -3,7 +3,7 @@
 # with many extensions by suchenwi and dbohdan. Call with "-l" to display all
 # test cases. Is this comment extended? \
 Yes, it is.
-set patchlevel 0.3.0
+set patchlevel 0.3.1
 set thisfile [info script]
 set tcl tclsh ;# The Tcl 8.x interpreter binary.
 
@@ -272,8 +272,10 @@ if {$test_config(arrays)} {
         test env.9   {catch {set b $::env(FOO))}} -> 1
         test env.10  {array names ::env}          -> PICOL
     }
-    test env.11      {info exists ::env(PATH)}    -> 1 ;# should be there
-    test env.12      {info exists ::env(HTAP)}    -> 0
+    test env.11.1    {info exists ::env(PATH)}            -> 1 ;# should be there
+    test env.11.2    {uplevel #0 {info exists env(PATH)}} -> 1
+    test env.11.3    {apply {{} {info exists env(PATH)}}} -> 0
+    test env.12      {info exists ::env(HTAP)}            -> 0
 }
 
 test errorinfo.1 {proc f x {/ $x 0}; catch {f 5} res; set res}     -> {divide by zero}
