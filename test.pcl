@@ -3,7 +3,7 @@
 # with many extensions by suchenwi and dbohdan. Call with "-l" to display all
 # test cases. Is this comment extended? \
 Yes, it is.
-set patchlevel 0.3.1
+set patchlevel 0.3.2
 set thisfile [info script]
 set tcl tclsh ;# The Tcl 8.x interpreter binary.
 

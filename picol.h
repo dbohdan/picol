@@ -54,7 +54,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#define PICOL_PATCHLEVEL "0.3.1"
+#define PICOL_PATCHLEVEL "0.3.2"
 
 /* MSVC compatibility. */
 #ifdef _MSC_VER
@@ -1522,7 +1522,7 @@ int picolQuoteForShell(char* dest, int argc, char** argv) {
                    if (offset >= sizeof(command) - 1) {return -1;}} while (0)
 #if PICOL_TCL_PLATFORM_PLATFORM == PICOL_TCL_PLATFORM_WINDOWS
     /* See http://blogs.msdn.com/b/twistylittlepassagesallalike/archive/2011/
-            04/23/everyone-quotes-arguments-the-wrong-way.aspx */
+           04/23/everyone-quotes-arguments-the-wrong-way.aspx */
     int backslashes = 0;
     int m;
     int length;
@@ -1530,8 +1530,7 @@ int picolQuoteForShell(char* dest, int argc, char** argv) {
     for (j = 1; j < argc; j++) {
         ADDCHAR(' ');
         length = strlen(argv[j]);
-        if ((j > 1) &&
-                strchr(argv[j], ' ') == NULL && \
+        if (strchr(argv[j], ' ') == NULL && \
                 strchr(argv[j], '\t') == NULL && \
                 strchr(argv[j], '\n') == NULL && \
                 strchr(argv[j], '\v') == NULL && \
