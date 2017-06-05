@@ -338,6 +338,7 @@ COMMAND(while);
     COMMAND(gets);
     COMMAND(open);
     COMMAND(pwd);
+    COMMAND(rawexec);
     COMMAND(read);
     COMMAND(source);
 
@@ -2060,8 +2061,18 @@ COMMAND(exec) {
     int status;
     int length;
 
-    if (picolQuoteForShell(command, argc, argv) == -1) {
-        return picolErr(interp, "string too long");
+    if (EQ(argv[0], "rawexec")) {
+        int i;
+        for (i = 1; i < argc; i++) {
+            APPEND(command, argv[i]);
+            if (i < argc - 1) {
+                APPEND(command, " ");
+            }
+        }
+    } else { /* exec */
+        if (picolQuoteForShell(command, argc, argv) == -1) {
+            return picolErr(interp, "string too long");
+        }
     }
 
     fd = PICOL_POPEN(command, "r");
@@ -4002,6 +4013,7 @@ void picolRegisterCoreCmds(picolInterp* interp) {
     picolRegisterCmd(interp, "gets",     picol_gets, NULL);
     picolRegisterCmd(interp, "open",     picol_open, NULL);
     picolRegisterCmd(interp, "pwd",      picol_pwd, NULL);
+    picolRegisterCmd(interp, "rawexec",  picol_exec, NULL);
     picolRegisterCmd(interp, "read",     picol_read, NULL);
     picolRegisterCmd(interp, "seek",     picolFileUtil, NULL);
     picolRegisterCmd(interp, "source",   picol_source, NULL);

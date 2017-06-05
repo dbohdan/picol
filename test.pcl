@@ -311,6 +311,16 @@ if {$test_config(io)} {
             test exec.12 {exec cmd.exe /c echo {\n} {\\\n} {\"}} -> {\n \\\n "\\\""}
         }
     }
+
+    if {$test_config(picol)} {
+        if {$test_config(unix)} {
+            test rawexec.1 {rawexec {echo "Hello, World!"}} -> {Hello, World!}
+            test rawexec.2 {rawexec echo {"Hello, World!"}} -> {Hello, World!}
+        } elseif {$test_config(windows)} {
+            test rawexec.3 {rawexec {echo "Hello, World!"}} -> {"Hello, World!"}
+            test rawexec.4 {rawexec echo {"Hello, World!"}} -> {"Hello, World!"}
+        }
+    }
 }
 
 test expand.0 {{*}{}} -> {} ;# empty command
