@@ -2508,16 +2508,59 @@ COMMAND(global) {
     return PICOL_OK;
 }
 COMMAND(if) {
-    int rc;
-    ARITY2(argc==3 || argc==5, "if test script1 ?else script2?");
+    int rc, i;
+    int last = argc - 1;
+
+    /* Verify the command syntax. */
+    ARITY2(argc >= 3, "if expr1 body1 ?elseif expr2 body2 ...? ?else bodyN?");
+    for (i = 3; i < argc; i += 3) {
+        char *no_script_msg = "wrong # args: no script following "
+                              "\"%s\" argument";
+        if (EQ(argv[i], "elseif")) {
+            if (i == last) {
+                return picolErr1(interp,
+                                 "wrong # args: no expression after "
+                                 "\"%s\" argument",
+                                 argv[i]);
+            }
+            if (i + 1 == last) {
+                return picolErr1(interp, no_script_msg, argv[i + 1]);
+            }
+        } else if (EQ(argv[i], "else")) {
+            if (i == last) {
+                return picolErr1(interp, no_script_msg, argv[i]);
+            }
+            if (i + 1 != last) {
+                return picolErr(interp,
+                                "wrong # args: extra words after "
+                                "\"else\" clause in \"if\" command");
+            }
+        } else {
+            return picolErr(interp, "expected \"elseif\" or \"else\"");
+        }
+    }
+
+    /* Evaluate the conditional. */
     if ((rc = picolCondition(interp, argv[1])) != PICOL_OK) {
         return rc;
     }
-    if ((rc = atoi(interp->result))) {
+    if (atoi(interp->result)) {
         return picolEval(interp, argv[2]);
-    } else if (argc == 5) {
-        return picolEval(interp, argv[4]);
+    } else {
+        for (i = 3; i < argc; i += 3) {
+            if (EQ(argv[i], "elseif")) {
+                if ((rc = picolCondition(interp, argv[i + 1])) != PICOL_OK) {
+                    return rc;
+                }
+                if (atoi(interp->result)) {
+                    return picolEval(interp, argv[i + 2]);
+                }
+             } else { /* argv[i] is "else" */
+                return picolEval(interp, argv[i + 1]);
+            }
+        }
     }
+
     return picolSetResult(interp, "");
 }
 int picol_InNi(picolInterp* interp, int argc, char** argv, void* pd) {

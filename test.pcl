@@ -594,6 +594,45 @@ test if.12      {set a 1; if $a {set a 2}; set a} -> 2
 test if.13      {set a 1; if !$a {set a 3}; set a} -> 1
 test if.14      {set a 2; if !$a {set a 3}; set a} -> 2
 test if.15      {set a 0; if !$a {set a 3}; set a} -> 3
+test if.16      {if 0 {lindex foo}} -> {}
+test if.17      {if 0 {lindex foo} else {lindex qux}} -> qux
+test if.18      {
+    if 0 {lindex foo} elseif 1 {lindex bar} else {lindex qux}
+} -> bar
+test if.19      {
+    if 0 {lindex foo} elseif 0 {lindex bar} \
+    elseif 1 {lindex baz} else {lindex qux}
+} -> baz
+test if.20      {if 1 {lindex foo}} -> foo
+test if.21      {if 1 {lindex foo} else {lindex qux}} -> foo
+test if.22      {
+    if 1 {lindex foo} elseif 1 {lindex bar} else {lindex qux}
+} -> foo
+test if.23      {
+    if 0 {lindex foo} elseif 1 {lindex bar} \
+    elseif 0 {lindex baz} else {lindex qux}
+} -> bar
+test if.24      {
+    if 0 {lindex foo} elseif 0 {lindex bar}
+} -> {}
+test if.25      {
+    if 0 {lindex foo} elseif 0 {lindex bar} elseif 0 {lindex baz}
+} -> {}
+test if.26      {if 1 {} elseif} -> {wrong # args: no expression after "elseif" argument}
+test if.27      {if 1 {} elseif 0} -> {wrong # args: no script following "0" argument}
+test if.28      {if 1 {} elseif 0 {} else} -> {wrong # args: no script following "else" argument}
+test if.29      {if 0 {} elseif} -> {wrong # args: no expression after "elseif" argument}
+test if.30      {if 0 {} elseif 0} -> {wrong # args: no script following "0" argument}
+test if.31      {if 0 {} elseif 1} -> {wrong # args: no script following "1" argument}
+test if.32      {if 0 {} elseif 0 {} else} -> {wrong # args: no script following "else" argument}
+test if.33      {if 0 {} elseif 1 {} else} -> {wrong # args: no script following "else" argument}
+test if.34      {if 0 {} elseif 1 {} else {} x} -> {wrong # args: extra words after "else" clause in "if" command}
+test if.35      {if 1 {} elseif 1 {} else {} x} -> {wrong # args: extra words after "else" clause in "if" command}
+if $test_config(picol) {
+    test if.36  {if 0 {} nope} -> {expected "elseif" or "else"}
+    test if.37  {if 0 {} nope x} -> {expected "elseif" or "else"}
+}
+
 if $test_config(picol) {
     test in.1   {set a 0; if {"c" in "a b c d"} {set a 1}} -> 1
     test in.2   {expr {"x" in "a b c d"}} -> 0
