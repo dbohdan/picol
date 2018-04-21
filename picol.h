@@ -5,9 +5,9 @@
  * This header file contains both the interface and the implementation for
  * Picol. To instantiate the implementation put the line
  *     #define PICOL_IMPLEMENTATION
- * in a single source code file of your above where you include this file.
- * To override the default compilation options place a modified copy of the
- * entire PICOL_CONFIGURATION section above where you include this file.
+ * in a single source code file of your project above where you include this
+ * file. To override the default compilation options place a modified copy of
+ * the entire PICOL_CONFIGURATION section above where you include this file.
  */
 
 /* -------------------------------------------------------------------------- */
