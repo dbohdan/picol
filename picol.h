@@ -54,7 +54,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#define PICOL_PATCHLEVEL "0.3.2"
+#define PICOL_PATCHLEVEL "0.3.3"
 
 /* MSVC compatibility. */
 #ifdef _MSC_VER
@@ -355,6 +355,7 @@ int picolCondition(picolInterp *interp, char* str);
 int picolErr1(picolInterp *interp, char* format, char* arg);
 int picolErr(picolInterp *interp, char* str);
 int picolEval2(picolInterp *interp, char *t, int mode);
+size_t picolExpandLC(char* destination, char* source, size_t num);
 int picolGetToken(picolInterp *interp, picolParser *p);
 int picol_InNi(picolInterp *interp, int argc, char **argv, void *pd);
 int picolIsDirectory(char* path);
@@ -632,7 +633,7 @@ int picolErr(picolInterp* interp, char* str) {
 }
 #undef APPEND_BREAK
 int picolErr1(picolInterp* interp, char* format, char* arg) {
-    /* The format line should contain exactly one "%s" specifier. */
+    /* The format line must contain exactly one "%s" specifier. */
     char buf[PICOL_MAX_STR];
     sprintf(buf, format, arg);
     return picolErr(interp, buf);
@@ -913,6 +914,7 @@ void picolEscape(char* str) {
                 cp++;
                 break;
             case '\n':
+                *cp2++ = ' ';
                 cp+=2;
                 while (isspace(*cp)) {
                     cp++;
@@ -926,6 +928,34 @@ void picolEscape(char* str) {
     *cp2 = '\0';
     strcpy(str, buf);
 }
+size_t picolExpandLC(char* destination, char* source, size_t num) {
+    /* Copy the string source to destination while substituting a single space
+       for \<newline><whitespace> line continuation sequences. Return the number
+       of characters copied to destination. */
+    char* dest = destination;
+    char* src = source;
+    size_t i;
+    for (i = 0; i < num; i++) {
+        if ((i == 0 || *(src - 1) != '\\') &&
+                *src == '\\' &&
+                i < num - 1 && *(src + 1) == '\n') {
+            src += 2;
+            i += 2;
+            if (i == num) break;
+            while (isspace(*src)) {
+                src++;
+                i++;
+            }
+            *dest = ' ';
+            dest++;
+            if (i == num) break;
+        }
+        *dest = *src;
+        src++;
+        dest++;
+    }
+    return dest - destination;
+}
 #define PICOL_EVAL_BUF_SIZE (PICOL_MAX_STR*2)
 int picolEval2(picolInterp* interp, char* t, int mode) { /*------------ EVAL! */
     /* mode==0: subst only, mode==1: full eval */
@@ -933,21 +963,23 @@ int picolEval2(picolInterp* interp, char* t, int mode) { /*------------ EVAL! */
     int argc = 0, j;
     char** argv = NULL;
     char buf[PICOL_EVAL_BUF_SIZE];
-    int tlen, rc = PICOL_OK;
+    int rc = PICOL_OK;
     picolSetResult(interp, "");
     picolInitParser(&p, t);
     while (1) {
+        size_t tlen;
         int prevtype = p.type;
         picolGetToken(interp, &p);
         if (p.type == PICOL_PT_EOF) {
             break;
         }
-        tlen = p.end - p.start + 1;
-        if (tlen < 0) {
-            tlen = 0;
+        tlen = p.end < p.start ? 0 : p.end - p.start + 1;
+        t = malloc(tlen + 1);
+        if (p.type == PICOL_PT_STR || p.type == PICOL_PT_VAR) {
+            tlen = picolExpandLC(t, p.start, tlen);
+        } else {
+            memcpy(t, p.start, tlen);
         }
-        t = malloc(tlen+1);
-        memcpy(t, p.start, tlen);
         t[tlen] = '\0';
         if (p.type == PICOL_PT_VAR) {
             picolVar* v = picolGetVar(interp, t);

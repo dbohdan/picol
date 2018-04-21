@@ -3,7 +3,7 @@
 # with many extensions by suchenwi and dbohdan. Call with "-l" to display all
 # test cases. Is this comment extended? \
 Yes, it is.
-set patchlevel 0.3.2
+set patchlevel 0.3.3
 set thisfile [info script]
 set tcl tclsh ;# The Tcl 8.x interpreter binary.
 
@@ -699,6 +699,72 @@ test lassign.1   {lassign {} a b c; list $a $b $c} -> {{} {} {}}
 test lassign.2   {lassign {foo} a b c; list $a $b $c} -> {foo {} {}}
 test lassign.3   {lassign {foo bar baz} a b c; list $a $b $c} -> {foo bar baz}
 test lassign.4   {set rem [lassign {foo bar baz qux quux} a b c]; list $a $b $c $rem} -> {foo bar baz {qux quux}}
+
+test line-continuation.1 {
+    lindex "foo\
+            bar"
+} -> {foo bar}
+test line-continuation.2 {
+    lindex {foo\
+            bar}
+} -> {foo bar}
+test line-continuation.3 {
+    list {*}"foo\
+             bar"
+} -> {foo bar}
+test line-continuation.4 {
+    # Tabs and spaces.
+    eval "list {*}\"foo\\\n\t \t \t bar\""
+} -> {foo bar}
+test line-continuation.5 {
+    list {*}{foo\
+             bar}
+} -> {foo bar}
+test line-continuation.6 {
+    # Tabs and spaces.
+    eval "list {*}{foo\\\n\t \t \t bar}"
+} -> {foo bar}
+test line-continuation.7 {
+    lindex "\
+        foo\
+         bar\
+              baz\
+    "
+} -> { foo bar baz }
+test line-continuation.8 {
+    lindex {\
+        foo\
+         bar\
+              baz\
+    }
+} -> { foo bar baz }
+test line-continuation.9 {
+    lindex {# comment \
+       line}
+} -> {# comment  line}
+test line-continuation.10 {
+    eval {# comment \
+       line}
+} -> {}
+test line-continuation.11 {
+    set {a b} 5
+    set "a\
+            b"
+} -> 5
+test line-continuation.12 {
+    set {a b} 5
+    set {a\
+            b}
+} -> 5
+test line-continuation.13 {
+    set {a b} 5
+    lindex ${a\
+        b}
+} -> 5
+test line-continuation.14 {
+    lindex {a\\
+        b}
+} -> "a\\\\\n        b"
 
 test lindex.1    {lindex {a b c} 1}     -> b
 test lindex.2    {lindex {a b c d e} 0} -> a
