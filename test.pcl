@@ -3,7 +3,7 @@
 # with many extensions by suchenwi and dbohdan. Call with "-l" to display all
 # test cases. Is this comment extended? \
 Yes, it is.
-set patchlevel 0.3.3
+set patchlevel 0.3.4
 set thisfile [info script]
 set tcl tclsh ;# The Tcl 8.x interpreter binary.
 
@@ -240,6 +240,10 @@ if {$test_config(unix)} {
 }
 if $test_config(picol) {test clock.1 {clock format 0} -> "Thu Jan 01 $hour:00:00 1970"}
 test clock.2    {clock format 0 -format %H:%M:%S} -> $hour:00:00
+test clock.3    {
+    catch {clock format} message
+    string match {*clock format clockval ?-format string?*} $message
+} -> 1
 unset hour
 
 test concat.1   concat      -> ""

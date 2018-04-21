@@ -54,7 +54,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#define PICOL_PATCHLEVEL "0.3.3"
+#define PICOL_PATCHLEVEL "0.3.4"
 
 /* MSVC compatibility. */
 #ifdef _MSC_VER
@@ -2036,8 +2036,8 @@ COMMAND(clock) {
     if (SUBCMD("clicks")) {
         picolSetIntResult(interp, clock());
     } else if (SUBCMD("format")) {
-        SCAN_INT(t, argv[2]);
         if (argc==3 || (argc==5 && EQ(argv[3], "-format"))) {
+            SCAN_INT(t, argv[2]);
             char buf[128], *cp;
             struct tm* mytm = localtime(&t);
             if (argc==3) {
@@ -2048,7 +2048,8 @@ COMMAND(clock) {
             strftime(buf, sizeof(buf), cp, mytm);
             picolSetResult(interp, buf);
         } else {
-            return picolErr(interp, "usage: clock format $t ?-format $fmt?");
+            return picolErr(interp,
+                            "usage: clock format clockval ?-format string?");
         }
     } else if (SUBCMD("seconds")) {
         ARITY2(argc == 2, "clock seconds");
