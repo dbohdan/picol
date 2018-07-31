@@ -4085,7 +4085,7 @@ picolInterp* picolCreateInterp2(int register_core_cmds, int randomize) {
     x = 1;
     picolSetVar(interp,
                  "tcl_platform(byteOrder)",
-                 ((char*) & x)[0] == x ? "littleEndian" : "bigEndian");
+                 ((char*) &x)[0] == x ? "littleEndian" : "bigEndian");
     sprintf(buf, "%ld", (long) sizeof(long));
     picolSetVar2(interp, "tcl_platform(wordSize)", buf, 1);
     sprintf(buf, "%ld", (long) sizeof(void *));

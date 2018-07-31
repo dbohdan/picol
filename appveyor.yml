@@ -21,3 +21,12 @@ artifacts:
   - path: picol_mingw.exe
   - path: picol_mingw_debug.exe
   - path: picol_msvc.exe
+deploy:
+  - provider: BinTray
+    username: dbohdan
+    api_key:
+      secure: ozw96x1eb8jSUjZWB3NtAeExwJJh7ELyI/mQed79YG6wRtXKps3D4Efr34b8RQDJ
+    subject: dbohdan
+    repo: picol
+    package: picol-win32-bin
+    publish: true
