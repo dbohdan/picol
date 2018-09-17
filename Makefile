@@ -1,4 +1,4 @@
-CFLAGS = -Wall
+CFLAGS ?= -Wall
 
 picol: interp.c picol.h vendor/regexp.o
 	$(CC) vendor/regexp.o interp.c -o $@ $(CFLAGS)
