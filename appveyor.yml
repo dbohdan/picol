@@ -1,26 +1,27 @@
-version: "0.3.2.{build}"
+version: "0.3.4.{build}"
 install:
   - ps: Invoke-WebRequest http://kitcreator.rkeene.org/kits/a61ed4e85dc94265fe77a6b24417b576daec7671/tclkit.exe -OutFile tclsh.exe
 build_script:
   - cmd: set default_path=%PATH%
+  - cmd: set commit=%APPVEYOR_REPO_COMMIT:~0,10%
 
   - cmd: build-mingw.cmd /batch
-  - cmd: copy picol.exe picol_mingw.exe
-  - cmd: copy picol.exe picol_mingw_debug.exe
-  - cmd: strip picol_mingw.exe
+  - cmd: copy picol.exe picol_%commit%_mingw.exe
+  - cmd: copy picol.exe picol_%commit%_mingw_debug.exe
+  - cmd: strip picol_%commit%_mingw.exe
   - cmd: make clean
 
   - cmd: set PATH=%default_path%
 
   - cmd: build-msvc.cmd /batch /version:12.0
-  - cmd: copy picol.exe picol_msvc.exe
+  - cmd: copy picol.exe picol_%commit%_msvc.exe
 test_script:
-  - cmd: picol_mingw.exe test.pcl
-  - cmd: picol_msvc.exe test.pcl
+  - cmd: picol_%commit%_mingw.exe test.pcl
+  - cmd: picol_%commit%_msvc.exe test.pcl
 artifacts:
-  - path: picol_mingw.exe
-  - path: picol_mingw_debug.exe
-  - path: picol_msvc.exe
+  - path: picol_%commit%_mingw.exe
+  - path: picol_%commit%_mingw_debug.exe
+  - path: picol_%commit%_msvc.exe
 deploy:
   - provider: BinTray
     username: dbohdan
