@@ -54,7 +54,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#define PICOL_PATCHLEVEL "0.3.4"
+#define PICOL_PATCHLEVEL "0.3.5"
 
 /* MSVC compatibility. */
 #ifdef _MSC_VER
@@ -2636,10 +2636,11 @@ COMMAND(incr) {
 COMMAND(info) {
     char buf[PICOL_MAX_STR] = "", *pat = "*";
     picolCmd* c = interp->commands;
-    int procs = SUBCMD("procs");
+    int procs;
     ARITY2(argc == 2 || argc == 3,
             "info args|body|commands|exists|globals|level|patchlevel|procs|"
             "script|vars");
+    procs = SUBCMD("procs");
     if (argc == 3) {
         pat = argv[2];
     }
@@ -2713,7 +2714,9 @@ COMMAND(info) {
 #if PICOL_FEATURE_INTERP
 COMMAND(interp) {
     picolInterp* src = interp, *trg = interp;
-    if (SUBCMD("alias")) {
+    if (argc < 2) {
+        return picolErr(interp, "usage: interp alias|create|eval ...");
+    } else if (SUBCMD("alias")) {
         picolCmd* c = NULL;
         ARITY2(argc==6, "interp alias slavePath slaveCmd masterPath masterCmd");
         if (!EQ(argv[2], "")) {
@@ -2757,9 +2760,8 @@ COMMAND(interp) {
         rc = picolEval(trg, argv[3]);
         picolSetResult(interp, trg->result);
         return rc;
-    } else {
-        return picolErr(interp, "usage: interp alias|create|eval ...");
     }
+    return picolErr(interp, "this should never be reached");
 }
 #endif /* PICOL_FEATURE_INTERP */
 COMMAND(join) {
