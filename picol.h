@@ -2992,9 +2992,6 @@ COMMAND(lreplace) {
         }
         a++;
     }
-    if (from > a) {
-        return picolErr1(interp, "list doesn't contain element %s", argv[2]);
-    }
     if (!done) {
         for (j = 4; j < argc; j++) {
             LAPPEND(buf2, argv[j]);

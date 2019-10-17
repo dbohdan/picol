@@ -912,8 +912,11 @@ test lreplace.6  {lreplace {a b c d} 1 2 B C}   -> {a B C d}
 test lreplace.7  {lreplace {a b c d} 1 end B C D}   -> {a B C D}
 test lreplace.8  {lreplace " \t \n a \n " 0 0 b} -> b
 test lreplace.9  {lreplace {} 0 0 a} -> a
-test lreplace.10 {lreplace {a b c} 99 99 d} -> {list doesn't contain element 99}
-test lreplace.11 {lreplace {a b c} 99 end d} -> {list doesn't contain element 99}
+if {!$test_config(tcl85)} {
+    # This will work incorrectly in some Tcl 8.6 versions < 8.6.9.
+    test lreplace.10 {lreplace {a b c} 99 99 d} -> {a b c d}
+    test lreplace.11 {lreplace {a b c} 99 end d} -> {a b c d}
+}
 test lreplace.12 {lreplace {a b c} 2 3 d e} -> {a b d e}
 test lreplace.13 {lreplace {} -5 -1 a} -> a
 test lreplace.14 {lreplace {c b} -5 0 a} -> {a b}
