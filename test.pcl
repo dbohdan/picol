@@ -3,7 +3,7 @@
 # with many extensions by suchenwi and dbohdan. Call with "-l" to display all
 # test cases. Is this comment extended? \
 Yes, it is.
-set patchlevel 0.3.5
+set patchlevel 0.3.6
 set thisfile [info script]
 set tcl tclsh ;# The Tcl 8.x interpreter binary.
 
@@ -503,8 +503,26 @@ if {$test_config(io)} {
         } -> [list size [expr {$::tcl_platform(maxLength) + 1}] too large]
     }
 }
-test file.12    {file dirname /foo/bar/grill.txt} -> /foo/bar
-test file.13    {file tail /foo/bar/grill.txt}    -> grill.txt
+test file.12.1  {file dirname /foo/bar/grill.txt} -> /foo/bar
+test file.12.2  {file dirname /foo/bar/baz/}      -> /foo/bar
+test file.12.3  {file dirname /foo/bar/baz///}    -> /foo/bar
+test file.12.4  {file dirname /foo/bar/baz///qux} -> /foo/bar/baz
+test file.12.5  {file dirname foo/bar/grill.txt}  -> foo/bar
+test file.12.6  {file dirname foo/bar/baz/}       -> foo/bar
+test file.12.7  {file dirname {}}   -> .
+test file.12.8  {file dirname /}    -> /
+test file.12.9  {file dirname ///}  -> /
+
+test file.13.1  {file tail /foo/bar/grill.txt}  -> grill.txt
+test file.13.2  {file tail /foo/bar/baz/}       -> baz
+test file.13.3  {file tail /foo/bar/baz///}     -> baz
+test file.13.4  {file dirname /foo/bar/baz///qux} -> /foo/bar/baz
+test file.13.5  {file tail foo/bar/grill.txt}   -> grill.txt
+test file.13.6  {file tail foo/bar/baz/}        -> baz
+test file.13.7  {file tail {}}   -> {}
+test file.13.8  {file tail /}    -> {}
+test file.13.9  {file tail ///}  -> {}
+
 test file.14    {file join foo}              -> foo
 test file.15    {file join foo bar}          -> foo/bar
 test file.16    {file join foo /bar}         -> /bar

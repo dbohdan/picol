@@ -54,7 +54,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#define PICOL_PATCHLEVEL "0.3.5"
+#define PICOL_PATCHLEVEL "0.3.6"
 
 /* MSVC compatibility. */
 #ifdef _MSC_VER
@@ -244,6 +244,7 @@ typedef struct picolArray {
 char* picolList(char* buf, int argc, char** argv);
 int   picolNeedsBraces(char* str);
 char* picolParseList(char* start, char* trg);
+char* picolStrFirstTrailing(char* str, char chr);
 char* picolStrRev(char* str);
 char* picolToLower(char* str);
 char* picolToUpper(char* str);
@@ -2170,11 +2171,30 @@ COMMAND(file) {
     int a;
     ARITY2(argc >= 3, "file option ?arg ...?");
     if (SUBCMD("dirname")) {
-        cp = strrchr(argv[2], '/');
-        if (cp != NULL) {
-            *cp = '\0';
-            cp = argv[2];
-        } else cp = "";
+        if (argv[2][0] == '\0') {
+            cp = ".";
+        } else {
+            char* trailing = picolStrFirstTrailing(argv[2], '/');
+            if (trailing != NULL) *trailing = '\0';
+
+            cp = strrchr(argv[2], '/');
+
+            if (cp == NULL) {
+                if (trailing == NULL) {
+                    cp = "";
+                } else {
+                    cp = "/";
+                }
+            } else {
+                *cp = '\0';
+                
+                trailing = picolStrFirstTrailing(argv[2], '/');
+                if (trailing != NULL) *trailing = '\0';
+
+                cp = argv[2];
+            }
+        }
+
         picolSetResult(interp, cp);
 #if PICOL_FEATURE_IO
     } else if (SUBCMD("delete")) {
@@ -2264,9 +2284,19 @@ COMMAND(file) {
         }
         picolSetResult(interp, buf);
     } else if (SUBCMD("tail")) {
+        char* trailing = picolStrFirstTrailing(argv[2], '/');
+
+        if (trailing != NULL) *trailing = '\0';
+
         cp = strrchr(argv[2], '/');
-        if (cp == NULL) cp = argv[2]-1;
-        picolSetResult(interp, cp+1);
+
+        if (cp == NULL) {
+            cp = argv[2];
+        } else {
+            cp++;
+        }
+
+        picolSetResult(interp, cp);
     } else {
         return picolErr(interp,
 #if PICOL_FEATURE_IO
@@ -3508,6 +3538,22 @@ COMMAND(split) {
         LAPPEND(buf, start);
     }
     return picolSetResult(interp, buf);
+}
+char* picolStrFirstTrailing(char* str, char chr) {
+    char* cp;
+    char* end;
+
+    if (*str == '\0') return NULL;
+
+    for (cp = str; *cp; cp++);
+    cp--;
+    end = cp;
+
+    for (; cp >= str && *cp == chr; cp--);
+
+    if (cp == end) return NULL;
+    cp++;
+    return cp;
 }
 char* picolStrRev(char* str) {
     char* cp = str, *cp2 = str + strlen(str)-1, tmp;
