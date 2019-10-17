@@ -1,6 +1,6 @@
-version: "0.3.5.{build}"
+version: "0.3.6.{build}"
 install:
-  - ps: Invoke-WebRequest http://kitcreator.rkeene.org/kits/a61ed4e85dc94265fe77a6b24417b576daec7671/tclkit.exe -OutFile tclsh.exe
+  - ps: Invoke-WebRequest http://kitcreator.rkeene.org/kits/787d0ae3ea5eac8cf68d6b9e766b0fda0a3579ea/tclkit.exe -OutFile tclsh.exe
 build_script:
   - cmd: set default_path=%PATH%
   - cmd: set commit=%APPVEYOR_REPO_COMMIT:~0,10%
