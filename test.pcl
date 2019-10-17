@@ -534,6 +534,8 @@ test file.19    {file split {/foo/space station/bar/}} -> {/ foo {space station}
 test file.20    {file split {foo/space station/bar}} -> {foo {space station} bar}
 test file.21    {file split foo///bar} -> {foo bar}
 test file.22    {file split foo} -> foo
+test file.23    {file split {/foo/bar///baz}} -> {/ foo bar baz}
+test file.24    {file split {///foo/bar/baz}} -> {/ foo bar baz}
 
 test for.1      {for {set i 0} {[< $i 4]} {incr i} {append r -$i}; set r
                 } -> -0-1-2-3

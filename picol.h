@@ -2268,7 +2268,7 @@ COMMAND(file) {
         char* start = argv[2];
         if (*start == '/') {
             APPEND(buf, "/");
-            start++;
+            while (*start == '/') start++;
         }
         while ((cp = strchr(start, '/'))) {
             memcpy(fragment, start, cp - start);
