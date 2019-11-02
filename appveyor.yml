@@ -1,27 +1,27 @@
-version: "0.3.6.{build}"
+version: "0.3.7.{build}"
 install:
   - ps: Invoke-WebRequest http://kitcreator.rkeene.org/kits/787d0ae3ea5eac8cf68d6b9e766b0fda0a3579ea/tclkit.exe -OutFile tclsh.exe
 build_script:
   - cmd: set default_path=%PATH%
-  - cmd: set commit=%APPVEYOR_REPO_COMMIT:~0,10%
+  - cmd: set source_version=%APPVEYOR_REPO_COMMIT:~0,10%_%APPVEYOR_REPO_TAG_NAME%
 
   - cmd: build-mingw.cmd /batch
-  - cmd: copy picol.exe picol_%commit%_mingw.exe
-  - cmd: copy picol.exe picol_%commit%_mingw_debug.exe
-  - cmd: strip picol_%commit%_mingw.exe
+  - cmd: copy picol.exe picol_%source_version%_mingw.exe
+  - cmd: copy picol.exe picol_%source_version%_mingw_debug.exe
+  - cmd: strip picol_%source_version%_mingw.exe
   - cmd: make clean
 
   - cmd: set PATH=%default_path%
 
   - cmd: build-msvc.cmd /batch /version:12.0
-  - cmd: copy picol.exe picol_%commit%_msvc.exe
+  - cmd: copy picol.exe picol_%source_version%_msvc.exe
 test_script:
-  - cmd: picol_%commit%_mingw.exe test.pcl
-  - cmd: picol_%commit%_msvc.exe test.pcl
+  - cmd: picol_%source_version%_mingw.exe test.pcl
+  - cmd: picol_%source_version%_msvc.exe test.pcl
 artifacts:
-  - path: picol_%commit%_mingw.exe
-  - path: picol_%commit%_mingw_debug.exe
-  - path: picol_%commit%_msvc.exe
+  - path: picol_%source_version%_mingw.exe
+  - path: picol_%source_version%_mingw_debug.exe
+  - path: picol_%source_version%_msvc.exe
 deploy:
   - provider: BinTray
     username: dbohdan
