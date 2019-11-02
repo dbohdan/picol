@@ -3,7 +3,7 @@
 # with many extensions by suchenwi and dbohdan. Call with "-l" to display all
 # test cases. Is this comment extended? \
 Yes, it is.
-set patchlevel 0.3.6
+set patchlevel 0.3.7
 set thisfile [info script]
 set tcl tclsh ;# The Tcl 8.x interpreter binary.
 
@@ -536,6 +536,12 @@ test file.21    {file split foo///bar} -> {foo bar}
 test file.22    {file split foo} -> foo
 test file.23    {file split {/foo/bar///baz}} -> {/ foo bar baz}
 test file.24    {file split {///foo/bar/baz}} -> {/ foo bar baz}
+test file.25    {file split ~foo}             -> ~foo
+test file.26    {file split ~~~foo}           -> ~~~foo
+test file.27    {file split /foo/~bar/baz}    -> {/ foo ./~bar baz}
+test file.28    {file split /~foo/~bar/~baz}  -> {/ ./~foo ./~bar ./~baz}
+test file.29    {file split /foo/~~~bar/baz}  -> {/ foo ./~~~bar baz}
+test file.30    {file split ~foo/~bar/baz}    -> {~foo ./~bar baz}
 
 test for.1      {for {set i 0} {[< $i 4]} {incr i} {append r -$i}; set r
                 } -> -0-1-2-3

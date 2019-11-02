@@ -54,7 +54,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#define PICOL_PATCHLEVEL "0.3.6"
+#define PICOL_PATCHLEVEL "0.3.7"
 
 /* MSVC compatibility. */
 #ifdef _MSC_VER
@@ -2266,22 +2266,43 @@ COMMAND(file) {
     } else if (SUBCMD("split")) {
         char fragment[PICOL_MAX_STR];
         char* start = argv[2];
+        char head = 1;
+
         if (*start == '/') {
             APPEND(buf, "/");
             while (*start == '/') start++;
+
+            head = 0;
         }
+
         while ((cp = strchr(start, '/'))) {
             memcpy(fragment, start, cp - start);
             fragment[cp - start] = '\0';
-            LAPPEND(buf, fragment);
+
+            if (!head && fragment[0] == '~') {
+                LAPPEND(buf, "./");
+                APPEND(buf, fragment);
+            } else {
+                LAPPEND(buf, fragment);
+            }
+
             start = cp + 1;
             while (*start == '/') {
                 start++;
             }
+
+            head = 0;
         }
+
         if (strlen(start) > 0) {
-            LAPPEND(buf, start);
+            if (!head && start[0] == '~') {
+                LAPPEND(buf, "./");
+                APPEND(buf, start);
+            } else {
+                LAPPEND(buf, start);
+            }
         }
+
         picolSetResult(interp, buf);
     } else if (SUBCMD("tail")) {
         char* trailing = picolStrFirstTrailing(argv[2], '/');
