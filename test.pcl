@@ -51,7 +51,7 @@ if !$test_config(picol) { #----------------------- compatibility mode for tclsh
     proc - {a1 args} {
         if {$args eq ""} {return [expr -$a1]}
         foreach a $args {set a1 [expr $a1-$a]}
-        return $a1 
+        return $a1
     }
     proc !   x {expr !$x}
     proc ~   x {expr ~$x}
@@ -376,7 +376,7 @@ if {$test_config(picol)} {
                 if {$x <= 1} {
                     return 1
                 } else {
-                    apply {y {% [* $y [fac [- $y 1]]] 0xFFFF}} $x 
+                    apply {y {% [* $y [fac [- $y 1]]] 0xFFFF}} $x
                 }
             }
         }
@@ -988,6 +988,8 @@ test parser.7    {set x $%} -> $%
 test proc.1      {proc h x {* $x $x}; h 5} -> 25
 test proc.2      {proc f args {set args}; f foo bar grill} -> {foo bar grill}
 test proc.3      {proc f {args x} {set x}; f foo bar} -> bar
+test proc.4      {proc f {} {}; rename f {}; proc f {} {}} -> {}
+
 if {$test_config(picol) && $test_config(io)} {
     test puts.x  {puts hello world} -> {expected pointer but got "hello"}
 }
@@ -1029,6 +1031,7 @@ if {$test_config(regexp)} {
 
 test rename.1    {rename h gg; gg 6} -> 36
 test rename.2    {rename gg ""; info commands gg} -> {}
+test rename.3    {rename no-such {}} -> {can't rename "no-such": command doesn't exist}
 
 test scan.1      {scan A %c}               -> 65
 test scan.2      {scan FF %x}              -> 255
@@ -1323,7 +1326,7 @@ if {$test_config(picol) && $test_config(io)} {
         #-|- Test the test suite for Tcl compliance. :)
 
         set miss {}
-        
+
         foreach i $output {
             if [string match auto* $i]       continue
             if {$i in {case history tclLog}} continue

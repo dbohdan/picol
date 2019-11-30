@@ -3336,8 +3336,8 @@ COMMAND(pid) {
     return picolSetIntResult(interp, PICOL_GETPID());
 }
 COMMAND(proc) {
-    char** procdata = NULL;
-    picolCmd* c = picolGetCmd(interp, argv[1]);
+    char **procdata = NULL;
+    picolCmd *c = picolGetCmd(interp, argv[1]);
     ARITY2(argc == 4, "proc name args body");
     if (c != NULL) {
         procdata = c->privdata;
@@ -3348,6 +3348,9 @@ COMMAND(proc) {
             c->privdata = procdata;
             c->func = picolCallProc; /* may override C-coded commands */
         }
+    } else {
+        free(procdata[0]);
+        free(procdata[1]);
     }
     procdata[0] = strdup(argv[2]); /* arguments list */
     procdata[1] = strdup(argv[3]); /* procedure body */
@@ -3447,16 +3450,16 @@ COMMAND(read) {
 #endif /* PICOL_FEATURE_IO */
 COMMAND(rename) {
     int found = 0;
-    picolCmd* c, *last = NULL;
+    picolCmd* c, *last = NULL, *toFree = NULL;
     ARITY2(argc == 3, "rename oldName newName");
     for (c = interp->commands; c; last = c, c=c->next) {
         if (EQ(c->name, argv[1])) {
             if (last == NULL && EQ(argv[2], "")) {
                 interp->commands = c->next;  /* delete the first command */
-                free(c->name);
-                free(c);
+                toFree = c;
             } else if (EQ(argv[2], "")) {
                 last->next = c->next;        /* delete an nth command */
+                toFree = c;
             } else {
                 c->name = strdup(argv[2]);   /* overwrite, but do not free() */
             }
@@ -3464,9 +3467,25 @@ COMMAND(rename) {
             break;
         }
     }
-    if (!found) {
-        return picolErr1(interp, "can't rename %s: no such command", argv[1]);
+
+    if (toFree != NULL) {
+        if (toFree->privdata != NULL) {
+            char **privdata = toFree->privdata;
+            free(privdata[0]);
+            free(privdata[1]);
+        }
+        free(toFree->name);
+        free(toFree);
     }
+
+    if (!found) {
+        return picolErr1(
+            interp,
+            "can't rename \"%s\": command doesn't exist",
+            argv[1]
+        );
+    }
+
     return PICOL_OK;
 }
 COMMAND(return ) {
