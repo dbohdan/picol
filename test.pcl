@@ -3,7 +3,7 @@
 # with many extensions by suchenwi and dbohdan. Call with "-l" to display all
 # test cases. Is this comment extended? \
 Yes, it is.
-set patchlevel 0.3.7
+set patchlevel 0.3.8
 set thisfile [info script]
 set tcl tclsh ;# The Tcl 8.x interpreter binary.
 
@@ -672,6 +672,14 @@ if $test_config(picol) {
     test if.36  {if 0 {} nope} -> {expected "elseif" or "else"}
     test if.37  {if 0 {} nope x} -> {expected "elseif" or "else"}
 }
+proc call {} {
+    incr ::calls
+}
+test if.38      {set ::calls 0; if {[call]} {}; return $::calls} -> 1
+test if.39      {set ::calls 0; if {![call]} {}; return $::calls} -> 1
+test if.40      {set ::calls 0; if {[call] > 108} {}; return $::calls} -> 1
+unset calls
+rename call {}
 
 if $test_config(picol) {
     test in.1   {set a 0; if {"c" in "a b c d"} {set a 1}} -> 1

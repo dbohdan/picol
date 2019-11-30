@@ -54,7 +54,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#define PICOL_PATCHLEVEL "0.3.7"
+#define PICOL_PATCHLEVEL "0.3.8"
 
 /* MSVC compatibility. */
 #ifdef _MSC_VER
@@ -1147,43 +1147,58 @@ err:
 #undef PICOL_EVAL_BUF_SIZE
 int picolCondition(picolInterp* interp, char* str) {
     if (str != NULL) {
-        char buf[PICOL_MAX_STR], buf2[PICOL_MAX_STR], *argv[3], *cp;
+        char substBuf[PICOL_MAX_STR], buf[PICOL_MAX_STR];
+        char *argv[3], *cp, *substP;
         int a = 0, rc;
+
         rc = picolSubst(interp, str);
         if (rc != PICOL_OK) {
             return rc;
         }
-        strcpy(buf2, interp->result);
-        /* ------- Check whether the format suits [expr]... */
+        strcpy(substBuf, interp->result);
+
+        /* Check whether the format suits [expr]. */
         strcpy(buf, "llength ");
         LAPPEND(buf, interp->result);
         rc = picolEval(interp, buf);
         if (rc != PICOL_OK) {
             return rc;
         }
-        if (EQ(interp->result, "3")) { /* Three elements? */
-            FOREACH(buf, cp, buf2) {
+
+        /* Three elements? */
+        if (EQ(interp->result, "3")) {
+            FOREACH(buf, cp, substBuf) {
                 argv[a++] = strdup(buf);
             }
-            if (picolGetCmd(interp, argv[1])) { /* operator in the middle? */
-                strcpy(buf, argv[1]); /* translate to Polish :) */
-                LAPPEND(buf, argv[0]); /* e.g. {1 > 2} -> {> 1 2} */
+
+            /* Is there an operator in the middle? */
+            if (picolGetCmd(interp, argv[1])) {
+                /* Translate to Polish :-) */
+                /* E.g., {1 > 2} -> {> 1 2} */
+                strcpy(buf, argv[1]);
+                LAPPEND(buf, argv[0]);
                 LAPPEND(buf, argv[2]);
+
                 for (a = 0; a < 3; a++) {
                     free(argv[a]);
                 }
+
                 rc = picolEval(interp, buf);
                 return rc;
             }
         }
-        if (*str == '!') {
-            /* allow !$x */
+
+        /* The expression is not a triple. */
+        substP = substBuf;
+        if (*substP == '!') {
+            /* Allow !$x */
             strcpy(buf, "== 0 ");
-            str++;
+            substP++;
         } else {
             strcpy(buf, "!= 0 ");
         }
-        strcat(buf, str);
+        strcat(buf, substP);
+
         return picolEval(interp, buf);
     } else {
         return picolErr(interp, "NULL condition");
@@ -2187,7 +2202,7 @@ COMMAND(file) {
                 }
             } else {
                 *cp = '\0';
-                
+
                 trailing = picolStrFirstTrailing(argv[2], '/');
                 if (trailing != NULL) *trailing = '\0';
 
