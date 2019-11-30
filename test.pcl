@@ -1031,7 +1031,8 @@ if {$test_config(regexp)} {
 
 test rename.1    {rename h gg; gg 6} -> 36
 test rename.2    {rename gg ""; info commands gg} -> {}
-test rename.3    {rename no-such {}} -> {can't rename "no-such": command doesn't exist}
+test rename.3    {rename no-such foo} -> {can't rename "no-such": command doesn't exist}
+test rename.4    {rename no-such {}} -> {can't delete "no-such": command doesn't exist}
 
 test scan.1      {scan A %c}               -> 65
 test scan.2      {scan FF %x}              -> 255

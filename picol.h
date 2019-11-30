@@ -3449,15 +3449,17 @@ COMMAND(read) {
 }
 #endif /* PICOL_FEATURE_IO */
 COMMAND(rename) {
-    int found = 0;
+    int found = 0, deleting = 0;
     picolCmd* c, *last = NULL, *toFree = NULL;
     ARITY2(argc == 3, "rename oldName newName");
+    deleting = EQ(argv[2], "");
+
     for (c = interp->commands; c; last = c, c=c->next) {
         if (EQ(c->name, argv[1])) {
-            if (last == NULL && EQ(argv[2], "")) {
+            if (last == NULL && deleting) {
                 interp->commands = c->next;  /* delete the first command */
                 toFree = c;
-            } else if (EQ(argv[2], "")) {
+            } else if (deleting) {
                 last->next = c->next;        /* delete an nth command */
                 toFree = c;
             } else {
@@ -3481,7 +3483,9 @@ COMMAND(rename) {
     if (!found) {
         return picolErr1(
             interp,
-            "can't rename \"%s\": command doesn't exist",
+            deleting
+            ? "can't delete \"%s\": command doesn't exist"
+            : "can't rename \"%s\": command doesn't exist",
             argv[1]
         );
     }
