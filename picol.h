@@ -1053,6 +1053,7 @@ int picolEval2(picolInterp* interp, char* t, int mode) { /*------------ EVAL! */
                 }
                 if (interp->current != NULL) {
                     free(interp->current);
+                    interp->current = NULL;
                 }
 
                 total_len = 0;
