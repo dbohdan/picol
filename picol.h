@@ -323,7 +323,7 @@ COMMAND(while);
     int         picolArrUnset1(picolInterp *interp, char *name);
     picolVar*   picolArrSet(picolArray* ap, char* key, char* value);
     picolVar*   picolArrSet1(picolInterp *interp, char *name, char *value);
-    char*       picolArrStat(picolArray *ap, char* buf);
+    char*       picolArrStat(picolArray *ap, char* buf, size_t buf_size);
     int         picolHash(char* key, int modul);
 #endif
 #if PICOL_FEATURE_GLOB
@@ -1038,7 +1038,6 @@ int picolEval2(picolInterp* interp, char* t, int mode) { /*------------ EVAL! */
                         goto err;
                     }
                     if ((c = picolGetCmd(interp, "unknown"))) {
-fprintf(stderr, "GOT UNKNOWN\n");
                         argv = realloc(argv, sizeof(char*)*(argc+1));
                         for (j = argc; j > 0; j--) {
                             /* copy up */
@@ -1892,7 +1891,7 @@ picolVar* picolArrSet1(picolInterp* interp, char* name, char* value) {
     }
     return picolArrSet(ap, buf, value);
 }
-char* picolArrStat(picolArray* ap, char* buf) {
+char* picolArrStat(picolArray* ap, char* buf, size_t buf_size) {
     int a, buckets=0, j, count[11], depth;
     picolVar* v;
     char tmp[128];
@@ -1913,8 +1912,9 @@ char* picolArrStat(picolArray* ap, char* buf) {
         }
         count[depth]++;
     }
-    sprintf(
+    snprintf(
         buf,
+        buf_size,
         "%d entries in table, %d buckets",
         ap->size,
         buckets
@@ -2004,7 +2004,7 @@ COMMAND(array) {
         if (v == NULL || !valid) {
             return picolErr1(interp, "\"%s\" isn't an array", argv[2]);
         }
-        picolSetResult(interp, picolArrStat(ap, buf));
+        picolSetResult(interp, picolArrStat(ap, buf, sizeof(buf)));
     } else {
         return picolErr1(interp,
             "bad subcommand \"%s\": must be exists, get, set, size, or names",
