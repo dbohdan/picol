@@ -1,6 +1,6 @@
 /* Tcl in ~ 500 lines of code by Salvatore antirez Sanfilippo. BSD-licensed.
  * 2007-04-01 Added by suchenwi: many more commands, see below.
- * 2016-2017  Misc. improvements and fixes by dbohdan. See the Fossil timeline.
+ * 2016-2020  Misc. improvements and fixes by dbohdan. See the Fossil timeline.
  *
  * This header file contains both the interface and the implementation for
  * Picol. To instantiate the implementation put the line
@@ -54,7 +54,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#define PICOL_PATCHLEVEL "0.3.8"
+#define PICOL_PATCHLEVEL "0.3.9"
 
 /* MSVC compatibility. */
 #ifdef _MSC_VER

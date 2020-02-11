@@ -3,7 +3,7 @@
 # with many extensions by suchenwi and dbohdan. Call with "-l" to display all
 # test cases. Is this comment extended? \
 Yes, it is.
-set patchlevel 0.3.8
+set patchlevel 0.3.9
 set thisfile [info script]
 set tcl tclsh ;# The Tcl 8.x interpreter binary.
 
@@ -287,6 +287,7 @@ test errorinfo.2 {proc f x {/ $x 0}; catch {f 5}; lrange $::errorInfo 0 2} -> {d
 if {!$test_config(tcl85)} {
     test errorinfo.3 {proc f x {/ $x 0}; try {f 5}; lrange $::errorInfo 0 2} -> {divide by zero}
 }
+
 test escape.1    {set f hello\x41world} -> helloAworld
 test escape.2    {set f {hello\x41world}} -> hello\\x41world
 test eval.1      {set a {\t}; eval [list set b $a]} -> {\t}
