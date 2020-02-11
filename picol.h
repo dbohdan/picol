@@ -1059,8 +1059,16 @@ int picolEval2(picolInterp* interp, char* t, int mode) { /*------------ EVAL! */
 
                 total_len = 0;
                 for (i = 0; i < argc; i++) {
-                    total_len += strlen(argv[i]);
-                }
+                    int arg_len = strlen(argv[i]);
+                    if (c->func == &picolCallProc &&
+                        arg_len >= PICOL_MAX_STR - 1) {
+                        rc = picolErr1(interp,
+                                       "proc argument too long: \"%s\"",
+                                       argv[i]);
+                        goto err;
+                    }
+                    total_len += arg_len;
+               }
                 if (total_len >= PICOL_EVAL_BUF_SIZE - 1) {
                     rc = picolErr(interp,
                                   "script too long to parse "
