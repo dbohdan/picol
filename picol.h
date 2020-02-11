@@ -592,7 +592,7 @@ int picolSetResult(picolInterp* interp, char* s) {
 }
 int picolSetFmtResult(picolInterp* interp, char* fmt, int result) {
     char buf[32];
-    sprintf(buf, fmt, result);
+    snprintf(buf, sizeof(buf), fmt, result);
     return picolSetResult(interp, buf);
 }
 #define APPEND_BREAK(src) {int src_len = strlen(src); \
@@ -602,6 +602,7 @@ int picolSetFmtResult(picolInterp* interp, char* fmt, int result) {
 int picolErr(picolInterp* interp, char* str) {
     char buf[PICOL_MAX_STR] = "";
     int too_long = 0, len = 0, added_len = 0;
+
     do {
         picolCallFrame* cf;
         APPEND_BREAK(str);
@@ -636,7 +637,7 @@ int picolErr(picolInterp* interp, char* str) {
 int picolErr1(picolInterp* interp, char* format, char* arg) {
     /* The format line must contain exactly one "%s" specifier. */
     char buf[PICOL_MAX_STR];
-    sprintf(buf, format, arg);
+    snprintf(buf, sizeof(buf), format, arg);
     return picolErr(interp, buf);
 }
 picolVar* picolGetVar2(picolInterp* interp, char* name, int glob) {
@@ -754,7 +755,7 @@ int picolSetVar2(picolInterp* interp, char* name, char* val, int glob) {
 }
 int picolSetIntVar(picolInterp* interp, char* name, int value) {
     char buf[32];
-    sprintf(buf, "%d", value);
+    snprintf(buf, sizeof(buf), "%d", value);
     return picolSetVar(interp, name, buf);
 }
 int picolGetToken(picolInterp* interp, picolParser* p) {
@@ -1037,6 +1038,7 @@ int picolEval2(picolInterp* interp, char* t, int mode) { /*------------ EVAL! */
                         goto err;
                     }
                     if ((c = picolGetCmd(interp, "unknown"))) {
+fprintf(stderr, "GOT UNKNOWN\n");
                         argv = realloc(argv, sizeof(char*)*(argc+1));
                         for (j = argc; j > 0; j--) {
                             /* copy up */
@@ -1730,7 +1732,7 @@ int picolHash(char* key, int modul) {
 picolArray* picolArrCreate(picolInterp* interp, char* name) {
     char buf[PICOL_MAX_STR];
     picolArray* ap = calloc(1, sizeof(picolArray));
-    sprintf(buf, "%p", (void*)ap);
+    snprintf(buf, sizeof(buf), "%p", (void*)ap);
     picolValidPtrAdd(interp, PICOL_PTR_ARRAY, (void*)ap);
     picolSetVar(interp, name, buf);
     return ap;
@@ -1911,12 +1913,28 @@ char* picolArrStat(picolArray* ap, char* buf) {
         }
         count[depth]++;
     }
-    sprintf(buf, "%d entries in table, %d buckets", ap->size, buckets);
+    sprintf(
+        buf,
+        "%d entries in table, %d buckets",
+        ap->size,
+        buckets
+    );
     for (j=0; j<10; j++) {
-        sprintf(tmp, "\nnumber of buckets with %d entries: %d", j, count[j]);
+        snprintf(
+            tmp,
+            sizeof(tmp),
+            "\nnumber of buckets with %d entries: %d",
+            j,
+            count[j]
+        );
         strcat(buf, tmp);
     }
-    sprintf(tmp, "\nnumber of buckets with 10 or more entries: %d", count[10]);
+    snprintf(
+        tmp,
+        sizeof(tmp),
+        "\nnumber of buckets with 10 or more entries: %d",
+        count[10]
+    );
     strcat(buf, tmp);
     return buf;
 }
@@ -1974,7 +1992,7 @@ COMMAND(array) {
             /* Wait until here to check if the array is valid in order to
                generate the same error message as Tcl 8.6. */
             if (!valid) {
-                sprintf(buf2, "%s(%s)", argv[2], buf);
+                snprintf(buf2, sizeof(buf2), "%s(%s)", argv[2], buf);
                 return picolErr1(interp,
                                  "can't set \"%s\": variable isn't array",
                                  buf2);
@@ -2499,7 +2517,7 @@ COMMAND(format) {
         SCAN_INT(value, argv[2]);
         return picolSetFmtResult(interp, argv[1], value);
     case 's':
-        sprintf(buf, argv[1], argv[2]);
+        snprintf(buf, sizeof(buf), argv[1], argv[2]);
         return picolSetResult(interp, buf);
     default:
         return picolErr1(interp, "bad format string \"%s\"", argv[1]);
@@ -2812,7 +2830,7 @@ COMMAND(interp) {
         char buf[32];
         ARITY(argc == 2);
         trg = picolCreateInterp();
-        sprintf(buf, "%p", (void*)trg);
+        snprintf(buf, sizeof(buf), "%p", (void*)trg);
         picolValidPtrAdd(interp, PICOL_PTR_INTERP, (void*)trg);
         return picolSetResult(interp, buf);
     } else if (SUBCMD("eval")) {
@@ -3224,11 +3242,12 @@ int picol_Math(picolInterp* interp, int argc, char** argv, void* pd) {
         ARITY(argc==3);
         if (b > sizeof(int)*8 - 1) {
             char buf[PICOL_MAX_STR];
-            sprintf(buf,
-                    "can't shift integer left by more than %d bit(s) "
-                    "(%d given)",
-                    (int)(sizeof(int)*8 - 1),
-                    b);
+            snprintf(buf,
+                     sizeof(buf),
+                     "can't shift integer left by more than %d bit(s) "
+                     "(%d given)",
+                     (int)(sizeof(int)*8 - 1),
+                     b);
             return picolErr(interp, buf);
         }
         c = a << b;
@@ -3327,7 +3346,7 @@ COMMAND(open) {
     if (fp == NULL) {
         return picolErr1(interp, "could not open %s", argv[1]);
     }
-    sprintf(fp_str, "%p", (void*)fp);
+    snprintf(fp_str, sizeof(fp_str), "%p", (void*)fp);
     picolValidPtrAdd(interp, PICOL_PTR_CHAN, (void*)fp);
     return picolSetResult(interp, fp_str);
 }
@@ -3892,7 +3911,7 @@ COMMAND(time) {
        testing. */
     dt = (double)(clock() - start)*1000000.0/CLOCKS_PER_SEC;
 #endif
-    sprintf(buf, "%.1f microseconds per iteration", dt/n);
+    snprintf(buf, sizeof(buf), "%.1f microseconds per iteration", dt/n);
     return picolSetResult(interp, buf);
 }
 COMMAND(try) {
@@ -4184,16 +4203,16 @@ picolInterp* picolCreateInterp2(int register_core_cmds, int randomize) {
                  PICOL_TCL_PLATFORM_ENGINE_STRING, 1);
     /* The maximum Picol string length. Subtract one for the final '\0', which
        scripts don't see. */
-    sprintf(buf, "%d", PICOL_MAX_STR - 1);
+    snprintf(buf, sizeof(buf), "%d", PICOL_MAX_STR - 1);
     picolSetVar2(interp, "tcl_platform(maxLength)", buf, 1);
 
     x = 1;
     picolSetVar(interp,
                  "tcl_platform(byteOrder)",
                  ((char*) &x)[0] == x ? "littleEndian" : "bigEndian");
-    sprintf(buf, "%ld", (long) sizeof(long));
+    snprintf(buf, sizeof(buf), "%ld", (long) sizeof(long));
     picolSetVar2(interp, "tcl_platform(wordSize)", buf, 1);
-    sprintf(buf, "%ld", (long) sizeof(void *));
+    snprintf(buf, sizeof(buf), "%ld", (long) sizeof(void *));
     picolSetVar2(interp, "tcl_platform(pointerSize)", buf, 1);
     return interp;
 }
