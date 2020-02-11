@@ -636,8 +636,21 @@ int picolErr(picolInterp* interp, char* str) {
 #undef APPEND_BREAK
 int picolErr1(picolInterp* interp, char* format, char* arg) {
     /* The format line must contain exactly one "%s" specifier. */
-    char buf[PICOL_MAX_STR];
-    snprintf(buf, sizeof(buf), format, arg);
+    char buf[PICOL_MAX_STR], truncated[PICOL_MAX_STR];
+    int max_len;
+    strncpy(truncated, arg, PICOL_MAX_STR);
+
+    /* The two chars are for the "%s". */
+    max_len = PICOL_MAX_STR - 1 - strlen(format) + 2;
+    if (strlen(truncated) > max_len) {
+        truncated[max_len - 3] = '.';
+        truncated[max_len - 2] = '.';
+        truncated[max_len - 1] = '.';
+        truncated[max_len] = '\0';
+    }
+
+    snprintf(buf, sizeof(buf), format, truncated);
+
     return picolErr(interp, buf);
 }
 picolVar* picolGetVar2(picolInterp* interp, char* name, int glob) {
