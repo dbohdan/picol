@@ -63,6 +63,11 @@
 #    define PICOL_POPEN  _popen
 #    define PICOL_PCLOSE _pclose
 #    define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
+
+#    if _MSC_VER < 1900
+#        define PICOL_SNPRINTF(str, size, format, ...) \
+                _snprintf_s(str, size, _TRUNCATE, format, __VA_ARGS__)
+#    endif
 /*   We also include <windows.h> below, but for all compilers on Windows,
      not just MSVC. */
 #else
@@ -71,6 +76,8 @@
 #    define PICOL_GETPID getpid
 #    define PICOL_POPEN  popen
 #    define PICOL_PCLOSE pclose
+#    define PICOL_SNPRINTF(str, size, format, ...) \
+            snprintf(str, size, format, __VA_ARGS__)
 #endif /* _MSC_VER */
 
 #if PICOL_FEATURE_GLOB
@@ -592,7 +599,7 @@ int picolSetResult(picolInterp* interp, char* s) {
 }
 int picolSetFmtResult(picolInterp* interp, char* fmt, int result) {
     char buf[32];
-    snprintf(buf, sizeof(buf), fmt, result);
+    PICOL_SNPRINTF(buf, sizeof(buf), fmt, result);
     return picolSetResult(interp, buf);
 }
 #define APPEND_BREAK(src) {int src_len = strlen(src); \
@@ -649,7 +656,7 @@ int picolErr1(picolInterp* interp, char* format, char* arg) {
         truncated[max_len] = '\0';
     }
 
-    snprintf(buf, sizeof(buf), format, truncated);
+    PICOL_SNPRINTF(buf, sizeof(buf), format, truncated);
 
     return picolErr(interp, buf);
 }
@@ -768,7 +775,7 @@ int picolSetVar2(picolInterp* interp, char* name, char* val, int glob) {
 }
 int picolSetIntVar(picolInterp* interp, char* name, int value) {
     char buf[32];
-    snprintf(buf, sizeof(buf), "%d", value);
+    PICOL_SNPRINTF(buf, sizeof(buf), "%d", value);
     return picolSetVar(interp, name, buf);
 }
 int picolGetToken(picolInterp* interp, picolParser* p) {
@@ -1752,7 +1759,7 @@ int picolHash(char* key, int modul) {
 picolArray* picolArrCreate(picolInterp* interp, char* name) {
     char buf[PICOL_MAX_STR];
     picolArray* ap = calloc(1, sizeof(picolArray));
-    snprintf(buf, sizeof(buf), "%p", (void*)ap);
+    PICOL_SNPRINTF(buf, sizeof(buf), "%p", (void*)ap);
     picolValidPtrAdd(interp, PICOL_PTR_ARRAY, (void*)ap);
     picolSetVar(interp, name, buf);
     return ap;
@@ -1933,7 +1940,7 @@ char* picolArrStat(picolArray* ap, char* buf, size_t buf_size) {
         }
         count[depth]++;
     }
-    snprintf(
+    PICOL_SNPRINTF(
         buf,
         buf_size,
         "%d entries in table, %d buckets",
@@ -1941,7 +1948,7 @@ char* picolArrStat(picolArray* ap, char* buf, size_t buf_size) {
         buckets
     );
     for (j=0; j<10; j++) {
-        snprintf(
+        PICOL_SNPRINTF(
             tmp,
             sizeof(tmp),
             "\nnumber of buckets with %d entries: %d",
@@ -1950,7 +1957,7 @@ char* picolArrStat(picolArray* ap, char* buf, size_t buf_size) {
         );
         strcat(buf, tmp);
     }
-    snprintf(
+    PICOL_SNPRINTF(
         tmp,
         sizeof(tmp),
         "\nnumber of buckets with 10 or more entries: %d",
@@ -2013,7 +2020,7 @@ COMMAND(array) {
             /* Wait until here to check if the array is valid in order to
                generate the same error message as Tcl 8.6. */
             if (!valid) {
-                snprintf(buf2, sizeof(buf2), "%s(%s)", argv[2], buf);
+                PICOL_SNPRINTF(buf2, sizeof(buf2), "%s(%s)", argv[2], buf);
                 return picolErr1(interp,
                                  "can't set \"%s\": variable isn't array",
                                  buf2);
@@ -2538,7 +2545,7 @@ COMMAND(format) {
         SCAN_INT(value, argv[2]);
         return picolSetFmtResult(interp, argv[1], value);
     case 's':
-        snprintf(buf, sizeof(buf), argv[1], argv[2]);
+        PICOL_SNPRINTF(buf, sizeof(buf), argv[1], argv[2]);
         return picolSetResult(interp, buf);
     default:
         return picolErr1(interp, "bad format string \"%s\"", argv[1]);
@@ -2851,7 +2858,7 @@ COMMAND(interp) {
         char buf[32];
         ARITY(argc == 2);
         trg = picolCreateInterp();
-        snprintf(buf, sizeof(buf), "%p", (void*)trg);
+        PICOL_SNPRINTF(buf, sizeof(buf), "%p", (void*)trg);
         picolValidPtrAdd(interp, PICOL_PTR_INTERP, (void*)trg);
         return picolSetResult(interp, buf);
     } else if (SUBCMD("eval")) {
@@ -3263,7 +3270,7 @@ int picol_Math(picolInterp* interp, int argc, char** argv, void* pd) {
         ARITY(argc==3);
         if (b > sizeof(int)*8 - 1) {
             char buf[PICOL_MAX_STR];
-            snprintf(buf,
+            PICOL_SNPRINTF(buf,
                      sizeof(buf),
                      "can't shift integer left by more than %d bit(s) "
                      "(%d given)",
@@ -3367,7 +3374,7 @@ COMMAND(open) {
     if (fp == NULL) {
         return picolErr1(interp, "could not open %s", argv[1]);
     }
-    snprintf(fp_str, sizeof(fp_str), "%p", (void*)fp);
+    PICOL_SNPRINTF(fp_str, sizeof(fp_str), "%p", (void*)fp);
     picolValidPtrAdd(interp, PICOL_PTR_CHAN, (void*)fp);
     return picolSetResult(interp, fp_str);
 }
@@ -3932,7 +3939,7 @@ COMMAND(time) {
        testing. */
     dt = (double)(clock() - start)*1000000.0/CLOCKS_PER_SEC;
 #endif
-    snprintf(buf, sizeof(buf), "%.1f microseconds per iteration", dt/n);
+    PICOL_SNPRINTF(buf, sizeof(buf), "%.1f microseconds per iteration", dt/n);
     return picolSetResult(interp, buf);
 }
 COMMAND(try) {
@@ -4224,16 +4231,16 @@ picolInterp* picolCreateInterp2(int register_core_cmds, int randomize) {
                  PICOL_TCL_PLATFORM_ENGINE_STRING, 1);
     /* The maximum Picol string length. Subtract one for the final '\0', which
        scripts don't see. */
-    snprintf(buf, sizeof(buf), "%d", PICOL_MAX_STR - 1);
+    PICOL_SNPRINTF(buf, sizeof(buf), "%d", PICOL_MAX_STR - 1);
     picolSetVar2(interp, "tcl_platform(maxLength)", buf, 1);
 
     x = 1;
     picolSetVar(interp,
                  "tcl_platform(byteOrder)",
                  ((char*) &x)[0] == x ? "littleEndian" : "bigEndian");
-    snprintf(buf, sizeof(buf), "%ld", (long) sizeof(long));
+    PICOL_SNPRINTF(buf, sizeof(buf), "%ld", (long) sizeof(long));
     picolSetVar2(interp, "tcl_platform(wordSize)", buf, 1);
-    snprintf(buf, sizeof(buf), "%ld", (long) sizeof(void *));
+    PICOL_SNPRINTF(buf, sizeof(buf), "%ld", (long) sizeof(void *));
     picolSetVar2(interp, "tcl_platform(pointerSize)", buf, 1);
     return interp;
 }
