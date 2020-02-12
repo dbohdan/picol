@@ -1940,29 +1940,23 @@ char* picolArrStat(picolArray* ap, char* buf, size_t buf_size) {
         }
         count[depth]++;
     }
-    PICOL_SNPRINTF(
-        buf,
-        buf_size,
-        "%d entries in table, %d buckets",
-        ap->size,
-        buckets
-    );
+    PICOL_SNPRINTF(buf,
+                   buf_size,
+                   "%d entries in table, %d buckets",
+                   ap->size,
+                   buckets);
     for (j=0; j<10; j++) {
-        PICOL_SNPRINTF(
-            tmp,
-            sizeof(tmp),
-            "\nnumber of buckets with %d entries: %d",
-            j,
-            count[j]
-        );
+        PICOL_SNPRINTF(tmp,
+                       sizeof(tmp),
+                       "\nnumber of buckets with %d entries: %d",
+                       j,
+                       count[j]);
         strcat(buf, tmp);
     }
-    PICOL_SNPRINTF(
-        tmp,
-        sizeof(tmp),
-        "\nnumber of buckets with 10 or more entries: %d",
-        count[10]
-    );
+    PICOL_SNPRINTF(tmp,
+                   sizeof(tmp),
+                   "\nnumber of buckets with 10 or more entries: %d",
+                   count[10]);
     strcat(buf, tmp);
     return buf;
 }
@@ -3271,11 +3265,11 @@ int picol_Math(picolInterp* interp, int argc, char** argv, void* pd) {
         if (b > sizeof(int)*8 - 1) {
             char buf[PICOL_MAX_STR];
             PICOL_SNPRINTF(buf,
-                     sizeof(buf),
-                     "can't shift integer left by more than %d bit(s) "
-                     "(%d given)",
-                     (int)(sizeof(int)*8 - 1),
-                     b);
+                           sizeof(buf),
+                           "can't shift integer left by more than %d bit(s) "
+                           "(%d given)",
+                           (int)(sizeof(int)*8 - 1),
+                           b);
             return picolErr(interp, buf);
         }
         c = a << b;
