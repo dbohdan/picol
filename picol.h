@@ -3785,7 +3785,7 @@ COMMAND(string) {
         char to[PICOL_MAX_STR] = "\0";
         char result[PICOL_MAX_STR] = "\0";
         
-        char small[2] = "\0\0";
+        char tiny[2] = "\0\0";
 
         int nocase = 0; 
 
@@ -3825,8 +3825,8 @@ COMMAND(string) {
             }
             
             if (!matched) {
-                small[0] = *str;
-                APPEND(result, small);
+                tiny[0] = *str;
+                APPEND(result, tiny);
             }
         }
 
