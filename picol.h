@@ -54,7 +54,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#define PICOL_PATCHLEVEL "0.3.9"
+#define PICOL_PATCHLEVEL "0.3.10"
 
 /* MSVC compatibility. */
 #ifdef _MSC_VER
@@ -386,6 +386,7 @@ int picolSetFmtResult(picolInterp* interp, char* fmt, int result);
 int picolSetIntVar(picolInterp *interp, char *name, int value);
 int picolSetResult(picolInterp *interp, char *s);
 int picolSetVar2(picolInterp *interp, char *name, char *val, int glob);
+int picolStrCompare(const char* a, const char* b, size_t len, int nocase);
 int picolReplace(char* str, char* from, char* to, int nocase);
 int picolSource(picolInterp *interp, char *filename);
 int picolQuoteForShell(char* dest, int argc, char** argv);
@@ -1516,6 +1517,40 @@ int picolMatch(char* pat, char* str) {
         }
         return res;
     }
+}
+/* Returns 0 if the strings are equal, the index of the first differing
+   character + 1 if they are not, and -1 if there was an error. */
+int picolStrCompare(
+    const char* str1,
+    const char* str2,
+    size_t num,
+    int nocase
+) {
+    int i;
+
+    if (str1 == NULL || str2 == NULL) {
+        return -1;
+    }
+
+    for (i = 0; *str1 && *str2 && i < num; str1++, str2++, i++) {
+        char a = *str1;
+        char b = *str2;
+
+        if (nocase) {
+            a = tolower(a);
+            b = tolower(b);
+        }
+
+        if (a != b) {
+            return i + 1;
+        }
+    }
+    
+    if (i < num && ((!*str1 && *str2) || (*str1 && !*str2))) {
+        return i;
+    }
+    
+    return 0;
 }
 int picolReplace(char* str, char* from, char* to, int nocase) {
     int strLen = strlen(str);
@@ -3745,11 +3780,14 @@ COMMAND(string) {
     } else if (SUBCMD("map")) {
         char* charMap;
         char* str;
-        char* cp;
+
         char from[PICOL_MAX_STR] = "\0";
         char to[PICOL_MAX_STR] = "\0";
         char result[PICOL_MAX_STR] = "\0";
-        int nocase = 0;
+        
+        char small[2] = "\0\0";
+
+        int nocase = 0; 
 
         if (argc == 4) {
             charMap = argv[2];
@@ -3762,17 +3800,34 @@ COMMAND(string) {
             return picolErr(interp, "usage: string map ?-nocase? charMap str");
         }
 
-        cp = charMap;
-        strcpy(result, str);
-        FOREACH(from, cp, charMap) {
-            cp = picolParseList(cp, to);
-            if (cp == NULL) {
-                return picolErr(interp, "char map list unbalanced");
+        for (; *str; str++) {
+            int fromLen = 0;
+            int matched = 0;
+            char* mp = charMap;
+
+            FOREACH(from, mp, charMap) {
+                mp = picolParseList(mp, to);
+
+                if (mp == NULL) {
+                    return picolErr(interp, "char map list unbalanced");
+                }
+                if (EQ(from, "")) {
+                    continue;
+                }
+
+                fromLen = strlen(from);
+                if (picolStrCompare(str, from, fromLen, nocase) == 0) {
+                    APPEND(result, to);
+                    str += fromLen - 1;
+                    matched = 1;
+                    break;
+                }
             }
-            if (EQ(from, "")) {
-                continue;
+            
+            if (!matched) {
+                small[0] = *str;
+                APPEND(result, small);
             }
-            picolReplace(result, from, to, nocase);
         }
 
         return picolSetResult(interp, result);
