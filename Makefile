@@ -23,9 +23,9 @@ examples-test: examples
 	./examples/regexp-ext
 
 clean:
-	-rm picol picol.exe interp.obj
-	-rm examples/command examples/command.exe command.obj
-	-rm examples/hello examples/hello.exe hello.obj
-	-rm examples/regexp-ext examples/regexp-ext.exe vendor/regexp.o regexp.obj regexp-ext.obj
+	-rm -f picol picol.exe interp.obj
+	-rm -f examples/command examples/command.exe command.obj
+	-rm -f examples/hello examples/hello.exe hello.obj
+	-rm -f examples/regexp-ext examples/regexp-ext.exe vendor/regexp.o regexp.obj regexp-ext.obj
 
 .PHONY: clean examples examples-test test
