@@ -53,11 +53,8 @@ if !$test_config(picol) { #----------------------- compatibility mode for tclsh
         foreach a $args {set a1 [expr $a1-$a]}
         return $a1
     }
-    proc !   x {expr !$x}
     proc ~   x {expr ~$x}
     proc abs x {expr abs($x)}
-    interp alias {} eq {} string equal
-    interp alias {} ne {} string compare
     catch {unset env(TZ)} ;# This is somehow (wrongly) set when running via system()
 }
 #--------------------------------------------- minimal testing "framework"
@@ -71,7 +68,7 @@ proc test {name cmd arrow expected} {
     catch $cmd res
 
     lassign [switch A$arrow A-> {
-        list [eq $expected $res] exact
+        list [string equal $expected $res] exact
     } A->* {
         list [string match $expected $res] glob
     } A->$ {
@@ -177,7 +174,7 @@ if $test_config(picol) {
    test apply.2    {apply {{} {return hello}}} -> hello
    test apply.3    {set sum {{a b} {+ $a $b}}; apply $sum 17 18} -> 35
 }
-test argv.0     {puts argv0:$::argv0;eq $::argv0 [info script]} -> 1
+test argv.0     {puts argv0:$::argv0;string equal $::argv0 [info script]} -> 1
 
 if {$test_config(arrays)} {
     test array.1    {array exists a} -> 0
