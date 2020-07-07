@@ -61,18 +61,34 @@ if !$test_config(picol) { #----------------------- compatibility mode for tclsh
     catch {unset env(TZ)} ;# This is somehow (wrongly) set when running via system()
 }
 #--------------------------------------------- minimal testing "framework"
-proc test {name cmd -> expected} {
-    if [! [string match $::match $name]] return
+proc test {name cmd arrow expected} {
+    if {![string match $::match $name]} return
     incr ::n
-    if {[lsearch $::argv -l] >= 0} {puts "     [list $name $cmd -> $expected]"}
+    if {[lsearch $::argv -l] >= 0} {
+        puts "     [list $name $cmd $arrow $expected]"
+    }
+
     catch $cmd res
-    if [ne $res $expected] {
+
+    lassign [switch A$arrow A-> {
+        list [eq $expected $res] exact
+    } A->* {
+        list [string match $expected $res] glob
+    } A->$ {
+        list [regexp $expected $res] regexp
+    } default {
+        error [list unknown arrow: $arrow]
+    }] match mode
+
+    if {!$match} {
         puts "\n>>>>> $name failed: [list $cmd]"
         puts "      got: $res"
         puts " expected: $expected"
+        puts "     mode: $mode"
         incr ::r
     }
 }
+
 if $test_config(picol) {test version {info pa} -> $patchlevel}
 puts "[info script] [info patchlevel], $argv0, argv:<$argv>,argc:$argc"
 
@@ -132,12 +148,9 @@ test <<.3       {<< 1 0} -> 1
 test <<.4       {<< 1 1} -> 2
 test <<.5       {<< 1 5} -> 32
 if {$test_config(picol)} {
-    test <<.6       {
-        catch {<< 1 99} err
-        string match \
-                {can't shift integer left by more than ?? bit(s) (99 given)} \
-                $err
-    } -> 1
+    test <<.6 {
+        << 1 99
+    } ->* {can't shift integer left by more than ?? bit(s) (99 given)}
 }
 test >>.1       {>> 0 0} -> 0
 test >>.2       {>> 0 1} -> 0
@@ -206,23 +219,20 @@ if {$test_config(arrays)} {
     test array.35   {unset a(5)} -> {can't unset "a(5)": no such variable}
     test array.36   {array set a {k1 v1 k2 v2 k3 v3}; unset a; array statistics a} -> {"a" isn't an array}
     test array.37   {set a(5) hello; set a(5) hi; set a(5)} -> {hi}
+    # A workaround for Tcl 8.6: throw a more specific error in this case
+    # ('can't read "a(0)": variable isn't array').
     test array.37   {
         set a 12345678
-        catch {set a(0)} err
-        # A workaround for Tcl 8.6 throw a more specific error in this case
-        # ('can't read "a(0)": variable isn't array').
-        string match {can't read "a(0)":*} $err
-    } -> 1
+        set a(0)
+    } ->* {can't read "a(0)":*}
     test array.38   {
         set a 12345678
-        catch {lindex $a(5)} err
-        string match {can't read "a(5)":*} $err
-    } -> 1
+        lindex $a(5)
+    } ->* {can't read "a(5)":*}
     test array.39   {
         set a 12345678
-        catch {lset a(5) 0 value} err
-        string match {can't read "a(5)":*} $err
-    } -> 1
+        lset a(5) 0 value
+    } ->* {can't read "a(5)":*}
 #   test array.xx   {set ::a 12345678; proc f ::a(foo) {}; f x} -> {can't set "a(foo)": variable isn't array}
 }
 
@@ -241,9 +251,8 @@ if {$test_config(unix)} {
 if $test_config(picol) {test clock.1 {clock format 0} -> "Thu Jan 01 $hour:00:00 1970"}
 test clock.2    {clock format 0 -format %H:%M:%S} -> $hour:00:00
 test clock.3    {
-    catch {clock format} message
-    string match {*clock format clockval ?-format string?*} $message
-} -> 1
+    clock format
+} ->* {*clock format clockval ?-format string?*}
 unset hour
 
 test concat.1   concat      -> ""
@@ -419,9 +428,8 @@ if {$test_config(io)} {
     } -> {}
     if {$test_config(unix)} {
         test file.delete.3 {
-            catch {file delete /dev/null/blah} error
-            string match {error deleting "/dev/null/blah"*} $error
-        } -> 1
+            file delete /dev/null/blah
+        } ->* {error deleting "/dev/null/blah"*}
     }
     test file.delete.4 {
         set exists [file isdir directory]
@@ -726,7 +734,7 @@ if {$test_config(interp)} {
     test interp.5    {interp eval $::F {ll {a b c d e}}}    -> 5
     test interp.6    {interp eval 12345678 {lindex BAM!}} -> {could not find interpreter "12345678"}
     test interp.7    {catch interp} -> 1
-    test interp.8    {catch {interp foo} error; string match {bad option "foo"*} $error} -> 1
+    test interp.8    {interp foo} ->* {bad option "foo"*}
 }
 
 test join.1      {join {a b c d} ##}  -> a##b##c##d
@@ -1029,6 +1037,9 @@ if {$test_config(regexp)} {
         regexp $re -0 m a b
         lappend result $m $a $b
     } -> [list -0001234 - 1234   -0 - 0]
+    test regexp.6 {
+        lindex aaaaabbb
+    } ->$ a+b+
 }
 
 test rename.1    {rename h gg; gg 6} -> 36
