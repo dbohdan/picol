@@ -1545,11 +1545,11 @@ int picolStrCompare(
             return i + 1;
         }
     }
-    
+
     if (i < num && ((!*str1 && *str2) || (*str1 && !*str2))) {
         return i;
     }
-    
+
     return 0;
 }
 int picolReplace(char* str, char* from, char* to, int nocase) {
@@ -2902,6 +2902,10 @@ COMMAND(interp) {
         rc = picolEval(trg, argv[3]);
         picolSetResult(interp, trg->result);
         return rc;
+    } else {
+        return picolErr1(interp,
+                         "bad option \"%s\": must be alias, create or eval",
+                         argv[1]);
     }
     return picolErr(interp, "this should never be reached");
 }
@@ -3784,10 +3788,10 @@ COMMAND(string) {
         char from[PICOL_MAX_STR] = "\0";
         char to[PICOL_MAX_STR] = "\0";
         char result[PICOL_MAX_STR] = "\0";
-        
+
         char tiny[2] = "\0\0";
 
-        int nocase = 0; 
+        int nocase = 0;
 
         if (argc == 4) {
             charMap = argv[2];
@@ -3823,7 +3827,7 @@ COMMAND(string) {
                     break;
                 }
             }
-            
+
             if (!matched) {
                 tiny[0] = *str;
                 APPEND(result, tiny);

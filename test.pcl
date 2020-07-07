@@ -726,6 +726,7 @@ if {$test_config(interp)} {
     test interp.5    {interp eval $::F {ll {a b c d e}}}    -> 5
     test interp.6    {interp eval 12345678 {lindex BAM!}} -> {could not find interpreter "12345678"}
     test interp.7    {catch interp} -> 1
+    test interp.8    {catch {interp foo} error; string match {bad option "foo"*} $error} -> 1
 }
 
 test join.1      {join {a b c d} ##}  -> a##b##c##d
