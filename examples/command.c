@@ -14,10 +14,10 @@ command. */
 #define PICOL_IMPLEMENTATION
 #include "picol.h"
 
-COMMAND(square) {
+PICOL_COMMAND(square) {
     int n;
-    ARITY2(argc == 2, "square number");
-    SCAN_INT(n, argv[1]);
+    PICOL_ARITY2(argc == 2, "square number");
+    PICOL_SCAN_INT(n, argv[1]);
     picolSetIntResult(interp, n * n);
     return PICOL_OK;
 }

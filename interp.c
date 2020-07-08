@@ -11,7 +11,7 @@ int set_interp_argv(picolInterp* interp, int offset, int argc, char** argv) {
     int i;
     picolSetIntVar(interp, "argc", argc - offset);
     for (i = offset; i < argc; i++) {
-        LAPPEND(buf, argv[i]);
+        PICOL_LAPPEND(buf, argv[i]);
     }
     picolSetVar(interp, "argv", buf);
     return PICOL_OK;
@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
                 printf("[%d] %s\n", rc, interp->result);
             }
         }
-    } else if (argc == 3 && EQ(argv[1], "-e")) { /* A script in argv[2]. */
+    } else if (argc == 3 && PICOL_EQ(argv[1], "-e")) { /* A script in argv[2]. */
         set_interp_argv(interp, 1, argc, argv);
         rc = picolEval(interp, argv[2]);
         if (rc != PICOL_OK) {

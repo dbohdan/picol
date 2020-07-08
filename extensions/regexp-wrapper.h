@@ -1,15 +1,15 @@
 #ifndef REGEXP_WRAPPER_H
-COMMAND(regexp);
+PICOL_COMMAND(regexp);
 #endif /* REGEXP_WRAPPER_H */
 
 #ifdef REGEXP_WRAPPER_IMPLEMENTATION
-COMMAND(regexp) {
+PICOL_COMMAND(regexp) {
     Reprog* p;
     Resub m;
     int i, result;
     const char* err;
     char match[PICOL_MAX_STR];
-    ARITY2(argc >= 3, "regexp exp string ?matchVar? ?subMatchVar ...?");
+    PICOL_ARITY2(argc >= 3, "regexp exp string ?matchVar? ?subMatchVar ...?");
     p = regcomp(argv[1], 0, &err);
     if (p == NULL) {
         return picolErr1(interp, "can't compile regexp: %s", (char*) err);
