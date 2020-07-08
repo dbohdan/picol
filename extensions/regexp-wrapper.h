@@ -1,8 +1,8 @@
-#ifndef REGEXP_WRAPPER_H
+#ifndef PICOL_REGEXP_WRAPPER_H
 PICOL_COMMAND(regexp);
-#endif /* REGEXP_WRAPPER_H */
+#endif /* PICOL_REGEXP_WRAPPER_H */
 
-#ifdef REGEXP_WRAPPER_IMPLEMENTATION
+#ifdef PICOL_REGEXP_WRAPPER_IMPLEMENTATION
 PICOL_COMMAND(regexp) {
     Reprog* p;
     Resub m;
@@ -38,4 +38,4 @@ PICOL_COMMAND(regexp) {
     regfree(p);
     return picolSetBoolResult(interp, result);
 }
-#endif /* REGEXP_WRAPPER_IMPLEMENTATION */
+#endif /* PICOL_REGEXP_WRAPPER_IMPLEMENTATION */

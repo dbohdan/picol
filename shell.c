@@ -4,7 +4,7 @@
 #include "picol.h"
 
 #include "vendor/regexp.h"
-#define REGEXP_WRAPPER_IMPLEMENTATION
+#define PICOL_REGEXP_WRAPPER_IMPLEMENTATION
 #include "extensions/regexp-wrapper.h"
 
 #if PICOL_TCL_PLATFORM_PLATFORM == PICOL_TCL_PLATFORM_UNIX
