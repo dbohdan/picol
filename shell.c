@@ -1,4 +1,4 @@
-/* An interactive Picol interpreter. */
+/* An interactive Picol shell. */
 
 #define PICOL_IMPLEMENTATION
 #include "picol.h"
@@ -8,15 +8,15 @@
 #include "extensions/regexp-wrapper.h"
 
 #if PICOL_TCL_PLATFORM_PLATFORM == PICOL_TCL_PLATFORM_UNIX
-    #define PICOL_INTERP_LINENOISE
+    #define PICOL_SHELL_LINENOISE
 #endif
-#ifdef PICOL_INTERP_LINENOISE
+#ifdef PICOL_SHELL_LINENOISE
     #include "vendor/linenoise.h"
 #endif
 
-#define PICOL_INTERP_HISTORY_FILE "history.pcl"
-#define PICOL_INTERP_HISTORY_LEN 100
-#define PICOL_INTERP_PROMPT "picol> "
+#define PICOL_SHELL_HISTORY_FILE "history.pcl"
+#define PICOL_SHELL_HISTORY_LEN 100
+#define PICOL_SHELL_PROMPT "picol> "
 
 int set_interp_argv(picolInterp* interp, int offset, int argc, char** argv) {
     char buf[PICOL_MAX_STR] = "";
@@ -53,15 +53,15 @@ int main(int argc, char** argv) {
     }
 
     if (argc == 1) { /* No arguments - interactive mode. */
-        #ifdef PICOL_INTERP_LINENOISE
+        #ifdef PICOL_SHELL_LINENOISE
             linenoiseSetMultiLine(1);
-            linenoiseHistorySetMaxLen(PICOL_INTERP_HISTORY_LEN);
-            linenoiseHistoryLoad(PICOL_INTERP_HISTORY_FILE);
+            linenoiseHistorySetMaxLen(PICOL_SHELL_HISTORY_LEN);
+            linenoiseHistoryLoad(PICOL_SHELL_HISTORY_FILE);
         #endif
 
         while (1) {
-            #ifdef PICOL_INTERP_LINENOISE
-                char* line = linenoise(PICOL_INTERP_PROMPT);
+            #ifdef PICOL_SHELL_LINENOISE
+                char* line = linenoise(PICOL_SHELL_PROMPT);
                 if (line == NULL) {
                     break;
                 }
@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
                 linenoiseHistoryAdd(buf);
                 linenoiseFree(line);
             #else
-                printf(PICOL_INTERP_PROMPT);
+                printf(PICOL_SHELL_PROMPT);
                 fflush(stdout);
                 if (fgets(buf, sizeof(buf), stdin) == NULL) {
                     break;
@@ -82,8 +82,8 @@ int main(int argc, char** argv) {
             }
         }
 
-        #ifdef PICOL_INTERP_LINENOISE
-            linenoiseHistorySave(PICOL_INTERP_HISTORY_FILE);
+        #ifdef PICOL_SHELL_LINENOISE
+            linenoiseHistorySave(PICOL_SHELL_HISTORY_FILE);
         #endif
     } else if (argc == 3 && PICOL_EQ(argv[1], "-e")) { /* A script in argv[2]. */
         set_interp_argv(interp, 1, argc, argv);

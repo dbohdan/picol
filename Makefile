@@ -1,10 +1,10 @@
 CFLAGS ?= -Wall
 
-picol: interp.c picol.h vendor/linenoise.o vendor/regexp.o
-	$(CC) vendor/linenoise.o vendor/regexp.o interp.c -o $@ $(CFLAGS)
+picolsh: shell.c picol.h vendor/linenoise.o vendor/regexp.o
+	$(CC) vendor/linenoise.o vendor/regexp.o shell.c -o $@ $(CFLAGS)
 
-test: picol
-	./picol test.pcl
+test: picolsh
+	./picolsh test.pcl
 
 vendor/linenoise.o: vendor/linenoise.h vendor/linenoise.c
 	$(CC) -c vendor/linenoise.c -o $@ $(CFLAGS)
@@ -25,7 +25,7 @@ examples-test: examples
 	./examples/regexp-ext
 
 clean:
-	-rm -f picol picol.exe interp.obj
+	-rm -f picolsh picol.exe shell.obj
 	-rm -f examples/command examples/command.exe command.obj
 	-rm -f examples/hello examples/hello.exe hello.obj
 	-rm -f examples/regexp-ext examples/regexp-ext.exe vendor/regexp.o regexp.obj regexp-ext.obj
