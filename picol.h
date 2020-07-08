@@ -2085,10 +2085,26 @@ PICOL_COMMAND(array) {
             /* Wait until here to check if the array is valid in order to
                generate the same error message as Tcl 8.6. */
             if (!valid) {
-                PICOL_SNPRINTF(buf2, sizeof(buf2), "%s(%s)", argv[2], buf);
-                return picolErr1(interp,
-                                 "can't set \"%s\": variable isn't array",
-                                 buf2);
+                int ret = PICOL_SNPRINTF(
+                    buf2,
+                    sizeof(buf2),
+                    "%s(%s)",
+                    argv[2],
+                    buf
+                );
+
+                if (ret < 0) {
+                    return picolErr1(
+                        interp,
+                        "can't set \"%s...\": variable isn't array",
+                        buf2
+                    );
+                }
+                return picolErr1(
+                    interp,
+                    "can't set \"%s\": variable isn't array",
+                    buf2
+                );
             }
             picolArrSet(ap, buf, buf2);
         }
