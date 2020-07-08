@@ -1,11 +1,13 @@
 CFLAGS ?= -Wall
 
-picol: interp.c picol.h vendor/regexp.o
-	$(CC) vendor/regexp.o interp.c -o $@ $(CFLAGS)
+picol: interp.c picol.h vendor/linenoise.o vendor/regexp.o
+	$(CC) vendor/linenoise.o vendor/regexp.o interp.c -o $@ $(CFLAGS)
 
 test: picol
 	./picol test.pcl
 
+vendor/linenoise.o: vendor/linenoise.h vendor/linenoise.c
+	$(CC) -c vendor/linenoise.c -o $@ $(CFLAGS)
 vendor/regexp.o: vendor/regexp.h vendor/regexp.c
 	$(CC) -c vendor/regexp.c -o $@ $(CFLAGS)
 

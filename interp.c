@@ -2,9 +2,21 @@
 
 #define PICOL_IMPLEMENTATION
 #include "picol.h"
+
 #include "vendor/regexp.h"
 #define REGEXP_WRAPPER_IMPLEMENTATION
 #include "extensions/regexp-wrapper.h"
+
+#if PICOL_TCL_PLATFORM_PLATFORM == PICOL_TCL_PLATFORM_UNIX
+    #define PICOL_INTERP_LINENOISE
+#endif
+#ifdef PICOL_INTERP_LINENOISE
+    #include "vendor/linenoise.h"
+#endif
+
+#define PICOL_INTERP_HISTORY_FILE "history.pcl"
+#define PICOL_INTERP_HISTORY_LEN 100
+#define PICOL_INTERP_PROMPT "picol> "
 
 int set_interp_argv(picolInterp* interp, int offset, int argc, char** argv) {
     char buf[PICOL_MAX_STR] = "";
@@ -39,18 +51,40 @@ int main(int argc, char** argv) {
         }
         interp->current = NULL; /* Prevent a misleading error traceback. */
     }
+
     if (argc == 1) { /* No arguments - interactive mode. */
+        #ifdef PICOL_INTERP_LINENOISE
+            linenoiseSetMultiLine(1);
+            linenoiseHistorySetMaxLen(PICOL_INTERP_HISTORY_LEN);
+            linenoiseHistoryLoad(PICOL_INTERP_HISTORY_FILE);
+        #endif
+
         while (1) {
-            printf("picol> ");
-            fflush(stdout);
-            if (fgets(buf, sizeof(buf), stdin) == NULL) {
-                return 0;
-            }
+            #ifdef PICOL_INTERP_LINENOISE
+                char* line = linenoise(PICOL_INTERP_PROMPT);
+                if (line == NULL) {
+                    break;
+                }
+                strncpy(buf, line, sizeof(buf));
+                linenoiseHistoryAdd(buf);
+                linenoiseFree(line);
+            #else
+                printf(PICOL_INTERP_PROMPT);
+                fflush(stdout);
+                if (fgets(buf, sizeof(buf), stdin) == NULL) {
+                    break;
+                }
+            #endif
+
             rc = picolEval(interp, buf);
             if (interp->result[0] != '\0' || rc != PICOL_OK) {
                 printf("[%d] %s\n", rc, interp->result);
             }
         }
+
+        #ifdef PICOL_INTERP_LINENOISE
+            linenoiseHistorySave(PICOL_INTERP_HISTORY_FILE);
+        #endif
     } else if (argc == 3 && PICOL_EQ(argv[1], "-e")) { /* A script in argv[2]. */
         set_interp_argv(interp, 1, argc, argv);
         rc = picolEval(interp, argv[2]);
