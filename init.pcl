@@ -1,5 +1,4 @@
 #-- init.pcl -- optional startup code for Picol
-#-- This file is sourced first if it is in current directory
 
 lappend auto_path [file dirname [file join [pwd] [info script]]]
 

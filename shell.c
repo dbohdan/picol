@@ -1,5 +1,7 @@
 /* An interactive Picol shell. */
 
+/* --- Libraries --- */
+
 #define PICOL_IMPLEMENTATION
 #include "picol.h"
 
@@ -8,15 +10,29 @@
 #include "extensions/regexp-wrapper.h"
 
 #if PICOL_TCL_PLATFORM_PLATFORM == PICOL_TCL_PLATFORM_UNIX
-    #define PICOL_SHELL_LINENOISE
-#endif
-#ifdef PICOL_SHELL_LINENOISE
+    #define PICOL_SHELL_LINENOISE 1
     #include "vendor/linenoise.h"
 #endif
 
-#define PICOL_SHELL_HISTORY_FILE "history.pcl"
+/* --- Configuration --- */
+
+/* History is currently only available on *nix. */
+#define PICOL_SHELL_HISTORY_FILE ".picolsh_history"
 #define PICOL_SHELL_HISTORY_LEN 100
+
+#define PICOL_SHELL_INIT_FILE_UNIX ".picolshrc"
+#define PICOL_SHELL_INIT_FILE_WINDOWS "picolshrc.pcl"
+#if PICOL_TCL_PLATFORM_PLATFORM == PICOL_TCL_PLATFORM_UNIX
+    #define PICOL_SHELL_INIT_FILE PICOL_SHELL_INIT_FILE_UNIX
+#elif PICOL_TCL_PLATFORM_PLATFORM == PICOL_TCL_PLATFORM_WINDOWS
+    #define PICOL_SHELL_INIT_FILE PICOL_SHELL_INIT_FILE_WINDOWS
+#else
+    #define PICOL_SHELL_INIT_FILE ""
+#endif
+
 #define PICOL_SHELL_PROMPT "picol> "
+
+/* --- Implementation --- */
 
 int set_interp_argv(picolInterp* interp, int offset, int argc, char** argv) {
     char buf[PICOL_MAX_STR] = "";
@@ -29,13 +45,30 @@ int set_interp_argv(picolInterp* interp, int offset, int argc, char** argv) {
     return PICOL_OK;
 }
 
+int home_dir_path(char* dest, size_t size, const char* append) {
+    char* dir = NULL;
+    #if PICOL_TCL_PLATFORM_PLATFORM == PICOL_TCL_PLATFORM_UNIX
+        dir = getenv("HOME");
+    #elif PICOL_TCL_PLATFORM_PLATFORM == PICOL_TCL_PLATFORM_WINDOWS
+        dir = getenv("USERPROFILE");
+    #endif
+
+    if (size == 0 || dir == NULL) {
+        return PICOL_ERR;
+    }
+
+    strncpy(dest, dir, size);
+    strcat(dest, append);
+    return PICOL_OK;
+}
+
 int main(int argc, char** argv) {
     char buf[PICOL_MAX_STR] = "";
     int rc = 0;
-    FILE* fp;
+    FILE* fp = NULL;
     picolInterp* interp = picolCreateInterp();
     picolRegisterCmd(interp, "regexp", picol_regexp, NULL);
-    fp = fopen("init.pcl", "r");
+
     picolSetVar(interp, "argv0", argv[0]);
     picolSetVar(interp, "argv",  "");
     picolSetVar(interp, "argc",  "0");
@@ -43,20 +76,28 @@ int main(int argc, char** argv) {
     /* The array ::env is lazily populated with the environment variables'
        values. */
     picolEval(interp, "array set env {}");
-    if (fp != NULL) {
-        fclose(fp);
-        rc = picolSource(interp, "init.pcl");
-        if (rc != PICOL_OK) {
-            puts(interp->result);
-        }
-        interp->current = NULL; /* Prevent a misleading error traceback. */
-    }
-
     if (argc == 1) { /* No arguments - interactive mode. */
+        rc = home_dir_path(buf, sizeof(buf), "/" PICOL_SHELL_INIT_FILE);
+        if (rc == PICOL_OK) {
+            fp = fopen(buf, "r");
+        }
+
+        if (fp != NULL) {
+            fclose(fp);
+            rc = picolSource(interp, buf);
+            if (rc != PICOL_OK) {
+                puts(interp->result);
+            }
+            interp->current = NULL; /* Prevent a misleading error traceback. */
+        }
+
         #ifdef PICOL_SHELL_LINENOISE
             linenoiseSetMultiLine(1);
             linenoiseHistorySetMaxLen(PICOL_SHELL_HISTORY_LEN);
-            linenoiseHistoryLoad(PICOL_SHELL_HISTORY_FILE);
+            rc = home_dir_path(buf, sizeof(buf), "/" PICOL_SHELL_HISTORY_FILE);
+            if (rc == PICOL_OK) {
+                linenoiseHistoryLoad(buf);
+            }
         #endif
 
         while (1) {

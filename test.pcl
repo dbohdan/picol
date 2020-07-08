@@ -44,6 +44,10 @@ set test_config(io) [expr {[info commands open] eq {open}}]
 set test_config(regexp) [expr {[info commands regexp] eq {regexp}}]
 # Do not check for [puts]. [puts] is mandatory to run the tests.
 
+if {$test_config(picol) && $test_config(io)} {
+    source [file dirname [file join [pwd] [info script]]]/init.pcl
+}
+
 if !$test_config(picol) { #----------------------- compatibility mode for tclsh
     foreach i {/ % == != > < >= <= << >>} {proc $i {a b} "expr {\$a $i \$b}"}
     foreach i {+ * && || & | ^} {proc $i args "expr \[join \$args $i\]+0"}
@@ -174,7 +178,10 @@ if $test_config(picol) {
    test apply.2    {apply {{} {return hello}}} -> hello
    test apply.3    {set sum {{a b} {+ $a $b}}; apply $sum 17 18} -> 35
 }
-test argv.0     {puts argv0:$::argv0;string equal $::argv0 [info script]} -> 1
+test argv0.1 {
+    puts [list argv0 $::argv0 script [info script]]
+    string equal $::argv0 [info script]
+} -> 1
 
 if {$test_config(arrays)} {
     test array.1    {array exists a} -> 0
@@ -722,6 +729,8 @@ if $test_config(picol) {
     test info.procs.1 {info procs} -> $result
     unset result
 }
+
+test info.script.1 {info script} -> test.pcl
 
 if {$test_config(interp)} {
     test interp.1    {interp alias {} ll {} llength; ll {a b c}} -> 3
