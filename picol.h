@@ -874,6 +874,7 @@ int picolGetToken(picolInterp* interp, picolParser* p) {
                 picolParseComment(p);
                 continue;
             }
+            /* FALLTHRU */
         default:
             return picolParseString(p);
         }
