@@ -117,6 +117,8 @@
 #    define PICOL_TCL_PLATFORM_PLATFORM_STRING  "unknown"
 #endif
 
+#define PICOL_INFO_SCRIPT_VAR "::_script_"
+
 /* ---------- Most macros need the picol_* environment: argc, argv and interp */
 #define PICOL_APPEND(dst, src) \
     do {if ((strlen(dst)+strlen(src)) > sizeof(dst) - 1) { \
@@ -2899,7 +2901,7 @@ PICOL_COMMAND(info) {
     } else if (PICOL_SUBCMD("patchlevel") || PICOL_SUBCMD("pa")) {
         picolSetResult(interp, PICOL_PATCHLEVEL);
     } else if (PICOL_SUBCMD("script")) {
-        picolVar* v = picolGetVar(interp, "::_script_");
+        picolVar* v = picolGetVar(interp, PICOL_INFO_SCRIPT_VAR);
         if (v != NULL) {
             picolSetResult(interp, v->val);
         }
@@ -3699,17 +3701,29 @@ PICOL_COMMAND(set) {
 }
 int picolSource(picolInterp* interp, char* filename) {
     char buf[PICOL_MAX_STR*64];
+    char prev[PICOL_MAX_STR];
     int rc;
+    picolVar* pv;
+
     FILE* fp = fopen(filename, "r");
     if (fp == NULL) {
         return picolErr1(interp, "No such file or directory \"%s\"", filename);
     }
-    picolSetVar(interp, "::_script_", filename);
+
+    pv = picolGetGlobalVar(interp, PICOL_INFO_SCRIPT_VAR);
+    if (pv != NULL && pv->val != NULL) {
+        strncpy(prev, pv->val, sizeof(buf));
+    }
+
+    picolSetVar(interp, PICOL_INFO_SCRIPT_VAR, filename);
+
     buf[fread(buf, 1, sizeof(buf), fp)] = '\0';
     fclose(fp);
+
     rc = picolEval(interp, buf);
-    /* script only known during [source] */
-    picolSetVar(interp, "::_script_", "");
+
+    picolSetVar(interp, PICOL_INFO_SCRIPT_VAR, prev);
+
     return rc;
 }
 #if PICOL_FEATURE_IO
