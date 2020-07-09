@@ -6,22 +6,22 @@ build_script:
   - cmd: set source_version=%APPVEYOR_REPO_COMMIT:~0,10%_%APPVEYOR_REPO_TAG_NAME%
 
   - cmd: build-mingw.cmd /batch
-  - cmd: copy picol.exe picol_%source_version%_mingw.exe
-  - cmd: copy picol.exe picol_%source_version%_mingw_debug.exe
-  - cmd: strip picol_%source_version%_mingw.exe
+  - cmd: copy picolsh.exe picolsh_%source_version%_mingw.exe
+  - cmd: copy picolsh.exe picolsh_%source_version%_mingw_debug.exe
+  - cmd: strip picolsh_%source_version%_mingw.exe
   - cmd: make clean
 
   - cmd: set PATH=%default_path%
 
   - cmd: build-msvc.cmd /batch /version:12.0
-  - cmd: copy picol.exe picol_%source_version%_msvc.exe
+  - cmd: copy picolsh.exe picolsh_%source_version%_msvc.exe
 test_script:
-  - cmd: picol_%source_version%_mingw.exe test.pcl
-  - cmd: picol_%source_version%_msvc.exe test.pcl
+  - cmd: picolsh_%source_version%_mingw.exe test.pcl
+  - cmd: picolsh_%source_version%_msvc.exe test.pcl
 artifacts:
-  - path: picol_%source_version%_mingw.exe
-  - path: picol_%source_version%_mingw_debug.exe
-  - path: picol_%source_version%_msvc.exe
+  - path: picolsh_%source_version%_mingw.exe
+  - path: picolsh_%source_version%_mingw_debug.exe
+  - path: picolsh_%source_version%_msvc.exe
 deploy:
   - provider: BinTray
     username: dbohdan
