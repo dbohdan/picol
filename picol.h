@@ -3715,7 +3715,7 @@ int picolSource(picolInterp* interp, char* filename) {
 
     pv = picolGetGlobalVar(interp, PICOL_INFO_SCRIPT_VAR);
     if (pv != NULL && pv->val != NULL) {
-        strncpy(prev, pv->val, sizeof(buf));
+        strncpy(prev, pv->val, sizeof(prev));
     }
 
     picolSetVar(interp, PICOL_INFO_SCRIPT_VAR, filename);
