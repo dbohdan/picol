@@ -6,7 +6,8 @@ PICOL_COMMAND(regexp);
 PICOL_COMMAND(regexp) {
     Reprog* p;
     Resub m;
-    int i, result;
+    int i;
+    int result;
     const char* err;
     char match[PICOL_MAX_STR];
     PICOL_ARITY2(argc >= 3, "regexp exp string ?matchVar? ?subMatchVar ...?");
@@ -16,7 +17,7 @@ PICOL_COMMAND(regexp) {
     }
     result = !regexec(p, argv[2], &m, 0);
     if (result) {
-        for (i = 0; (i < m.nsub) && (i + 3 < argc); i++) {
+        for (i = 0; (i < (int)m.nsub) && (i + 3 < argc); i++) {
             /* n should always be less than PICOL_MAX_STR under normal
                operation, but we'll check it anyway in case the command was,
                e.g., run directly from C with pathological arguments. */
