@@ -10,6 +10,6 @@ rem Build Picol with MinGW.
 echo on
 set PATH=C:\MinGW\bin;C:\MinGW\msys\1.0\bin
 set CC=gcc
-make
+make picolsh
 make examples
 @if "%flag_batch%"=="0" pause
