@@ -315,16 +315,16 @@ if {$test_config(io)} {
     }
     if {$test_config(windows)} {
         test exec.4  {exec cmd.exe /c echo Hello, World!} -> {Hello, World!}
-        test exec.5  {exec picol.exe qargv.pcl a b c} -> {{a b c}}
-        test exec.6  {exec picol.exe qargv.pcl {a b c}} -> {{{a b c}}}
+        test exec.5  {exec picolsh.exe qargv.pcl a b c} -> {{a b c}}
+        test exec.6  {exec picolsh.exe qargv.pcl {a b c}} -> {{{a b c}}}
         test exec.7  {exec cmd.exe /c echo {Hello, World!}} -> {"Hello, World!"}
-        test exec.8  {exec picol.exe qargv.pcl {He said, "She said, 'Hello!'"}} -> \
+        test exec.8  {exec picolsh.exe qargv.pcl {He said, "She said, 'Hello!'"}} -> \
                 {{{He said, "She said, 'Hello!'"}}}
-        test exec.9  {exec picol.exe qargv.pcl \
+        test exec.9  {exec picolsh.exe qargv.pcl \
                 {They said, 'Hello!'} {"Hasta la vista, baby!"} Tab\ttab} -> \
                 [list [list {They said, 'Hello!'} {"Hasta la vista, baby!"} Tab\ttab]]
-        test exec.10 {exec picol.exe qargv.pcl &whoami} -> &whoami
-        test exec.11 {exec picol.exe qargv.pcl {\n} {\\\n} {\"}} -> {{{\n} {\\\n} {\"}}}
+        test exec.10 {exec picolsh.exe qargv.pcl &whoami} -> &whoami
+        test exec.11 {exec picolsh.exe qargv.pcl {\n} {\\\n} {\"}} -> {{{\n} {\\\n} {\"}}}
         if {$test_config(picol)} {
             test exec.12 {exec cmd.exe /c echo {\n} {\\\n} {\"}} -> {\n \\\n "\\\""}
         }
