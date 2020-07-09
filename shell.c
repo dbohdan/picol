@@ -10,8 +10,10 @@
 #include "extensions/regexp-wrapper.h"
 
 #if PICOL_TCL_PLATFORM_PLATFORM == PICOL_TCL_PLATFORM_UNIX
-    #define PICOL_SHELL_LINENOISE 1
-    #include "vendor/linenoise.h"
+    #ifndef PICOL_SHELL_LINENOISE
+        #define PICOL_SHELL_LINENOISE 1
+        #include "vendor/linenoise.h"
+    #endif
 #else
     #define PICOL_SHELL_LINENOISE 0
 #endif
@@ -133,7 +135,7 @@ int main(int argc, char** argv) {
             }
         }
 
-        #ifdef PICOL_SHELL_LINENOISE
+        #if PICOL_SHELL_LINENOISE
             linenoiseHistorySave(history_file_path);
         #endif
    } else if (argc == 3 && PICOL_EQ(argv[1], "-e")) { /* A script in argv[2]. */

@@ -1,6 +1,10 @@
 CFLAGS ?= -Wall
 
-picolsh: shell.c picol.h vendor/linenoise.o vendor/regexp.o
+all: picolsh picolsh-linenoise
+
+picolsh: shell.c picol.h vendor/regexp.o
+	$(CC) vendor/regexp.o shell.c -o $@ $(CFLAGS) -DPICOL_SHELL_LINENOISE=0
+picolsh-linenoise: shell.c picol.h vendor/linenoise.o vendor/regexp.o
 	$(CC) vendor/linenoise.o vendor/regexp.o shell.c -o $@ $(CFLAGS)
 
 test: picolsh
@@ -29,5 +33,6 @@ clean:
 	-rm -f examples/command examples/command.exe command.obj
 	-rm -f examples/hello examples/hello.exe hello.obj
 	-rm -f examples/regexp-ext examples/regexp-ext.exe vendor/regexp.o regexp.obj regexp-ext.obj
+	-rm -f vendor/linenoise.o
 
-.PHONY: clean examples examples-test test
+.PHONY: all clean examples examples-test test
