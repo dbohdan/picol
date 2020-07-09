@@ -322,6 +322,7 @@ PICOL_COMMAND(lrepeat);
 PICOL_COMMAND(lreplace);
 PICOL_COMMAND(lreverse);
 PICOL_COMMAND(lsearch);
+PICOL_COMMAND(lset);
 PICOL_COMMAND(lsort);
 PICOL_COMMAND(max);
 PICOL_COMMAND(min);
@@ -387,10 +388,12 @@ int picolValidPtrFind(picolInterp *interp, int type, void* ptr);
 int picolValidPtrRemove(picolInterp *interp, int type, void* ptr);
 int picolCallProc(picolInterp *interp, int argc, char **argv, void *pd);
 int picolCondition(picolInterp *interp, char* str);
+char* picolConcat(char* buf, int argc, char** argv);
 int picolErr1(picolInterp *interp, char* format, char* arg);
 int picolErr(picolInterp *interp, char* str);
 int picolEval2(picolInterp *interp, char *t, int mode);
 size_t picolExpandLC(char* destination, char* source, size_t num);
+int picol_EqNe(picolInterp* interp, int argc, char** argv, void* pd);
 int picolGetToken(picolInterp *interp, picolParser *p);
 int picol_InNi(picolInterp *interp, int argc, char **argv, void *pd);
 int picolIsDirectory(char* path);
@@ -632,7 +635,7 @@ int picolSetFmtResult(picolInterp* interp, char* fmt, int result) {
 }
 #define PICOL_APPEND_BREAK(src) \
     { \
-        int src_len = strlen(src); \
+        size_t src_len = strlen(src); \
         if ((len + src_len) > sizeof(buf) - 1) { too_long = 1; break;} \
         strcat(buf, src); added_len += src_len; \
     }
@@ -674,7 +677,7 @@ int picolErr(picolInterp* interp, char* str) {
 int picolErr1(picolInterp* interp, char* format, char* arg) {
     /* The format line must contain exactly one "%s" specifier. */
     char buf[PICOL_MAX_STR], truncated[PICOL_MAX_STR];
-    int max_len;
+    size_t max_len;
     strncpy(truncated, arg, PICOL_MAX_STR);
 
     /* The two chars are for the "%s". */
@@ -1557,7 +1560,7 @@ int picolStrCompare(
     size_t num,
     int nocase
 ) {
-    int i;
+    size_t i;
 
     if (str1 == NULL || str2 == NULL) {
         return -1;
@@ -1659,7 +1662,7 @@ int picolReplace(char* str, char* from, char* to, int nocase) {
 }
 int picolQuoteForShell(char* dest, int argc, char** argv) {
     char command[PICOL_MAX_STR] = "\0";
-    unsigned int j;
+    int j;
     unsigned int k;
     unsigned int offset = 0;
 #define PICOL_ADDCHAR(c) \
@@ -3368,7 +3371,7 @@ int picol_Math(picolInterp* interp, int argc, char** argv, void* pd) {
     /*ARITY2"<< a b" */
     else if (PICOL_EQ(argv[0], "<<" )) {
         PICOL_ARITY(argc==3);
-        if (b > sizeof(int)*8 - 1) {
+        if (b > (int)sizeof(int)*8 - 1) {
             char buf[PICOL_MAX_STR];
             PICOL_SNPRINTF(buf,
                            sizeof(buf),
