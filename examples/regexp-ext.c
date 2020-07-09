@@ -3,7 +3,7 @@
 #define PICOL_IMPLEMENTATION
 #include "picol.h"
 #include "vendor/regexp.h"
-#define REGEXP_WRAPPER_IMPLEMENTATION
+#define PICOL_REGEXP_WRAPPER_IMPLEMENTATION
 #include "extensions/regexp-wrapper.h"
 
 void eval_and_report(picolInterp* interp, char* command) {
