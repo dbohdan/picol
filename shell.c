@@ -12,6 +12,8 @@
 #if PICOL_TCL_PLATFORM_PLATFORM == PICOL_TCL_PLATFORM_UNIX
     #define PICOL_SHELL_LINENOISE 1
     #include "vendor/linenoise.h"
+#else
+    #define PICOL_SHELL_LINENOISE 0
 #endif
 
 /* --- Configuration --- */
@@ -77,6 +79,10 @@ int main(int argc, char** argv) {
        values. */
     picolEval(interp, "array set env {}");
     if (argc == 1) { /* No arguments - interactive mode. */
+        #if PICOL_SHELL_LINENOISE
+            char history_file_path[PICOL_MAX_STR] = "";
+        #endif
+
         rc = home_dir_path(buf, sizeof(buf), "/" PICOL_SHELL_INIT_FILE);
         if (rc == PICOL_OK) {
             fp = fopen(buf, "r");
@@ -91,17 +97,21 @@ int main(int argc, char** argv) {
             interp->current = NULL; /* Prevent a misleading error traceback. */
         }
 
-        #ifdef PICOL_SHELL_LINENOISE
+        #if PICOL_SHELL_LINENOISE
             linenoiseSetMultiLine(1);
             linenoiseHistorySetMaxLen(PICOL_SHELL_HISTORY_LEN);
-            rc = home_dir_path(buf, sizeof(buf), "/" PICOL_SHELL_HISTORY_FILE);
+            rc = home_dir_path(
+                history_file_path,
+                sizeof(history_file_path),
+                "/" PICOL_SHELL_HISTORY_FILE
+            );
             if (rc == PICOL_OK) {
-                linenoiseHistoryLoad(buf);
+                linenoiseHistoryLoad(history_file_path);
             }
         #endif
 
         while (1) {
-            #ifdef PICOL_SHELL_LINENOISE
+            #if PICOL_SHELL_LINENOISE
                 char* line = linenoise(PICOL_SHELL_PROMPT);
                 if (line == NULL) {
                     break;
@@ -124,9 +134,9 @@ int main(int argc, char** argv) {
         }
 
         #ifdef PICOL_SHELL_LINENOISE
-            linenoiseHistorySave(PICOL_SHELL_HISTORY_FILE);
+            linenoiseHistorySave(history_file_path);
         #endif
-    } else if (argc == 3 && PICOL_EQ(argv[1], "-e")) { /* A script in argv[2]. */
+   } else if (argc == 3 && PICOL_EQ(argv[1], "-e")) { /* A script in argv[2]. */
         set_interp_argv(interp, 1, argc, argv);
         rc = picolEval(interp, argv[2]);
         if (rc != PICOL_OK) {
