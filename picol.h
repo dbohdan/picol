@@ -120,18 +120,37 @@
 #define PICOL_INFO_SCRIPT_VAR "::_script_"
 
 /* ---------- Most macros need the picol_* environment: argc, argv and interp */
-#define PICOL_APPEND(dst, src) \
-    do {if ((strlen(dst)+strlen(src)) > sizeof(dst) - 1) { \
-    return picolErr(interp, "string too long");} \
-    strcat(dst, src);} while (0)
+#define PICOL_ERROR_TOO_LONG "string too long"
 
-#define PICOL_ARITY(x)\
-    do {if (!(x)) {return picolErr1(interp, \
-    "wrong # args for \"%s\"", argv[0]);}} while (0);
+#define PICOL_APPEND(dst, src) \
+    do { \
+        if ((strlen(dst) + strlen(src)) > sizeof(dst) - 1) { \
+            return picolErr(interp, PICOL_ERROR_TOO_LONG); \
+        } \
+        strcat(dst, src); \
+    } while (0)
+
+#define PICOL_APPEND_BREAK(dst, src, too_long) \
+    { \
+        if ((strlen(dst) + strlen(src)) > sizeof(dst) - 1) { \
+            too_long = 1; break; \
+        } \
+        strcat(dst, src); \
+    }
+
+#define PICOL_ARITY(x) \
+    do { \
+        if (!(x)) { \
+            return picolErr1(interp, "wrong # args for \"%s\"", argv[0]); \
+        } \
+    } while (0);
 
 #define PICOL_ARITY2(x,s) \
-    do {if (!(x)) {return picolErr1(interp, \
-    "wrong # args: should be \"%s\"", s);}} while (0)
+    do { \
+        if (!(x)) { \
+            return picolErr1(interp, "wrong # args: should be \"%s\"", s); \
+        } \
+    } while (0)
 
 #define PICOL_COLONED(_p) \
     (*(_p) == ':' && *(_p+1) == ':') /* indicates global */
@@ -633,39 +652,43 @@ int picolSetFmtResult(picolInterp* interp, char* fmt, int result) {
     PICOL_SNPRINTF(buf, sizeof(buf), fmt, result);
     return picolSetResult(interp, buf);
 }
-#define PICOL_APPEND_BREAK(src) \
+#define PICOL_APPEND_BREAK_PICOLERR(src) \
     { \
         size_t src_len = strlen(src); \
-        if ((len + src_len) > sizeof(buf) - 1) { too_long = 1; break;} \
-        strcat(buf, src); added_len += src_len; \
+        if ((len + src_len) > sizeof(buf) - 1) { \
+            too_long = 1; break; \
+        } \
+        strcat(buf, src); \
+        added_len += src_len; \
     }
 int picolErr(picolInterp* interp, char* str) {
     char buf[PICOL_MAX_STR] = "";
-    int too_long = 0, len = 0, added_len = 0;
+    int too_long = 0;
+    size_t len = 0, added_len = 0;
 
     do {
         picolCallFrame* cf;
-        PICOL_APPEND_BREAK(str);
+        PICOL_APPEND_BREAK_PICOLERR(str);
         len += added_len; added_len = 0;
         if (interp->current != NULL) {
-            PICOL_APPEND_BREAK("\n    while executing\n\"");
-            PICOL_APPEND_BREAK(interp->current);
-            PICOL_APPEND_BREAK("\"");
+            PICOL_APPEND_BREAK_PICOLERR("\n    while executing\n\"");
+            PICOL_APPEND_BREAK_PICOLERR(interp->current);
+            PICOL_APPEND_BREAK_PICOLERR("\"");
         }
         for (cf = interp->callframe;
              cf->command != NULL && cf->parent != NULL;
              cf = cf->parent) {
             len += added_len; added_len = 0;
-            PICOL_APPEND_BREAK("\n    invoked from within\n\"");
-            PICOL_APPEND_BREAK(cf->command);
-            PICOL_APPEND_BREAK("\"");
+            PICOL_APPEND_BREAK_PICOLERR("\n    invoked from within\n\"");
+            PICOL_APPEND_BREAK_PICOLERR(cf->command);
+            PICOL_APPEND_BREAK_PICOLERR("\"");
         }
     } while (0);
     if (too_long) {
         /* Truncate the error message at the last complete chunk. */
         buf[len] = '\0';
         do {
-            PICOL_APPEND_BREAK(len > 0 ? "\n..." : "...");
+            PICOL_APPEND_BREAK_PICOLERR(len > 0 ? "\n..." : "...");
         } while (0);
     }
     /* Not exactly the same as in Tcl. */
@@ -673,7 +696,7 @@ int picolErr(picolInterp* interp, char* str) {
     picolSetResult(interp, str);
     return PICOL_ERR;
 }
-#undef PICOL_APPEND_BREAK
+#undef PICOL_APPEND_BREAK_PICOLERR
 int picolErr1(picolInterp* interp, char* format, char* arg) {
     /* The format line must contain exactly one "%s" specifier. */
     char buf[PICOL_MAX_STR], truncated[PICOL_MAX_STR];
@@ -2239,8 +2262,9 @@ PICOL_COMMAND(exec) {
     char buf[256] = "\0";
     char output[PICOL_MAX_STR] = "\0";
     FILE* fd;
-    int status;
     int length;
+    int status;
+    int too_long = 0;
 
     if (PICOL_EQ(argv[0], "rawexec")) {
         int i;
@@ -2252,7 +2276,7 @@ PICOL_COMMAND(exec) {
         }
     } else { /* exec */
         if (picolQuoteForShell(command, argc, argv) == -1) {
-            return picolErr(interp, "string too long");
+            return picolErr(interp, PICOL_ERROR_TOO_LONG);
         }
     }
 
@@ -2262,9 +2286,13 @@ PICOL_COMMAND(exec) {
     }
 
     while (fgets(buf, 256, fd)) {
-        PICOL_APPEND(output, buf);
+        PICOL_APPEND_BREAK(output, buf, too_long);
     }
     status = PICOL_PCLOSE(fd);
+
+    if (too_long) {
+        return picolErr(interp, PICOL_ERROR_TOO_LONG);
+    }
 
     length = strlen(output);
     if (output[length - 1] == '\r') {
