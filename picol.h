@@ -3243,14 +3243,44 @@ PICOL_COMMAND(lreverse) {
 }
 PICOL_COMMAND(lsearch) {
     char buf[PICOL_MAX_STR] = "", *cp;
+    char* list;
+    char* pattern;
     int j = 0;
-    PICOL_ARITY2(argc == 3, "lsearch list pattern");
-    PICOL_FOREACH(buf, cp, argv[1]) {
-        if (picolMatch(argv[2], buf) > 0) {
+    int match_mode; // 0 for exact, 1 for glob.
+
+    PICOL_ARITY2(
+        argc == 3 || argc == 4,
+        "lsearch ?-exact|-glob? list pattern"
+    );
+    if (argc == 4) {
+        list = argv[2];
+        pattern = argv[3];
+
+        if (PICOL_EQ(argv[1], "-exact")) {
+            match_mode = 0;
+        } else if (PICOL_EQ(argv[1], "-glob")) {
+            match_mode = 1;
+        } else {
+            return picolErr1(
+                interp,
+                "bad option \"%s\": must be -exact or -glob",
+                argv[1]
+            );
+        }
+    } else {
+        list = argv[1];
+        pattern = argv[2];
+        match_mode = 1;
+    }
+
+    PICOL_FOREACH(buf, cp, list) {
+        if ((match_mode == 0 && PICOL_EQ(pattern, buf)) ||
+            (match_mode == 1 && picolMatch(pattern, buf) > 0)) {
             return picolSetIntResult(interp, j);
         }
         j++;
     }
+
     return picolSetResult(interp, "-1");
 }
 PICOL_COMMAND(lset) {

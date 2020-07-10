@@ -1,4 +1,4 @@
-#!/usr/bin/env picol
+#! /usr/bin/env picolsh
 # test.pcl - A test suite for the Picol interpreter
 # with many extensions by suchenwi and dbohdan. Call with "-l" to display all
 # test cases. Is this comment extended? \
@@ -968,6 +968,11 @@ test lsearch.1   {lsearch {a b c d e} c} -> 2
 test lsearch.2   {lsearch {a b c d e} x} -> -1
 test lsearch.3   {lsearch {a b {c d} e} {c d}} -> 2
 test lsearch.4   {lsearch {foo bar grill} b*} -> 1
+test lsearch.5   {lsearch -glob {foo bar grill} b*} -> 1
+test lsearch.6   {lsearch -exact {foo bar grill} b*} -> -1
+test lsearch.7   {lsearch -exact {foo bar grill} b*} -> -1
+test lsearch.8   {lsearch -exact {foo bar grill} barrr} -> -1
+test lsearch.9   {lsearch -exact {foo bar grill} {}} -> -1
 
 test lset.1      {set a {1 2 3 4}; lset a 1 x} -> {1 x 3 4}
 test lset.2      {set a {1 2 3 4}; lset a 99 x} -> "list index out of range"
