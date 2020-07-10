@@ -618,13 +618,24 @@ if {$test_config(picol)} {
     if {$test_config(arrays)} {
         lappend globals env tcl_platform test_config
     } else {
-        lappend globals tcl_platform(byteOrder) tcl_platform(engine) \
-                tcl_platform(maxLength) tcl_platform(platform) \
-                tcl_platform(pointerSize) tcl_platform(wordSize) \
-                test_config(arrays) test_config(glob) \
-                test_config(hello_file_length) test_config(interp) \
-                test_config(io) test_config(newline) test_config(picol) \
-                test_config(regexp) test_config(tcl85) test_config(unix) \
+        lappend globals \
+                tcl_platform(byteOrder) \
+                tcl_platform(engine) \
+                tcl_platform(maxLevel) \
+                tcl_platform(maxLength) \
+                tcl_platform(platform) \
+                tcl_platform(pointerSize) \
+                tcl_platform(wordSize) \
+                test_config(arrays) \
+                test_config(glob) \
+                test_config(hello_file_length) \
+                test_config(interp) \
+                test_config(io) \
+                test_config(newline) \
+                test_config(picol) \
+                test_config(regexp) \
+                test_config(tcl85) \
+                test_config(unix) \
                 test_config(windows)
     }
     test global.8  {proc g3 {} {lsort [info globals]}; g3} -> [lsort $globals]
@@ -1249,6 +1260,8 @@ if {$test_config(picol)} {
             append s x
         }
     } -> {string too long}
+    test tcl_platform.4 {string is int $::tcl_platform(maxLevel)} -> 1
+    test tcl_platform.5 {expr {$::tcl_platform(maxLevel) > 1}} -> 1
 }
 
 test time.1      {
@@ -1376,8 +1389,4 @@ if {$test_config(picol) && $test_config(io)} {
     }
 }
 
-# --------------------- A factorial test to compare the performance with [time].
-# for {set i 6} {$i <= 12} {incr i} {
-#     puts "fac [format %2d $i]:[format %10d [fac $i]], [time {fac $i} 111]"
-# }
 puts "[info script] [info patchlevel]: ---------------- tested $n, failed $r"

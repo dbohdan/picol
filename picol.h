@@ -4429,6 +4429,7 @@ picolInterp* picolCreateInterp2(int register_core_cmds, int randomize) {
     if (randomize) {
         srand(time(NULL));
     }
+
     picolSetVar2(interp,
                  "tcl_platform(platform)",
                  PICOL_TCL_PLATFORM_PLATFORM_STRING,
@@ -4436,10 +4437,14 @@ picolInterp* picolCreateInterp2(int register_core_cmds, int randomize) {
     picolSetVar2(interp,
                  "tcl_platform(engine)",
                  PICOL_TCL_PLATFORM_ENGINE_STRING, 1);
+
     /* The maximum Picol string length. Subtract one for the final '\0', which
        scripts don't see. */
     PICOL_SNPRINTF(buf, sizeof(buf), "%d", PICOL_MAX_STR - 1);
     picolSetVar2(interp, "tcl_platform(maxLength)", buf, 1);
+
+    PICOL_SNPRINTF(buf, sizeof(buf), "%d", PICOL_MAX_LEVEL);
+    picolSetVar2(interp, "tcl_platform(maxLevel)", buf, 1);
 
     x = 1;
     picolSetVar(interp,
