@@ -4006,7 +4006,11 @@ PICOL_COMMAND(string) {
             return picolErr(interp, "usage: string match pat str");
         }
     } else if (PICOL_SUBCMD("is")) {
-        PICOL_ARITY2(argc == 4 && PICOL_EQ(argv[2], "int"), "string is int str");
+        PICOL_ARITY2(
+            argc == 4 &&
+            (PICOL_EQ(argv[2], "int") || PICOL_EQ(argv[2], "integer")),
+            "string is integer str"
+        );
         picolSetBoolResult(interp, picolIsInt(argv[3]));
     } else if (PICOL_SUBCMD("repeat")) {
         int j, n;
