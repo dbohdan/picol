@@ -1218,10 +1218,10 @@ int picolEval2(picolInterp* interp, char* t, int mode) { /*------------ EVAL! */
             p.expand = 0;
         } else {
             /* Interpolation */
-            size_t oldlen = strlen(argv[argc-1]), tlen = strlen(t);
-            argv[argc-1]  = realloc(argv[argc-1], oldlen+tlen+1);
-            memcpy(argv[argc-1]+oldlen, t, tlen);
-            argv[argc-1][oldlen+tlen] = '\0';
+            size_t oldlen = strlen(argv[argc-1]), tlen2 = strlen(t);
+            argv[argc-1]  = realloc(argv[argc-1], oldlen + tlen2 + 1);
+            memcpy(argv[argc-1] + oldlen, t, tlen2);
+            argv[argc-1][oldlen + tlen2] = '\0';
             free(t);
             t = NULL;
         }
@@ -2896,11 +2896,11 @@ PICOL_COMMAND(info) {
         }
         for (; c; c = c->next) {
             if (PICOL_EQ(c->name, argv[2])) {
-                char** pd = c->privdata;
-                if (pd != NULL) {
+                char** privdata = c->privdata;
+                if (privdata != NULL) {
                     return picolSetResult(
                         interp,
-                        pd[(PICOL_EQ(argv[1], "args") ? 0 : 1)]
+                        privdata[(PICOL_EQ(argv[1], "args") ? 0 : 1)]
                     );
                 } else {
                     return picolErr1(interp, "\"%s\" isn't a procedure",
