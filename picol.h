@@ -4011,7 +4011,13 @@ PICOL_COMMAND(string) {
             (PICOL_EQ(argv[2], "int") || PICOL_EQ(argv[2], "integer")),
             "string is integer str"
         );
-        picolSetBoolResult(interp, picolIsInt(argv[3]));
+
+        /* This is for Tcl 8 compatibility. */
+        if (PICOL_EQ(argv[3], "")) {
+            return picolSetBoolResult(interp, 1);
+        }
+
+        return picolSetBoolResult(interp,  picolIsInt(argv[3]));
     } else if (PICOL_SUBCMD("repeat")) {
         int j, n;
         PICOL_SCAN_INT(n, argv[3]);

@@ -1122,6 +1122,7 @@ test str.int.3    {string is int foo} -> 0
 test str.int.4    {string is integer 42} -> 1
 test str.int.5    {string is integer -1} -> 1
 test str.int.6    {string is integer foo} -> 0
+test str.int.7    {string is integer {}} -> 1
 test str.last.1   {string last + a+b+c+d} -> 5
 test str.last.2   {string last - a+b+c+d} -> -1
 test str.length   {string length hello}   -> 5
