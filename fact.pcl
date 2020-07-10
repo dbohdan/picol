@@ -1,7 +1,8 @@
-# --------------------- A factorial test to compare the performance with [time].
+# A factorial benchmark
+
 proc fact x {
     if {$x < 2} {
-        set x
+        return 1
     } else {
         expr {$x * [fact [expr {$x - 1}]]}
     }
