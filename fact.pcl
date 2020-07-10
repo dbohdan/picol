@@ -1,0 +1,17 @@
+# --------------------- A factorial test to compare the performance with [time].
+proc fact x {
+    if {$x < 2} {
+        set x
+    } else {
+        expr {$x * [fact [expr {$x - 1}]]}
+    }
+}
+
+set max 30
+if {[info exists tcl_platform(maxLevel)]} {
+    set max $tcl_platform(maxLevel)
+}
+
+for {set i 6} {$i < $max} {incr i} {
+    puts "fact [format %02d $i] [format %21d [fact $i]] [time {fact $i} 111]"
+}
