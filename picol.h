@@ -3689,6 +3689,7 @@ PICOL_COMMAND(rename) {
             char **privdata = toFree->privdata;
             free(privdata[0]);
             free(privdata[1]);
+            free(privdata);
         }
         free(toFree->name);
         free(toFree);
