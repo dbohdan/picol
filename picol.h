@@ -1249,8 +1249,8 @@ int picolCondition(picolInterp* interp, char* str) {
         strcpy(substBuf, interp->result);
 
         /* Check whether the format suits [expr]. */
-        strcpy(buf, "llength ");
-        PICOL_LAPPEND(buf, interp->result);
+        strcpy(buf, "llength");
+        PICOL_LAPPEND(buf, substBuf);
         rc = picolEval(interp, buf);
         if (rc != PICOL_OK) {
             return rc;
@@ -1288,7 +1288,7 @@ int picolCondition(picolInterp* interp, char* str) {
         } else {
             strcpy(buf, "!= 0 ");
         }
-        strcat(buf, substP);
+        PICOL_APPEND(buf, substP);
 
         return picolEval(interp, buf);
     } else {
