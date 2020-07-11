@@ -1956,13 +1956,14 @@ picolVar* picolArrGet1(picolArray* ap, char* key) {
 int picolArrUnset(picolArray* ap, char* key) {
     int hash = picolHash(key, PICOL_ARR_BUCKETS);
     picolVar* v = ap->table[hash], *prev = NULL;
+
     for (v = ap->table[hash]; v != NULL; v = v->next) {
         if (v == NULL || PICOL_EQ(v->name, key)) {
             break;
         }
         prev = v;
-        v = v->next;
     }
+
     if (v == NULL) {
         return 0;
     } else {
@@ -1976,6 +1977,7 @@ int picolArrUnset(picolArray* ap, char* key) {
         free(v->val);
         free(v);
     }
+
     return 1;
 }
 int picolArrUnset1(picolInterp* interp, char* name) {
@@ -1992,11 +1994,7 @@ picolVar* picolArrSet(picolArray* ap, char* key, char* value) {
 
     for (v = ap->table[hash]; v != NULL && !PICOL_EQ(v->name, key); v = v->next);
 
-    if (v != NULL) {
-        /* Replace the value for an existing variable. */
-        free(v->val);
-        v->val = strdup(value);
-    } else {
+    if (v == NULL) {
         /* Create a new variable. */
         v       = malloc(sizeof(*v));
         v->name = strdup(key);
@@ -2004,6 +2002,10 @@ picolVar* picolArrSet(picolArray* ap, char* key, char* value) {
         v->next = ap->table[hash];
         ap->table[hash] = v;
         ap->size++;
+    } else {
+        /* Replace the value for an existing variable. */
+        free(v->val);
+        v->val = strdup(value);
     }
 
     return v;

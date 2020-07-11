@@ -237,6 +237,75 @@ if {$test_config(arrays)} {
         set a 12345678
         lset a(5) 0 value
     } ->* {can't read "a(5)":*}
+    test array.40   {
+        proc array.40 {} { set a(k) 5 }
+        array.40
+        rename array.40 {}
+        set a(k)
+    } -> {can't read "a(k)": no such variable}
+    test array.41   {
+        proc array.41.foo {} { set a(k) 5; array.41.bar }
+        proc array.41.bar {} { return $a(k) }
+
+        catch array.41.foo res
+
+        rename array.41.foo {}
+        rename array.41.bar {}
+
+        lindex $res
+    } -> {can't read "a(k)": no such variable}
+    test array.42   {
+        proc array.42.foo {} { set ::a42(k) 5; array.42.bar }
+        proc array.42.bar {} { return $::a42(k) }
+
+        set res [array.42.foo]
+
+        rename array.42.foo {}
+        rename array.42.bar {}
+        unset ::a42
+
+        lindex $res
+    } -> 5
+    test array.43   {
+        set n 100
+        for {set i 0} {$i < $n} {incr i} {
+            set arr(k$i) 1
+        }
+        for {set i 0} {$i < $n} {incr i} {
+            set arr(k$i) 2
+        }
+        lsort -unique [array get arr]
+    } ->* {2 k*}
+    test array.44   {
+        set n 100
+        for {set i 0} {$i < $n} {incr i} {
+            set arr($i) value
+        }
+        unset arr(xx)
+    } -> {can't unset "arr(xx)": no such element in array}
+    test array.45   {
+        set n 100
+        for {set i 0} {$i < $n} {incr i} {
+            set ::arr($i) value
+        }
+        for {set i [expr {$n - 1}]} {$i >= 0} {incr i -1} {
+            unset ::arr($i)
+        }
+
+        set res [array get ::arr]
+        unset ::arr
+        lindex $res
+    } -> {}
+    test array.46   {
+        set n 100
+        for {set i 0} {$i < $n} {incr i} {
+            set arr($i) value
+        }
+        for {set i 0} {$i < $n} {incr i} {
+            unset arr($i)
+        }
+    } -> {}
+
 #   test array.xx   {set ::a 12345678; proc f ::a(foo) {}; f x} -> {can't set "a(foo)": variable isn't array}
 }
 
@@ -1324,6 +1393,7 @@ if {!$test_config(tcl85)} {
 }
 
 test unset.1     {set foo 1;unset foo;info exists foo} -> 0
+test unset.2     {set ::foo 1;unset ::foo;info exists ::foo} -> 0
 
 test unknown.1  bogus -> {invalid command name "bogus"}
 if {$test_config(io)} {
