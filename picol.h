@@ -3925,26 +3925,50 @@ PICOL_COMMAND(string) {
         PICOL_ARITY2(argc == 4, "string equal s1 s2");
         picolSetIntResult(interp, PICOL_EQ(argv[2], argv[3]));
     } else if (PICOL_SUBCMD("first") || PICOL_SUBCMD("last")) {
-        int offset = 0, res = -1;
-        char* cp;
+        int have_offset = 0, offset = 0, res = -1;
+        size_t str_len;
+        char* cp = NULL;
         if (argc != 4 && argc != 5) {
-            return picolErr1(interp,
-                             "usage: string %s substr str ?index?",
-                             argv[1]);
+            return picolErr1(
+                interp,
+                "usage: string %s substr str ?index?",
+                argv[1]
+            );
         }
+
         if (argc == 5) {
+            have_offset = 1;
             PICOL_SCAN_INT(offset, argv[4]);
         }
+
+        str_len = strlen(argv[3]);
+
         if (PICOL_SUBCMD("first")) {
-            cp = strstr(argv[3]+offset, argv[2]);
-        }
-        else { /* last */
-            char* cp2 = argv[3]+offset;
-            while ((cp = strstr(cp2, argv[2]))) {
-                cp2 = cp + 1;
+            if (offset < 0) { offset = 0; }
+            if ((size_t)offset < str_len) {
+                cp = strstr(argv[3] + offset, argv[2]);
             }
-            cp = cp2 - 1;
+        } else if (offset >= 0) { /* last */
+            char* start;
+            int found = 0;
+            size_t substr_len = strlen(argv[2]);
+
+            start = argv[3]
+                    + (have_offset ? (size_t)offset : str_len)
+                    - (substr_len - 1);
+
+            for (; start >= argv[3]; start--) {
+                if (strncmp(start, argv[2], substr_len) == 0) {
+                    found = 1;
+                    break;
+                }
+            }
+
+            if (found) {
+                cp = start;
+            }
         }
+
         if (cp != NULL) res = cp - argv[3];
         picolSetIntResult(interp, res);
     } else if (PICOL_SUBCMD("index") || PICOL_SUBCMD("range")) {

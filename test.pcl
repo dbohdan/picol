@@ -1209,6 +1209,11 @@ test str.first.2  {string first x abcdefg}   -> -1
 test str.first.3  {string first e abcdefg}   -> 4
 test str.first.4  {string first f abcdefg 2} -> 5
 test str.first.5  {string first a abcdefg 2} -> -1
+test str.first.6  {string first a abcdefg -1} -> 0
+test str.first.7  {string first a abcdefg 99} -> -1
+test str.first.8  {string first g abcdefg 5} -> 6
+test str.first.9  {string first g abcdefg 6} -> 6
+test str.first.10 {string first g abcdefg 7} -> -1
 test str.index.1  {string index hello 1}   -> e
 test str.index.2  {string index hello end} -> o
 test str.index.3  {string index {} 2}      -> {}
@@ -1223,6 +1228,21 @@ test str.int.6    {string is integer foo} -> 0
 test str.int.7    {string is integer {}} -> 1
 test str.last.1   {string last + a+b+c+d} -> 5
 test str.last.2   {string last - a+b+c+d} -> -1
+test str.last.3   {string last + a+b+c+d 5} -> 5
+test str.last.4   {string last + a+b+c+d 3} -> 3
+test str.last.5   {string last + a+b+c+d 99} -> 5
+test str.last.6   {string last + a+b+c+d -1} -> -1
+test str.last.7   {string last g abcdefg 5} -> -1
+test str.last.8   {string last g abcdefg 6} -> 6
+test str.last.9   {string last g abcdefg 7} -> 6
+test str.last.10  {string last a abcdefg -1} -> -1
+test str.last.11  {string last a abcdefg 0} -> 0
+test str.last.12  {string last a abcdefg 1} -> 0
+test str.last.13  {string last foo foofoofoo 0} -> -1
+test str.last.14  {string last foo foofoofoo 3} -> 0
+test str.last.15  {string last foo foofoofoo 6} -> 3
+test str.last.16  {string last foo foofoofoo 7} -> 3
+test str.last.17  {string last oo oooooo 3} -> 2
 test str.length   {string length hello}   -> 5
 test str.lower    {string tolower FOO}    -> foo
 
