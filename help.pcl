@@ -47,7 +47,8 @@ proc match-bracket {opening closing escape s start} {
 
 set file [if {$argc == 0} { lindex picol.h } else { lindex $argv 0 }]
 set ch [open $file]
-puts "Running Picol [info pa] with [llength [info commands]] commands"
+puts "Running $tcl_platform(engine) [info pa] with\
+      [llength [info commands]] commands"
 
 set count 0
 while {![eof $ch]} {
@@ -71,9 +72,9 @@ while {![eof $ch]} {
 
     # The usage message is one or more C strings in the last argument to the
     # macro.
-    set last_arg_start [string last , $statement $start]
+    set last_arg_start [string last , $statement]
     set message_start [string first \" $statement $last_arg_start]
-    set message_end [string last \" $statement $message_start]
+    set message_end [string last \" $statement]
 
     set message [string range $statement \
                               [+ $message_start 1] \
