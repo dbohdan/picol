@@ -19,8 +19,10 @@ int main(int argc, char** argv) {
     eval_and_report(interp, "regexp {***++} foo");
     eval_and_report(interp, "regexp bar foo");
     eval_and_report(interp, "regexp foo foo");
-    eval_and_report(interp, "regexp (a+)(b+) aaabb match sub1 sub2 s");
-    picolEval(interp,
-              "puts \"     match: $match\nsubmatches: [list $sub1 $sub2]\"");
+    eval_and_report(interp, "regexp (a+)(b+) aaabb match sub1 sub2 sub3");
+    picolEval(
+        interp,
+        "puts \"     match: $match\nsubmatches: [list $sub1 $sub2 $sub3]\""
+    );
     return 0;
 }
