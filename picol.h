@@ -1908,11 +1908,16 @@ picolArray* picolArrCreate(picolInterp* interp, char* name) {
 }
 int picolArrDestroy(picolInterp* interp, char* name) {
     picolArray* ap;
+    int success = 1;
     ap = picolArrFindByName(interp, name, 0, NULL);
     if (ap == NULL) {
         return -1;
     }
-    return picolArrDestroy1(ap);
+    if (!picolValidPtrRemove(interp, PICOL_PTR_ARRAY, (void*)ap)) {
+        success = 0;
+    }
+    success &= picolArrDestroy1(ap);
+    return success;
 }
 int picolArrDestroy1(picolArray* ap) {
     picolVar* v, *next;
