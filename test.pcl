@@ -316,6 +316,13 @@ if {$test_config(arrays)} {
         unset ::arr
         return $res
     } -> 1
+    test array.49   {
+        info exists arr([string repeat 1 1000])
+    } -> 0
+    test array.50   {
+        set arr(x) y
+        info exists arr([string repeat 1 100])
+    } -> 0
 
 #   test array.xx   {set ::a 12345678; proc f ::a(foo) {}; f x} -> {can't set "a(foo)": variable isn't array}
 }

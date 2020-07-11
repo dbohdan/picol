@@ -1881,20 +1881,29 @@ PICOL_COMMAND(apply) {
 }
 /*--------------------------------------------------------------- Array stuff */
 #if PICOL_FEATURE_ARRAYS
-int picolHash(char* key, int modul) {
+int picolHash(char* key, int modulo) {
     char* cp;
-    int hash = 0;
+    unsigned int hash = 0;
     for (cp = key; *cp; cp++) {
         hash = (hash << 1) ^ *cp;
     }
-    return hash % modul;
+    return (int)(hash % modulo);
 }
 picolArray* picolArrCreate(picolInterp* interp, char* name) {
     char buf[PICOL_MAX_STR];
+    int i;
     picolArray* ap = calloc(1, sizeof(picolArray));
-    PICOL_SNPRINTF(buf, sizeof(buf), "%p", (void*)ap);
+
+    ap->size = 0;
+    for (i = 0; i < PICOL_ARR_BUCKETS; i++) {
+        ap->table[i] = NULL;
+    }
+
     picolValidPtrAdd(interp, PICOL_PTR_ARRAY, (void*)ap);
+
+    PICOL_SNPRINTF(buf, sizeof(buf), "%p", (void*)ap);
     picolSetVar(interp, name, buf);
+
     return ap;
 }
 int picolArrDestroy(picolInterp* interp, char* name) {
@@ -1980,7 +1989,10 @@ char* picolArrGet(picolArray* ap, char* pat, char* buf, int mode) {
 }
 picolVar* picolArrGet1(picolArray* ap, char* key) {
     int hash = picolHash(key, PICOL_ARR_BUCKETS), found = 0;
-    picolVar* pos = ap->table[hash], *v;
+    picolVar* pos, *v;
+
+    if (ap == NULL) return NULL;
+    pos = ap->table[hash];
     for (v = pos; v != NULL; v = v->next) {
         if (PICOL_EQ(v->name, key)) {
             found = 1;
