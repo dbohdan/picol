@@ -777,6 +777,16 @@ if $test_config(picol) {
     test if.36  {if 0 {} nope} -> {expected "elseif" or "else"}
     test if.37  {if 0 {} nope x} -> {expected "elseif" or "else"}
 }
+test if.38    {set x {}; if {$x eq {}} { return 1 }} -> 1
+# test if.39    {set x \{; if {$x eq "\{"} { return 1 }} -> 1
+# test if.40    {set x \}; if {$x eq "\}"} { return 1 }} -> 1
+test if.41    {set x \[; if {$x eq "\["} { return 1 }} -> 1
+test if.42    {set x \]; if {$x eq "\]"} { return 1 }} -> 1
+test if.43    {set x \$; if {$x eq "$"} { return 1 }} -> 1
+test if.44    {set x \"; if {$x eq "\""} { return 1 }} -> 1
+test if.45    {set x {[exit]}; if {!$x} { return 1 }} ->* expected*
+test if.46    {set x { }; if {$x} { return 1 }} ->* {*got " "*}
+
 proc call {} {
     incr ::calls
 }
