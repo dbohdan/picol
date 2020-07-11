@@ -3959,7 +3959,9 @@ PICOL_COMMAND(string) {
             size_t substr_len = strlen(argv[2]);
 
             start = argv[3]
-                    + (have_offset ? (size_t)offset : str_len)
+                    + (have_offset && (size_t)offset < str_len
+                       ? (size_t)offset
+                       : str_len)
                     - (substr_len - 1);
 
             for (; start >= argv[3]; start--) {
