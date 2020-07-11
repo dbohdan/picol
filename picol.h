@@ -2572,7 +2572,7 @@ PICOL_COMMAND(for) {
             return rc;
         }
         if (atoi(interp->result)==0) {
-            return PICOL_OK;
+            return picolSetResult(interp, "");
         }
     }
 }

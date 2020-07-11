@@ -632,6 +632,7 @@ test for.2      {for {set i 0} {$i < 6} {incr i} {append r -$i}; set r} \
 test for.3      {for {set i 0} {[< $i 4]} {incr i} {append r -$i}; set r}\
                     -> -0-1-2-3
 test for.4      {for {set i 0} {$i < 10} {incr i} {set i 99}; set i} -> 100
+test for.5      {for {set i 0} {$i < 10} {incr i} {}} -> {}
 
 test foreach.0  {set x ""; foreach i {} {append x ($i)}; set x}        -> {}
 test foreach.1  {set x ""; foreach i {a b c d e} {append x $i};set x} -> abcde
