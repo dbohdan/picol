@@ -1504,6 +1504,7 @@ arityerr:
 }
 int picolUnsetVar(picolInterp* interp, char* name) {
     picolVar* v, *lastv = NULL;
+    picolCallFrame* cf;
     int found = 0;
 #if PICOL_FEATURE_ARRAYS
     picolArray* ap;
@@ -1513,11 +1514,17 @@ int picolUnsetVar(picolInterp* interp, char* name) {
         picolArrDestroy1(ap);
     }
 #endif
-    for (v = interp->callframe->vars; v != NULL; lastv = v, v = v->next) {
+    cf = interp->callframe;
+    if (PICOL_COLONED(name)) {
+        while (cf->parent) cf = cf->parent;
+        name += 2;
+    }
+
+    for (v = cf->vars; v != NULL; lastv = v, v = v->next) {
         if (PICOL_EQ(v->name, name)) {
             found = 1;
             if (lastv == NULL) {
-                interp->callframe->vars = v->next;
+                cf->vars = v->next;
             } else {
                 lastv->next = v->next;
             }
