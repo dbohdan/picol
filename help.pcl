@@ -1,36 +1,122 @@
 #! /usr/bin/env picolsh
-# -- help.pcl -- extract usage hints from picol.h
-# Usage notes are marked with the ARITY2 macro in picol.h.  This script
-# extracts them and adds commands that don't have a note from
-# [info commands].  It shows string manipulation and the use of arrays and
-# regular expressions in Picol.
+# help.pcl: Extract usage messages from picol.h.
+# 
+# The PICOL_ARITY2 macro in picol.h is called to ensure the command is being
+# used correctly and to display a usage message if it is not.  This script
+# extracts the commands and their usage messages from picol.h, adds any missing
+# commands from [info commands], and prints the result.  Its code demonstrates
+# text manipulation, basic parsing, and the use of optional features: arrays,
+# I/O, and regular expressions.  Could this be the most complex program written
+# in Picol?  It's possible!
+
+set macro PICOL_ARITY2  ;# The macro we shall look for.
+
+# Find a matching closing bracket for an opening bracket in $s starting at
+# $start.  Brackets escaped with $escape don't count.
+proc match-bracket {opening closing escape s start} {
+    set n 0
+
+    if {[string index $s $start] ne $opening} {
+        error {start isn't a bracket}
+    }
+
+    set len [string length $s]
+    for {set i $start} {$i < $len} {incr i} {
+        set c [string index $s $i]
+
+        if {[string equal $c $escape]} {
+            incr i
+            continue
+        }
+
+        if {[string equal $c $opening]} {
+            incr n
+        } elseif {[string equal $c $closing]} {
+            incr n -1
+        }
+
+        if {$n == 0} break
+    }
+
+    if {$n > 0} {
+        return -$n
+    }
+
+    return $i
+}
 
 set file [if {$argc == 0} { lindex picol.h } else { lindex $argv 0 }]
-set f [open $file]
-puts "Picol [info pa] has [llength [info commands]] commands"
+set ch [open $file]
+puts "Running Picol [info pa] with [llength [info commands]] commands"
 
-while {[gets $f line] >= 0} {
-    if {[string first ARITY2 $line] == -1} continue
-    if {[string match #define* $line]} continue
+set count 0
+while {![eof $ch]} {
+    gets $ch statement
+    # We don't want macro definitions.
+    if {[string match #define* $statement]} continue
 
-    set first [+ 1 [string first \" $line]]
-    set last  [expr {[string last \" $line] - 1}]
-    set line  [string range $line $first $last]
+    set start [string first [set macro]( $statement]
+    if {$start == -1} continue
+    incr start [string length $macro]
 
-    set cmd [lindex $line 0]
+    # Read up to five lines of the source code to get every argument to the
+    # PICOL_ARITY2(...) macro.
+    for {set lines 1} {$lines <= 5} {incr lines} {
+        set end [match-bracket ( ) \\ $statement $start]
+        if {$end > -1} break
+
+        gets $ch line
+        append statement $line
+    }
+
+    # The usage message is one or more C strings in the last argument to the
+    # macro.
+    set last_arg_start [string last , $statement $start]
+    set message_start [string first \" $statement $last_arg_start]
+    set message_end [string last \" $statement $message_start]
+
+    set message [string range $statement \
+                              [+ $message_start 1] \
+                              [- $message_end 1]]
+
+    # Separate the usage message into the command name and its possible
+    # arguments.
+    set cmd [lindex $message 0]
     if {[regexp ^\s*$ $cmd]} continue
-    lappend cmds $cmd
-    set info($cmd) [string trim [string range $line [string length $cmd] end]]
-}
-close $f
 
-puts "[llength $cmds] annotations\n"
+    set usage [if {[info exists cmds($cmd)]} {
+        set cmds($cmd)
+    } else {
+        lindex {}
+    }]
+    lappend usage [string trim [string range $message \
+                                             [string length $cmd] \
+                                             end]]
+    set cmds($cmd) $usage
+    incr count
+}
+
+close $ch
+
+rename match-bracket {}
+
+puts "$count usage notes\n"
 foreach cmd [info commands] {
     if {[string match _* $cmd]} continue
-    if {[lsearch -exact $cmds $cmd] < 0} {
-        lappend cmds $cmd
-        set info($cmd) "\[no annotation\]"
+    if {![info exists cmds($cmd)]} {
+        set cmds($cmd) [list "\[no usage found\]"]
     }
 }
 
-foreach cmd [lsort -unique $cmds] { puts "$cmd [set info($cmd)]" }
+foreach cmd [lsort -unique [array names cmds]] {
+    foreach usage [set cmds($cmd)] {
+        set msg "$cmd $usage"
+
+        # Avoid printing the same usage muliple times.  Some commands are
+        # defined identically twice because of conditional compilation.
+        if {[info exists printed($msg)]} continue
+        
+        puts $msg
+        set printed($msg) 1
+    }
+}
