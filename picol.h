@@ -405,7 +405,7 @@ PICOL_COMMAND(while);
 #endif
 int picolValidPtrAdd(picolInterp *interp, int type, void* ptr);
 int picolValidPtrFind(picolInterp *interp, int type, void* ptr);
-int picolValidPtrRemove(picolInterp *interp, int type, void* ptr);
+int picolValidPtrRemove(picolInterp *interp, void* ptr);
 int picolCallProc(picolInterp *interp, int argc, char **argv, void *pd);
 char* picolConcat(char* buf, int argc, char** argv);
 int picolCondition(picolInterp *interp, char* str);
@@ -1413,13 +1413,13 @@ int picolValidPtrFind(picolInterp* interp, int type, void* ptr) {
     }
     return 0;
 }
-int picolValidPtrRemove(picolInterp* interp, int type, void* ptr) {
+int picolValidPtrRemove(picolInterp* interp, void* ptr) {
     picolPtr* p = interp->validptrs, *prev = NULL;
 
     if (p == NULL) {
         return 0;
     }
-    while (p != NULL && p->type != type && p->ptr != ptr) {
+    while (p != NULL && p->ptr != ptr) {
         prev = p;
         p = p->next;
     }
@@ -1913,7 +1913,7 @@ int picolArrDestroy(picolInterp* interp, char* name) {
     if (ap == NULL) {
         return -1;
     }
-    if (!picolValidPtrRemove(interp, PICOL_PTR_ARRAY, (void*)ap)) {
+    if (!picolValidPtrRemove(interp, (void*)ap)) {
         success = 0;
     }
     success &= picolArrDestroy1(ap);
@@ -2582,7 +2582,7 @@ int picolFileUtil(picolInterp* interp, int argc, char** argv, void* pd) {
     }
     if (PICOL_EQ(argv[0], "close")) {
         fclose(fp);
-        if (!picolValidPtrRemove(interp, PICOL_PTR_CHAN, (void*) fp)) {
+        if (!picolValidPtrRemove(interp, (void*) fp)) {
             return picolErr1(interp,
                              "can not remove \"%s\" from valid channel "
                              "pointer list",
