@@ -430,20 +430,21 @@ int picolParseEol(picolParser *p);
 int picolParseSep(picolParser *p);
 int picolParseString(picolParser *p);
 int picolParseVar(picolParser *p);
+int picolQsortCompInt(const void* a, const void *b);
+int picolQsortCompStr(const void* a, const void *b);
+int picolQsortCompStrDecr(const void* a, const void *b);
+int picolQuoteForShell(char* dest, int argc, char** argv);
 int picolRegisterCmd(picolInterp *interp, char *name, picol_Func f, void *pd);
+int picolReplace(char* str, char* from, char* to, int nocase);
 int picolScanInt(char* str, int base);
 int picolSetFmtResult(picolInterp* interp, char* fmt, int result);
 int picolSetIntVar(picolInterp *interp, char *name, int value);
 int picolSetResult(picolInterp *interp, char *s);
 int picolSetVar2(picolInterp *interp, char *name, char *val, int glob);
-int picolStrCompare(const char* a, const char* b, size_t len, int nocase);
-int picolReplace(char* str, char* from, char* to, int nocase);
 int picolSource(picolInterp *interp, char *filename);
-int picolQuoteForShell(char* dest, int argc, char** argv);
+int picolStrCompare(const char* a, const char* b, size_t len, int nocase);
+int picolUnsetVar(picolInterp* interp, char* name);
 int picolWildEq(char* pat, char* str, int n);
-int picolQsortCompStr(const void* a, const void *b);
-int picolQsortCompStrDecr(const void* a, const void *b);
-int picolQsortCompInt(const void* a, const void *b);
 picolCmd *picolGetCmd(picolInterp *interp, char *name);
 picolInterp* picolCreateInterp(void);
 picolInterp* picolCreateInterp2(int register_core_cmds, int randomize);
@@ -1501,6 +1502,34 @@ arityerr:
     interp->level--;
     return picolErr1(interp, "wrong # args for \"%s\"", argv[0]);
 }
+int picolUnsetVar(picolInterp* interp, char* name) {
+    picolVar* v, *lastv = NULL;
+    int found = 0;
+#if PICOL_FEATURE_ARRAYS
+    picolArray* ap;
+    ap = picolArrFindByName(interp, name, 0, NULL);
+    if (ap != NULL) {
+        /* The variable is an array. */
+        picolArrDestroy1(ap);
+    }
+#endif
+    for (v = interp->callframe->vars; v != NULL; lastv = v, v = v->next) {
+        if (PICOL_EQ(v->name, name)) {
+            found = 1;
+            if (lastv == NULL) {
+                interp->callframe->vars = v->next;
+            } else {
+                lastv->next = v->next;
+            }
+            free(v->name);
+            free(v->val);
+            free(v);
+            break;
+        }
+    }
+
+    return found ? PICOL_OK : PICOL_ERR;
+};
 int picolWildEq(char* pat, char* str, int n) {
     /* Check if the first n characters of str match the pattern pat where
        a '?' in pat matches any character. */
@@ -4216,11 +4245,11 @@ PICOL_COMMAND(try) {
     return body_rc;
 }
 PICOL_COMMAND(unset) {
-    picolVar* v, *lastv = NULL;
-    int found = 0;
+    int result;
+
     PICOL_ARITY2(argc == 2, "unset varName");
 #if PICOL_FEATURE_ARRAYS
-    /* Remove an array element. */
+    /* Remove an array element and return. */
     if (strchr(argv[1], '(')) {
         picolArray* ap;
         char key[PICOL_MAX_STR];
@@ -4228,43 +4257,27 @@ PICOL_COMMAND(unset) {
         if (ap != NULL) {
             /* The array exists. */
             if (picolArrUnset(ap, key) > 0) {
-                found = 1;
+                return picolSetResult(interp, "");
             } else {
-                return picolErr1(interp,
-                                 "can't unset \"%s\": no such element in array",
-                                 argv[1]);
+                return picolErr1(
+                    interp,
+                    "can't unset \"%s\": no such element in array",
+                    argv[1]
+                );
             }
         }
-    } else {
-        picolArray* ap;
-        ap = picolArrFindByName(interp, argv[1], 0, NULL);
-        if (ap != NULL) {
-            /* The variable is an array. */
-            picolArrDestroy1(ap);
-        }
-#endif
-        for (v = interp->callframe->vars; v != NULL; lastv = v, v = v->next) {
-            if (PICOL_EQ(v->name, argv[1])) {
-                found = 1;
-                if (lastv == NULL) {
-                    interp->callframe->vars = v->next;
-                } else {
-                    lastv->next = v->next;
-                }
-                free(v->name);
-                free(v->val);
-                free(v);
-                break;
-            }
-        }
-#if PICOL_FEATURE_ARRAYS
     }
 #endif
-    if (!found) {
-        return picolErr1(interp,
-                         "can't unset \"%s\": no such variable",
-                         argv[1]);
+
+    result = picolUnsetVar(interp, argv[1]);
+    if (result != PICOL_OK) {
+        return picolErr1(
+            interp,
+            "can't unset \"%s\": no such variable",
+            argv[1]
+        );
     }
+
     return picolSetResult(interp, "");
 }
 PICOL_COMMAND(uplevel) {

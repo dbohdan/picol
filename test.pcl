@@ -1395,6 +1395,10 @@ if {!$test_config(tcl85)} {
 
 test unset.1     {set foo 1;unset foo;info exists foo} -> 0
 test unset.2     {set ::foo 1;unset ::foo;info exists ::foo} -> 0
+test unset.3     {unset absent} -> {can't unset "absent": no such variable}
+test unset.4     {unset ::absent} -> {can't unset "::absent": no such variable}
+test unset.5     {unset nosuch(element)} -> {can't unset "nosuch(element)": no such variable}
+test unset.6     {unset ::nosuch(element)} -> {can't unset "::nosuch(element)": no such variable}
 
 test unknown.1  bogus -> {invalid command name "bogus"}
 if {$test_config(io)} {
