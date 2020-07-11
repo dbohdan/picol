@@ -305,6 +305,17 @@ if {$test_config(arrays)} {
             unset arr($i)
         }
     } -> {}
+    test array.47   {
+        set arr(k) v
+        set ::arr(k)
+    } -> {can't read "::arr(k)": no such variable}
+    test array.48   {
+        set arr(k) 1
+        set ::arr(k) 2
+        set res $arr(k)
+        unset ::arr
+        return $res
+    } -> 1
 
 #   test array.xx   {set ::a 12345678; proc f ::a(foo) {}; f x} -> {can't set "a(foo)": variable isn't array}
 }
