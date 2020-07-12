@@ -830,6 +830,7 @@ test info.level.0 {set ::F} -> 0
 test info.level.1 {info level} -> 1
 test info.level.2 {proc f {} {info level}; f} -> 2
 test info.level.3 {proc f {x y} {info level 0}; f foo bar} -> {f foo bar}
+test info.level.4 {uplevel 1 {info level 0}} -> {bad level "0"}
 if $test_config(picol) {
     set result {g3 fac f test}
     if {$test_config(io)} {

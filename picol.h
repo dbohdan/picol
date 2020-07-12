@@ -3003,10 +3003,14 @@ PICOL_COMMAND(info) {
         } else if (argc==3) {
             int level;
             PICOL_SCAN_INT(level, argv[2]);
-            if (level==0) {
+            if (level == 0) {
+                if (interp->callframe == NULL ||
+                    interp->callframe->command == NULL) {
+                    return picolErr1(interp, "bad level \"%s\"", argv[2]);
+                }
                 picolSetResult(interp, interp->callframe->command);
             } else {
-                return picolErr1(interp, "unsupported level %s", argv[2]);
+                return picolErr1(interp, "unsupported level \"%s\"", argv[2]);
             }
         }
     } else if (PICOL_SUBCMD("patchlevel") || PICOL_SUBCMD("pa")) {
