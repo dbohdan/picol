@@ -4,7 +4,7 @@ all: picolsh picolsh-linenoise
 
 picolsh: shell.c picol.h
 	$(CC) shell.c -o $@ $(CFLAGS) -DPICOL_SHELL_LINENOISE=0
-picolsh-linenoise: shell.c picol.h vendor/linenoise.
+picolsh-linenoise: shell.c picol.h vendor/linenoise.o
 	$(CC) vendor/linenoise.o shell.c -o $@ $(CFLAGS)
 
 test: picolsh
