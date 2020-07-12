@@ -1,5 +1,5 @@
-The regexp.h/regexp.c library is by Tor Andersson
-(https://github.com/ccxvii/minilibs).
+The regexp.h library is by Tor Andersson (https://github.com/ccxvii/minilibs).
+It has been refactored into a header-only library.
 
 The library collection it is from carries the following note: "These libraries
 are in the public domain (or the equivalent where that is not possible). You

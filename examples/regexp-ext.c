@@ -2,6 +2,7 @@
 
 #define PICOL_IMPLEMENTATION
 #include "picol.h"
+#define REGEXP_IMPLEMENTATION
 #include "vendor/regexp.h"
 #define PICOL_REGEXP_WRAPPER_IMPLEMENTATION
 #include "extensions/regexp-wrapper.h"
