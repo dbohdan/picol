@@ -3626,8 +3626,9 @@ PICOL_COMMAND(pid) {
 }
 PICOL_COMMAND(proc) {
     char **procdata = NULL;
-    picolCmd *c = picolGetCmd(interp, argv[1]);
+    picolCmd *c;
     PICOL_ARITY2(argc == 4, "proc name args body");
+    c = picolGetCmd(interp, argv[1]);
     if (c != NULL) {
         procdata = c->privdata;
     }

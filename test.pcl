@@ -1119,6 +1119,7 @@ test proc.1      {proc h x {* $x $x}; h 5} -> 25
 test proc.2      {proc f args {set args}; f foo bar grill} -> {foo bar grill}
 test proc.3      {proc f {args x} {set x}; f foo bar} -> bar
 test proc.4      {proc f {} {}; rename f {}; proc f {} {}} -> {}
+test proc.5      {proc} ->* {wrong # args*}
 
 if {$test_config(picol) && $test_config(io)} {
     test puts.x  {puts hello world} -> {expected pointer but got "hello"}
