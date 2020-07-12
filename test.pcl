@@ -93,6 +93,12 @@ proc test {name cmd arrow expected} {
 if $test_config(picol) {test version {info pa} -> $patchlevel}
 puts "[info script] [info patchlevel], $argv0, argv:<$argv>,argc:$argc"
 
+test parser.1   {set a 5} -> 5
+test parser.2   {set a [} -> {missing close-bracket}
+test parser.3   {set a [][} -> {missing close-bracket}
+test parser.4   {set a [[} -> {missing close-bracket}
+test parser.5   {set a [\{} -> {missing close-bracket}
+
 test +.1        {+ 3 4}   -> 7
 test +.2        {+ 3 4 5} -> 12
 test +.3        {+ 3}     -> 3

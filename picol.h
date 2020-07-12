@@ -504,7 +504,7 @@ int picolParseCmd(picolParser* p) {
     p->len--;
     while (p->len) {
         if (!*p->p) {
-            return PICOL_ERR;
+            break;
         } if (*p->p == '[' && blevel == 0) {
             level++;
         } else if (*p->p == ']' && blevel == 0) {
@@ -532,7 +532,7 @@ int picolParseCmd(picolParser* p) {
         p->p++;
         p->len--;
     }
-    return PICOL_OK;
+    return (level == 0 && blevel == 0) ? PICOL_OK : PICOL_ERR;
 }
 int picolParseBrace(picolParser* p) {
     int level = 1;
@@ -1074,10 +1074,8 @@ int picolEval2(picolInterp* interp, char* t, int mode) { /*------------ EVAL! */
     while (1) {
         size_t tlen;
         int prevtype = p.type;
-        picolGetToken(interp, &p);
-        if (p.type == PICOL_PT_EOF) {
-            break;
-        }
+        if (picolGetToken(interp, &p) != PICOL_OK) break;
+        if (p.type == PICOL_PT_EOF) { break; }
         tlen = p.end < p.start ? 0 : p.end - p.start + 1;
         t = PICOL_MALLOC(tlen + 1);
         if (p.type == PICOL_PT_STR || p.type == PICOL_PT_VAR) {
