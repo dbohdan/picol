@@ -492,7 +492,7 @@ static RegNode *reg_newrep(RegNode *atom, int ng, int min, int max)
 {
 	RegNode *rep = reg_newnode(P_REP);
 	if (max == REG_REPINF && reg_empty(atom))
-		reg_die("infinite loop reg_matching the reg_empty string");
+		reg_die("infinite loop matching the empty string");
 	rep->ng = ng;
 	rep->m = min;
 	rep->n = max;

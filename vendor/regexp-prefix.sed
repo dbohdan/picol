@@ -56,6 +56,7 @@ s|match|reg_match|g
 
 s|reg_reg_|reg_|g
 s|REG_REG_|REG_|g
+s|reg_matching the reg_empty string|matching the empty string|
 
 s|Reclass|RegClass|g
 s|Reinst|RegInst|g
