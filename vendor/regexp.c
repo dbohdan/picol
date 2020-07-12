@@ -844,17 +844,17 @@ Reprog *regcomp(const char *pattern, int cflags, const char **errorp)
 
 	if (setjmp(g.kaboom)) {
 		if (errorp) *errorp = g.error;
-		free(g.pstart);
-		free(g.prog);
+		REG_FREE(g.pstart);
+		REG_FREE(g.prog);
 		return NULL;
 	}
 
-	g.prog = malloc(sizeof (Reprog));
+	g.prog = REG_MALLOC(sizeof (Reprog));
 	if (!g.prog)
 		die("cannot allocate regular expression");
 	n = strlen(pattern) * 2;
 	if (n > 0) {
-		g.pstart = g.pend = malloc(sizeof (Renode) * n);
+		g.pstart = g.pend = REG_MALLOC(sizeof (Renode) * n);
 		if (!g.pstart)
 			die("cannot allocate regular expression parse list");
 	}
@@ -884,7 +884,7 @@ Reprog *regcomp(const char *pattern, int cflags, const char **errorp)
 		die("program too large");
 
 	g.prog->nsub = g.nsub;
-	g.prog->start = g.prog->end = malloc(n * sizeof (Reinst));
+	g.prog->start = g.prog->end = REG_MALLOC(n * sizeof (Reinst));
 
 	split = emit(g.prog, I_SPLIT);
 	split->x = split + 3;
@@ -901,7 +901,7 @@ Reprog *regcomp(const char *pattern, int cflags, const char **errorp)
 	dumpprog(g.prog);
 #endif
 
-	free(g.pstart);
+	REG_FREE(g.pstart);
 
 	if (errorp) *errorp = NULL;
 	return g.prog;
@@ -910,8 +910,8 @@ Reprog *regcomp(const char *pattern, int cflags, const char **errorp)
 void regfree(Reprog *prog)
 {
 	if (prog) {
-		free(prog->start);
-		free(prog);
+		REG_FREE(prog->start);
+		REG_FREE(prog);
 	}
 }
 

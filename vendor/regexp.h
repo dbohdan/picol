@@ -1,6 +1,13 @@
 #ifndef regexp_h
 #define regexp_h
 
+#ifndef REG_MM
+    #define REG_MM
+
+    #define REG_MALLOC malloc
+    #define REG_FREE free
+#endif
+
 typedef struct Reprog Reprog;
 typedef struct Resub Resub;
 
