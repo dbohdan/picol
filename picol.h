@@ -43,7 +43,6 @@
 #ifndef PICOL_MEMORY_MANAGEMENT
 #    define PICOL_MEMORY_MANAGEMENT
 
-#    define PICOL_CALLOC calloc
 #    define PICOL_FREE free
 #    define PICOL_MALLOC malloc
 #    define PICOL_REALLOC realloc
@@ -894,8 +893,16 @@ int picolGetToken(picolInterp* interp, picolParser* p) {
 void picolInitInterp(picolInterp* interp) {
     interp->level     = 0;
     interp->maxlevel  = PICOL_MAX_LEVEL;
-    interp->callframe = PICOL_CALLOC(1, sizeof(picolCallFrame));
+    interp->callframe = PICOL_MALLOC(sizeof(picolCallFrame));
+    interp->commands  = NULL;
+    interp->current   = NULL;
     interp->result    = strdup("");
+    interp->debug     = 0;
+    interp->validptrs = NULL;
+
+    interp->callframe->vars = NULL;
+    interp->callframe->command = NULL;
+    interp->callframe->parent = NULL;
 }
 picolCmd* picolGetCmd(picolInterp* interp, char* name) {
     picolCmd* c;
@@ -1403,7 +1410,7 @@ int picolValidPtrAdd(picolInterp* interp, int type, void* ptr) {
         p = p->next;
     }
 
-    p = PICOL_CALLOC(1, sizeof(picolPtr));
+    p = PICOL_MALLOC(sizeof(picolPtr));
     if (p == NULL) return 0;
     p->type = type;
     p->ptr = ptr;
@@ -1448,14 +1455,19 @@ int picolValidPtrRemove(picolInterp* interp, void* ptr) {
 int picolCallProc(picolInterp* interp, int argc, char** argv, void* pd) {
     char** x = pd, *alist = x[0], *body = x[1], *p = strdup(alist), *tofree;
     char buf[PICOL_MAX_STR];
-    picolCallFrame* cf = PICOL_CALLOC(1, sizeof(*cf));
+    picolCallFrame* cf = PICOL_MALLOC(sizeof(picolCallFrame));
     int a = 0, done = 0, errcode = PICOL_OK;
+
     if (cf == NULL) {
         printf("could not allocate callframe\n");
         exit(1);
     }
+
+    cf->vars = NULL;
+    cf->command = NULL;
     cf->parent = interp->callframe;
     interp->callframe = cf;
+
     if (interp->level > interp->maxlevel) {
         PICOL_FREE(p);
         picolDropCallFrame(interp);
@@ -1901,7 +1913,7 @@ int picolHash(char* key, int modulo) {
 picolArray* picolArrCreate(picolInterp* interp, char* name) {
     char buf[PICOL_MAX_STR];
     int i;
-    picolArray* ap = PICOL_CALLOC(1, sizeof(picolArray));
+    picolArray* ap = PICOL_MALLOC(sizeof(picolArray));
 
     ap->size = 0;
     for (i = 0; i < PICOL_ARR_BUCKETS; i++) {
@@ -4503,7 +4515,7 @@ picolInterp* picolCreateInterp(void) {
     return picolCreateInterp2(1, 1);
 }
 picolInterp* picolCreateInterp2(int register_core_cmds, int randomize) {
-    picolInterp* interp = PICOL_CALLOC(1, sizeof(picolInterp));
+    picolInterp* interp = PICOL_MALLOC(sizeof(picolInterp));
     char buf[8];
     int x;
     picolInitInterp(interp);
