@@ -38,6 +38,8 @@
 #define PICOL_FEATURE_IO        1
 #define PICOL_FEATURE_PUTS      1
 
+#endif /* PICOL_CONFIGURATION */
+
 #ifndef PICOL_MEMORY_MANAGEMENT
 #    define PICOL_MEMORY_MANAGEMENT
 
@@ -46,8 +48,6 @@
 #    define PICOL_MALLOC malloc
 #    define PICOL_REALLOC realloc
 #endif /* PICOL_MEMORY_MANAGEMENT */
-
-#endif /* PICOL_CONFIGURATION */
 
 /* -------------------------------------------------------------------------- */
 
