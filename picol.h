@@ -503,7 +503,9 @@ int picolParseCmd(picolParser* p) {
     p->start = ++p->p;
     p->len--;
     while (p->len) {
-        if (*p->p == '[' && blevel == 0) {
+        if (!*p->p) {
+            return PICOL_ERR;
+        } if (*p->p == '[' && blevel == 0) {
             level++;
         } else if (*p->p == ']' && blevel == 0) {
             if (!--level) {
@@ -519,8 +521,10 @@ int picolParseCmd(picolParser* p) {
                 blevel--;
             }
         }
-        p->p++;
-        p->len--;
+        if (p->len > 0) {
+            p->p++;
+            p->len--;
+        }
     }
     p->end  = p->p-1;
     p->type = PICOL_PT_CMD;
