@@ -1,12 +1,10 @@
 all: picolsh.exe examples\hello.exe examples\command.exe examples\regexp-ext.exe
 
-picolsh.exe: shell.c regexp.obj picol.h
-    cl /Fepicolsh.exe regexp.obj shell.c
+picolsh.exe: shell.c picol.h
+    cl /Fepicolsh.exe shell.c
 examples\hello.exe: examples\hello.c picol.h
     cl /Feexamples\hello.exe /I. examples\hello.c
 examples\command.exe: examples\command.c picol.h
     cl /Feexamples\command.exe /I. examples\command.c
-regexp.obj: vendor\regexp.c
-    cl /c /Feregexp.obj vendor\regexp.c
-examples\regexp-ext.exe: examples\regexp-ext.c regexp.obj picol.h
-    cl /Feexamples\regexp-ext.exe regexp.obj /I. examples\regexp-ext.c
+examples\regexp-ext.exe: examples\regexp-ext.c picol.h
+    cl /Feexamples\regexp-ext.exe /I. examples\regexp-ext.c
