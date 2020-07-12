@@ -1,8 +1,9 @@
 /* Picol use example: custom command. */
 
 #define PICOL_CONFIGURATION
-#define PICOL_MAX_STR   4096
-#define PICOL_MAX_LEVEL 10
+#define PICOL_MAX_STR          4096
+#define PICOL_SOURCE_BUF_SIZE     0
+#define PICOL_MAX_LEVEL          10
 /* A minimal Picol configuration: no arrays, no I/O, no [interp] or [glob]
 command. */
 #define PICOL_FEATURE_ARRAYS  0

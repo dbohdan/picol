@@ -15,11 +15,13 @@
 #ifndef PICOL_CONFIGURATION
 #define PICOL_CONFIGURATION
 
-#define PICOL_MAX_STR        4096
+#define PICOL_MAX_STR          4096
+#define PICOL_SOURCE_BUF_SIZE  (PICOL_MAX_STR*64)
+
 #ifdef _MSC_VER
-#    define PICOL_MAX_LEVEL  10
+#    define PICOL_MAX_LEVEL    10
 #else
-#    define PICOL_MAX_LEVEL  30
+#    define PICOL_MAX_LEVEL    30
 #endif
 
 #ifdef __MINGW32__
@@ -3840,7 +3842,7 @@ PICOL_COMMAND(set) {
     }
 }
 int picolSource(picolInterp* interp, char* filename) {
-    char buf[PICOL_MAX_STR*64];
+    char buf[PICOL_SOURCE_BUF_SIZE];
     char prev[PICOL_MAX_STR];
     int rc;
     picolVar* pv;
