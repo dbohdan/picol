@@ -4,18 +4,18 @@ PICOL_COMMAND(regexp);
 
 #ifdef PICOL_REGEXP_WRAPPER_IMPLEMENTATION
 PICOL_COMMAND(regexp) {
-    Reprog* p;
-    Resub m;
+    RegProg* p;
+    RegSub m;
     int i;
     int result;
     const char* err;
     char match[PICOL_MAX_STR];
     PICOL_ARITY2(argc >= 3, "regexp exp string ?matchVar? ?subMatchVar ...?");
-    p = regcomp(argv[1], 0, &err);
+    p = reg_comp(argv[1], 0, &err);
     if (p == NULL) {
         return picolErr1(interp, "can't compile regexp: %s", (char*) err);
     }
-    result = !regexec(p, argv[2], &m, 0);
+    result = !reg_exec(p, argv[2], &m, 0);
     if (result) {
         for (i = 0; (i < (int)m.nsub) && (i + 3 < argc); i++) {
             /* n should always be less than PICOL_MAX_STR under normal
@@ -36,7 +36,7 @@ PICOL_COMMAND(regexp) {
             picolSetVar(interp, argv[i + 3], "");
         }
     }
-    regfree(p);
+    reg_free(p);
     return picolSetBoolResult(interp, result);
 }
 #endif /* PICOL_REGEXP_WRAPPER_IMPLEMENTATION */
