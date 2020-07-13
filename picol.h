@@ -322,7 +322,7 @@ typedef struct picolArray {
 /* prototypes */
 
 int   picolList(char* buf, size_t buf_size, int argc, char** argv);
-int   picolNeedsBraces(char* str);
+int   picolNeedsBraces(const char* str);
 char* picolParseList(char* start, char* target, size_t target_size);
 char* picolStrFirstTrailing(char* str, char chr);
 char* picolStrRev(char* str);
@@ -970,12 +970,16 @@ int picolList(char* buf, size_t buf_size, int argc, char** argv) {
     }
     return PICOL_OK;
 }
-/* Returns the next starting point in the list. */
+/* Returns the next character after the end of the first element in the
+   list. */
+#define PICOL_LIST_NESTING 32
 char* picolParseList(char* start, char* target, size_t target_size) {
     char* cp = start;
-    int bracelevel = 0, quoted = 0, done;
-    size_t offset = 0, elem_len;
-    if (cp == NULL || *cp == '\0') {
+    char q[PICOL_LIST_NESTING];
+    size_t qi = 0, ti = 0;
+    int esc = 0;
+
+    if (cp == NULL || *cp == '\0' || target == NULL || target_size == 0) {
         return NULL;
     }
 
@@ -988,50 +992,87 @@ char* picolParseList(char* start, char* target, size_t target_size) {
     }
     start = cp;
 
-    for (done=0; 1; cp++) {
-        if (*cp == '{') {
-            bracelevel++;
-        } else if (*cp == '}') {
-            bracelevel--;
-        } else if (bracelevel == 0 && *cp == '\"') {
-            if (quoted) {
-                done = 1;
-                quoted = 0;
-            } else if ((cp == start) || isspace(*cp)) {
-                quoted = 1;
-            }
-        } else if (bracelevel == 0 &&!quoted && (isspace(*cp) || *cp == '\0')) {
-            done = 1;
+    for (q[0] = ' '; *cp && ti < target_size; cp++) {
+        if (esc) {
+            target[ti] = *cp;
+            ti++;
+            if (ti == target_size - 1) break;
+            esc = 0;
+
+            continue;
         }
-        if (done && !quoted) {
-            if (*start == '{')  {
-                start++;
-                offset = 1;
-            }
-            if (*start == '\"') {
-                start++;
-                offset = 1;
-                cp++;
-            }
 
-            elem_len = cp - start - offset;
-            /* TODO: This could return an error instead of truncating
-             * the element. */
-            if (elem_len > target_size - 1) { elem_len = target_size - 1; }
-            strncpy(target, start, elem_len);
-            target[elem_len] = '\0';
+        if (q[0] != '{' && *cp == '\\') {
+            esc = 1;
 
-            while (isspace(*cp)) {
-                cp++;
-            }
+            continue;
+        }
+
+        if (qi == 0 && isspace(*cp)) {
             break;
         }
 
-        if (!*cp) break;
+        if (*cp == '{') {
+            if (qi > 0) {
+                target[ti] = *cp;
+                ti++;
+                if (ti == target_size - 1) break;
+            }
+            q[qi] = '{';
+            qi++;
+            if (qi == PICOL_LIST_NESTING) break;
+
+            continue;
+        }
+
+        if (*cp == '}') {
+            if (qi > 0 && q[qi - 1] == '{') {
+                qi--;
+                if (qi > 0) {;
+                    target[ti] = *cp;
+                    ti++;
+                    if (ti == target_size - 1) break;
+                } else { /* qi == 0 */
+                    cp++;
+                    break;
+                }
+            } else {
+                /* We break rather than return an error when a list is
+                   invalid. */
+                break;
+            }
+
+            continue;
+        }
+
+        if (*cp == '"') {
+            if (qi == 1 && q[0] == '"') {
+                qi--;
+                if (qi == 0) { cp++; break; }
+            } else if (qi == 0 && (cp == start || isspace(*(cp - 1)))) {
+                q[0] = '"';
+                qi++;
+                if (qi == PICOL_LIST_NESTING) break;
+            } else {
+                target[ti] = '"';
+                ti++;
+                if (ti == target_size - 1) break;
+            }
+
+            continue;
+        }
+
+        target[ti] = *cp;
+        ti++;
+        if (ti == target_size - 1) break;
+        esc = 0;
     }
+
+    target[ti] = '\0';
 
     return cp;
 }
+#undef PICOL_LIST_NESTING
 void picolEscape(char* str, size_t str_size) {
     char buf[PICOL_MAX_STR], *cp, *cp2;
     int ichar;
@@ -1185,6 +1226,8 @@ int picolEval2(picolInterp* interp, char* t, int mode) { /*------------ EVAL! */
                         goto err;
                     }
                     if ((c = picolGetCmd(interp, "unknown"))) {
+                        /* TODO: Use realloc() safely in this function.
+                           Check for failure. */
                         argv = PICOL_REALLOC(argv, sizeof(char*)*(argc+1));
                         for (j = argc; j > 0; j--) {
                             /* copy up */
@@ -1975,6 +2018,13 @@ PICOL_COMMAND(apply) {
     char buf[PICOL_MAX_STR], buf2[PICOL_MAX_STR];
     PICOL_ARITY2(argc >= 2, "apply {argl body} ?arg ...?");
     cp = picolParseList(argv[1], buf, sizeof(buf));
+    if (cp == NULL) {
+        return picolErrFmt(
+            interp,
+            "can't interpret \"%s\" as a lambda expression",
+            argv[1]
+        );
+    }
     picolParseList(cp, buf2, sizeof(buf2));
     procdata[0] = buf;
     procdata[1] = buf2;
@@ -3777,7 +3827,7 @@ PICOL_COMMAND(min) {
     PICOL_FOLD(c = a, c = c < a ? c : a, 1);
     return picolSetIntResult(interp, c);
 }
-int picolNeedsBraces(char* str) {
+int picolNeedsBraces(const char* str) {
     int i;
     int length = 0;
     for (i = 0;; i++) {
