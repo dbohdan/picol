@@ -204,7 +204,7 @@
     "can't read \"%s\": no such variable", _n);
 
 #define PICOL_PARSED(_t) \
-    do {p->end = p->p-1; p->type = _t;} while (0)
+    do {p->end = p->pos - 1; p->type = _t;} while (0)
 
 #define PICOL_RETURN_PARSED(_t) \
     do {PICOL_PARSED(_t); return PICOL_OK;} while (0)
@@ -235,7 +235,7 @@ enum {PICOL_PTR_NONE, PICOL_PTR_CHAN, PICOL_PTR_ARRAY, PICOL_PTR_INTERP};
 /* ------------------------------------------------------------------- types */
 typedef struct picolParser {
     char*  text;
-    char*  p;           /* current text position */
+    char*  pos;         /* current text position */
     size_t len;         /* remaining length */
     char*  start;       /* token start */
     char*  end;         /* token end */
@@ -476,7 +476,7 @@ void picolRegisterCoreCmds(picolInterp *interp);
 
 /* ---------------------------====-------------------------- parser functions */
 void picolInitParser(picolParser* p, char* text) {
-    p->text  = p->p = text;
+    p->text  = p->pos = text;
     p->len   = strlen(text);
     p->start = 0;
     p->end = 0;
@@ -485,106 +485,107 @@ void picolInitParser(picolParser* p, char* text) {
     p->expand = 0;
 }
 int picolParseSep(picolParser* p) {
-    p->start = p->p;
-    while (isspace(*p->p) || (*p->p=='\\' && *(p->p+1)=='\n')) {
-        p->p++;
+    p->start = p->pos;
+    while (isspace(*p->pos) ||
+           (*p->pos == '\\' && *(p->pos + 1) == '\n')) {
+        p->pos++;
         p->len--;
     }
     PICOL_RETURN_PARSED(PICOL_PT_SEP);
 }
 int picolParseEol(picolParser* p) {
-    p->start = p->p;
-    while (isspace(*p->p) || *p->p == ';') {
-        p->p++;
+    p->start = p->pos;
+    while (isspace(*p->pos) || *p->pos == ';') {
+        p->pos++;
         p->len--;
     }
     PICOL_RETURN_PARSED(PICOL_PT_EOL);
 }
 int picolParseCmd(picolParser* p) {
     int level = 1, blevel = 0;
-    p->start = ++p->p;
+    p->start = ++p->pos;
     p->len--;
     while (p->len) {
-        if (!*p->p) {
+        if (!*p->pos) {
             break;
-        } if (*p->p == '[' && blevel == 0) {
+        } if (*p->pos == '[' && blevel == 0) {
             level++;
-        } else if (*p->p == ']' && blevel == 0) {
+        } else if (*p->pos == ']' && blevel == 0) {
             if (!--level) {
                 break;
             }
-        } else if (*p->p == '\\') {
-            p->p++;
+        } else if (*p->pos == '\\') {
+            p->pos++;
             p->len--;
-        } else if (*p->p == '{') {
+        } else if (*p->pos == '{') {
             blevel++;
-        } else if (*p->p == '}') {
+        } else if (*p->pos == '}') {
             if (blevel != 0) {
                 blevel--;
             }
         }
         if (p->len > 0) {
-            p->p++;
+            p->pos++;
             p->len--;
         }
     }
-    p->end  = p->p-1;
+    p->end  = p->pos - 1;
     p->type = PICOL_PT_CMD;
-    if (*p->p == ']') {
-        p->p++;
+    if (*p->pos == ']') {
+        p->pos++;
         p->len--;
     }
     return (level == 0 && blevel == 0) ? PICOL_OK : PICOL_ERR;
 }
 int picolParseBrace(picolParser* p) {
     int level = 1;
-    p->start = ++p->p;
+    p->start = ++p->pos;
     p->len--;
     while (1) {
-        if (p->len >= 2 && *p->p == '\\') {
-            p->p++;
+        if (p->len >= 2 && *p->pos == '\\') {
+            p->pos++;
             p->len--;
-        } else if (p->len == 0 || *p->p == '}') {
+        } else if (p->len == 0 || *p->pos == '}') {
             level--;
             if (level == 0 || p->len == 0) {
-                p->end = p->p-1;
+                p->end = p->pos - 1;
                 if (p->len) {
-                    p->p++; /* Skip final closed brace */
+                    p->pos++; /* Skip final closed brace */
                     p->len--;
                 }
                 p->type = PICOL_PT_STR;
                 return PICOL_OK;
             }
-        } else if (*p->p == '{') {
+        } else if (*p->pos == '{') {
             level++;
         }
-        p->p++;
+        p->pos++;
         p->len--;
     }
 }
 int picolParseString(picolParser* p) {
     int newword = (p->type == PICOL_PT_SEP || p->type == PICOL_PT_EOL ||
                    p->type == PICOL_PT_STR);
-    if (p->len >= 3 && !strncmp(p->p, "{*}", 3)) {
+    if (p->len >= 3 && !strncmp(p->pos, "{*}", 3)) {
         p->expand = 1;
-        p->p += 3;
+        p->pos += 3;
         p->len -= 3; /* skip the {*} expand indicator */
     }
-    if (newword && *p->p == '{') {
+    if (newword && *p->pos == '{') {
         return picolParseBrace(p);
-    } else if (newword && *p->p == '"') {
+    } else if (newword && *p->pos == '"') {
         p->insidequote = 1;
-        p->p++;
+        p->pos++;
         p->len--;
     }
-    for (p->start = p->p; 1; p->p++, p->len--) {
+    for (p->start = p->pos; 1; p->pos++, p->len--) {
         if (p->len == 0) {
             PICOL_RETURN_PARSED(PICOL_PT_ESC);
         }
-        switch(*p->p) {
+        switch(*p->pos) {
         case '\\':
             if (p->len >= 2) {
-                p->p++;
+                p->pos++;
                 p->len--;
             };
             break;
@@ -602,9 +603,9 @@ int picolParseString(picolParser* p) {
             break;
         case '"':
             if (p->insidequote) {
-                p->end = p->p-1;
+                p->end = p->pos-1;
                 p->type = PICOL_PT_ESC;
-                p->p++;
+                p->pos++;
                 p->len--;
                 p->insidequote = 0;
                 return PICOL_OK;
@@ -615,30 +616,35 @@ int picolParseString(picolParser* p) {
 }
 int picolParseVar(picolParser* p) {
     int parened = 0;
-    p->start = ++p->p;
+    p->start = ++p->pos;
     p->len--; /* skip the '$' */
-    if (*p->p == '{') {
+    if (*p->pos == '{') {
         picolParseBrace(p);
         p->type = PICOL_PT_VAR;
         return PICOL_OK;
     }
-    if (PICOL_COLONED(p->p)) {
-        p->p += 2;
+    if (PICOL_COLONED(p->pos)) {
+        p->pos += 2;
         p->len -= 2;
     }
 
-    while (isalnum(*p->p) || *p->p == '_' || *p->p == '(' || *p->p == ')') {
-        if (*p->p=='(') {
+    while (
+        isalnum(*p->pos) ||
+        *p->pos == '_' ||
+        *p->pos == '(' ||
+        *p->pos == ')'
+    ) {
+        if (*p->pos=='(') {
             parened = 1;
         }
-        p->p++;
+        p->pos++;
         p->len--;
     }
-    if (!parened && *(p->p-1) == ')') {
-        p->p--;
+    if (!parened && *(p->pos-1) == ')') {
+        p->pos--;
         p->len++;
     }
-    if (p->start == p->p) {
+    if (p->start == p->pos) {
         /* It's just the single char string "$" */
         picolParseString(p);
         p->start--;
@@ -650,12 +656,12 @@ int picolParseVar(picolParser* p) {
     }
 }
 int picolParseComment(picolParser* p) {
-    while (p->len && *p->p != '\n') {
-        if (*p->p=='\\' && *(p->p+1)=='\n') {
-            p->p++;
+    while (p->len && *p->pos != '\n') {
+        if (*p->pos=='\\' && *(p->pos+1)=='\n') {
+            p->pos++;
             p->len--;
         }
-        p->p++;
+        p->pos++;
         p->len--;
     }
     return PICOL_OK;
@@ -863,7 +869,7 @@ int picolGetToken(picolInterp* interp, picolParser* p) {
             }
             return PICOL_OK;
         }
-        switch(*p->p) {
+        switch(*p->pos) {
         case ' ':
         case '\t':
             if (p->insidequote) {
