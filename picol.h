@@ -447,7 +447,7 @@ int picolQsortCompStr(const void* a, const void *b);
 int picolQsortCompStrDecr(const void* a, const void *b);
 int picolQuoteForShell(char* dest, int argc, char** argv);
 int picolRegisterCmd(picolInterp *interp, char *name, picol_Func f, void *pd);
-int picolReplace(char* str, char* from, char* to, int nocase);
+int picolReplace(char* str, size_t str_size, char* from, char* to, int nocase);
 int picolScanInt(char* str, int base);
 int picolSetFmtResult(picolInterp* interp, char* fmt, int result);
 int picolSetIntVar(picolInterp *interp, char *name, int value);
@@ -1697,7 +1697,13 @@ int picolStrCompare(
 
     return 0;
 }
-int picolReplace(char* str, char* from, char* to, int nocase) {
+int picolReplace(
+    char* str,
+    size_t str_size,
+    char* from,
+    char* to,
+    int nocase
+) {
     int strLen = strlen(str);
     int fromLen = strlen(from);
     int toLen = strlen(to);
@@ -1768,7 +1774,7 @@ int picolReplace(char* str, char* from, char* to, int nocase) {
         result[PICOL_MAX_STR - 1] = '\0';
     }
 
-    strcpy(str, result);
+    strncpy(str, result, str_size);
     return count;
 }
 int picolQuoteForShell(char* dest, int argc, char** argv) {
