@@ -3481,7 +3481,7 @@ int picol_Math(picolInterp* interp, int argc, char** argv, void* pd) {
     if (argc==3) {
         PICOL_SCAN_INT(b, argv[2]);
     }
-    if (argv[0][0] == '/' && !b) {
+    if (b == 0 && (argv[0][0] == '/' || argv[0][0] == '%')) {
         return picolErr(interp, "divide by zero");
     }
     /*ARITY2 "+ ?arg..." */

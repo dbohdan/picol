@@ -339,6 +339,7 @@ test catch.3    {/ 1 0} -> "divide by zero"
 if $test_config(picol) {
     test catch.4 {catch {+ a b} res;set res} -> {expected integer but got "a"}
 }
+test catch.5    {% 1 0} -> "divide by zero"
 
 if {$test_config(unix)} {
     set hour [string range [clock format 0 -format %z] 1 2]
