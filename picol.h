@@ -3609,11 +3609,11 @@ int picol_Math(picolInterp* interp, int argc, char** argv, void* pd) {
     if (b == 0 && (argv[0][0] == '/' || argv[0][0] == '%')) {
         return picolErr(interp, "divide by zero");
     }
-    /*ARITY2 "+ ?arg..." */
+    /* PICOL_ARITY2(..., "+ ?arg...") */
     if (PICOL_EQ(argv[0], "+" )) {
         PICOL_FOLD(c=0, c += a, 1);
     }
-    /*ARITY2 "- arg ?apicolParseCmdrg...?" */
+    /* PICOL_ARITY2(..., "- arg ?arg...?") */
     else if (PICOL_EQ(argv[0], "-" )) {
         if (argc==2) {
             c= -a;
@@ -3621,11 +3621,11 @@ int picol_Math(picolInterp* interp, int argc, char** argv, void* pd) {
             PICOL_FOLD(c=a, c -= a, 2);
         }
     }
-    /*ARITY2"* ?arg...?" */
+    /* PICOL_ARITY2(..., "* ?arg...?") */
     else if (PICOL_EQ(argv[0], "*" )) {
         PICOL_FOLD(c=1, c *= a, 1);
     }
-    /*ARITY2 "** a b" */
+    /* PICOL_ARITY2(..., "** a b") */
     else if (PICOL_EQ(argv[0], "**" )) {
         PICOL_ARITY(argc==3);
         c = 1;
@@ -3633,37 +3633,37 @@ int picol_Math(picolInterp* interp, int argc, char** argv, void* pd) {
             c = c*a;
         }
     }
-    /*ARITY2 "/ a b" */
+    /* PICOL_ARITY2(..., "/ a b") */
     else if (PICOL_EQ(argv[0], "/" )) {
         PICOL_ARITY(argc==3);
         c = a / b;
     }
-    /*ARITY2"% a b" */
+    /* PICOL_ARITY2(..., "% a b") */
     else if (PICOL_EQ(argv[0], "%" )) {
         PICOL_ARITY(argc==3);
         c = a % b;
     }
-    /*ARITY2"&& ?arg...?"*/
+    /* PICOL_ARITY2(..., "&& ?arg...?") */
     else if (PICOL_EQ(argv[0], "&&")) {
         PICOL_FOLD(c=1, c = c && a, 1);
     }
-    /*ARITY2"|| ?arg...?"*/
+    /* PICOL_ARITY2(..., "|| ?arg...?") */
     else if (PICOL_EQ(argv[0], "||")) {
         PICOL_FOLD(c=0, c = c || a, 1);
     }
-    /*ARITY2"& ?arg...?"*/
+    /* PICOL_ARITY2(..., "& ?arg...?") */
     else if (PICOL_EQ(argv[0], "&")) {
         PICOL_FOLD(c=INT_MAX, c = c & a, 1);
     }
-    /*ARITY2"| ?arg...?"*/
+    /* PICOL_ARITY2(..., "| ?arg...?") */
     else if (PICOL_EQ(argv[0], "|")) {
         PICOL_FOLD(c=0, c = c | a, 1);
     }
-    /*ARITY2"^ ?arg...?"*/
+    /* PICOL_ARITY2(..., "^ ?arg...?") */
     else if (PICOL_EQ(argv[0], "^")) {
         PICOL_FOLD(c=0, c = c ^ a, 1);
     }
-    /*ARITY2"<< a b" */
+    /* PICOL_ARITY2(..., "<< a b") */
     else if (PICOL_EQ(argv[0], "<<" )) {
         PICOL_ARITY(argc==3);
         if (b > (int)sizeof(int)*8 - 1) {
@@ -3678,37 +3678,37 @@ int picol_Math(picolInterp* interp, int argc, char** argv, void* pd) {
         }
         c = a << b;
     }
-    /*ARITY2">> a b" */
+    /* PICOL_ARITY2(..., ">> a b") */
     else if (PICOL_EQ(argv[0], ">>" )) {
         PICOL_ARITY(argc==3);
         c = a >> b;
     }
-    /*ARITY2"> a b" */
+    /* PICOL_ARITY2(..., "> a b") */
     else if (PICOL_EQ(argv[0], ">" )) {
         PICOL_ARITY(argc==3);
         c = a > b;
     }
-    /*ARITY2">= a b"*/
+    /* PICOL_ARITY2(..., ">= a b") */
     else if (PICOL_EQ(argv[0], ">=")) {
         PICOL_ARITY(argc==3);
         c = a >= b;
     }
-    /*ARITY2"< a b" */
+    /* PICOL_ARITY2(..., "< a b") */
     else if (PICOL_EQ(argv[0], "<" )) {
         PICOL_ARITY(argc==3);
         c = a < b;
     }
-    /*ARITY2"<= a b"*/
+    /* PICOL_ARITY2(..., "<= a b") */
     else if (PICOL_EQ(argv[0], "<=")) {
         PICOL_ARITY(argc==3);
         c = a <= b;
     }
-    /*ARITY2"== a b"*/
+    /* PICOL_ARITY2(..., "== a b") */
     else if (PICOL_EQ(argv[0], "==")) {
         PICOL_ARITY(argc==3);
         c = a == b;
     }
-    /*ARITY2"!= a b"*/
+    /* PICOL_ARITY2(..., "!= a b") */
     else if (PICOL_EQ(argv[0], "!=")) {
         PICOL_ARITY(argc==3);
         c = a != b;
@@ -3949,7 +3949,7 @@ PICOL_COMMAND(rename) {
 
     return PICOL_OK;
 }
-PICOL_COMMAND(return ) {
+PICOL_COMMAND(return) {
     PICOL_ARITY2(argc == 1 || argc == 2, "return ?result?");
     picolSetResult(interp, (argc == 2) ? argv[1] : "");
     return PICOL_RETURN;
