@@ -673,7 +673,7 @@ int picolSetFmtResult(picolInterp* interp, char* fmt, int result) {
 #define PICOL_APPEND_BREAK_PICOLERR(src) \
     { \
         size_t src_len = strlen(src); \
-        if ((len + src_len) > sizeof(buf) - 1) { \
+        if ((len + added_len + src_len) >= sizeof(buf)) { \
             too_long = 1; break; \
         } \
         strcat(buf, src); \
