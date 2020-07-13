@@ -419,7 +419,7 @@ int picolValidPtrAdd(picolInterp *interp, int type, void* ptr);
 int picolValidPtrFind(picolInterp *interp, int type, void* ptr);
 int picolValidPtrRemove(picolInterp *interp, void* ptr);
 int picolCallProc(picolInterp *interp, int argc, char **argv, void *pd);
-char* picolConcat(char* buf, int argc, char** argv);
+int picolConcat(char* buf, size_t buf_size, int argc, char** argv);
 int picolCondition(picolInterp *interp, char* str);
 int picolErr1(picolInterp *interp, char* format, char* arg);
 int picolErr(picolInterp *interp, char* str);
@@ -2292,22 +2292,33 @@ PICOL_COMMAND(bitwise_not) {
     PICOL_SCAN_INT(res, argv[1]);
     return picolSetIntResult(interp, ~res);
 }
-char* picolConcat(char* buf, int argc, char** argv) {
-    int a;
+int picolConcat(char* buf, size_t buf_size, int argc, char** argv) {
+    int a; size_t len = 0;
     /* The caller is responsible for supplying a large enough buffer. */
     buf[0] = '\0';
     for (a = 1; a < argc; a++) {
+        size_t part_size = strlen(argv[a]);
+        if (len + part_size > buf_size) { return PICOL_ERR; }
+        len += part_size;
+
         strcat(buf, argv[a]);
+
         if (*argv[a] && a < argc-1) {
+            if (len + 1 > buf_size) { return PICOL_ERR; }
+            len++;
+
             strcat(buf, " ");
         }
     }
-    return buf;
+    return PICOL_OK;
 }
 PICOL_COMMAND(concat) {
     char buf[PICOL_MAX_STR];
     PICOL_ARITY2(argc > 0, "concat ?arg...?");
-    return picolSetResult(interp, picolConcat(buf, argc, argv));
+    if (picolConcat(buf, sizeof(buf), argc, argv) != PICOL_OK) {
+        picolErr(interp, PICOL_ERROR_TOO_LONG);
+    }
+    return picolSetResult(interp, buf);
 }
 PICOL_COMMAND(continue) {
     PICOL_ARITY(argc == 1);
@@ -2375,7 +2386,10 @@ PICOL_COMMAND(debug) {
 PICOL_COMMAND(eval) {
     char buf[PICOL_MAX_STR];
     PICOL_ARITY2(argc >= 2, "eval arg ?arg ...?");
-    return picolEval(interp, picolConcat(buf, argc, argv));
+    if (picolConcat(buf, sizeof(buf), argc, argv) != PICOL_OK) {
+        picolErr(interp, PICOL_ERROR_TOO_LONG);
+    }
+    return picolEval(interp, buf);
 }
 int picol_EqNe(picolInterp* interp, int argc, char** argv, void* pd) {
     int res;
@@ -4426,7 +4440,10 @@ PICOL_COMMAND(uplevel) {
     for (; delta>0 && interp->callframe->parent; delta--) {
         interp->callframe = interp->callframe->parent;
     }
-    rc = picolEval(interp, picolConcat(buf, argc-1, argv+1));
+    if (picolConcat(buf, sizeof(buf), argc - 1, argv + 1) != PICOL_OK) {
+        picolErr(interp, PICOL_ERROR_TOO_LONG);
+    }
+    rc = picolEval(interp, buf);
     interp->callframe = cf; /* back to normal */
     return rc;
 }
