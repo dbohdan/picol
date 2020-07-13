@@ -4158,8 +4158,8 @@ PICOL_COMMAND(string) {
         return picolSetBoolResult(interp,  picolIsInt(argv[3]));
     } else if (PICOL_SUBCMD("repeat")) {
         int j, n;
-        PICOL_SCAN_INT(n, argv[3]);
         PICOL_ARITY2(argc == 4, "string repeat string count");
+        PICOL_SCAN_INT(n, argv[3]);
         for (j=0; j<n; j++) {
             PICOL_APPEND(buf, argv[2]);
         }

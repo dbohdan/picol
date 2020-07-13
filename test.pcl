@@ -1349,9 +1349,10 @@ test str.range.9   {string range abcdefg  0 99} -> abcdefg
 test str.range.10  {string range abcdefg  0 6} -> abcdefg
 test str.range.11  {string range abcdefg  0 5} -> abcdef
 test str.range.12  {string range abcdefg  99 99} -> {}
-test str.rep.1   {string repeat foo 3}    -> foofoofoo
-test str.rep.2   {string repeat foo 0}    -> ""
-if $test_config(picol) {test str.rep.3  {string repeat foo 10000} -> "string too long"}
+test str.repeat.1  {string repeat foo 3} -> foofoofoo
+test str.repeat.2  {string repeat foo 0} -> ""
+test str.repeat.3  {string repeat} ->* {wrong # args*}
+if $test_config(picol) {test str.repeat.4  {string repeat foo 10000} -> "string too long"}
 if $test_config(picol) {test str.rev {string reverse picol} -> locip ;# 8.5 :)}
 test str.trim.1  {string trim "  abc\t\t"}     -> abc
 test str.trim.2  {string trim ::def::: :}      -> def
