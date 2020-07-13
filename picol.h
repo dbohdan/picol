@@ -254,8 +254,12 @@ typedef struct picolVar {
 } picolVar;
 
 struct picolInterp; /* forward declaration */
-typedef int (*picol_Func)(struct picolInterp *interp, int argc, char **argv, \
-                          void *pd);
+typedef int (*picol_Func)(
+    struct picolInterp *interp,
+    int argc,
+    char **argv,
+    void *pd
+);
 
 typedef struct picolCmd {
     char*            name;
@@ -296,14 +300,14 @@ typedef struct picolArray {
 
 /* Ease of use macros. */
 
-#define picolEval(_i,_t)             picolEval2(_i, _t, 1)
-#define picolGetGlobalVar(_i,_n)     picolGetVar2(_i, _n, 1)
-#define picolGetVar(_i,_n)           picolGetVar2(_i, _n, 0)
-#define picolSetBoolResult(_i,x)     picolSetFmtResult(_i, "%d", !!x)
-#define picolSetGlobalVar(_i,_n,_v)  picolSetVar2(_i, _n, _v, 1)
-#define picolSetIntResult(_i,x)      picolSetFmtResult(_i, "%d", x)
-#define picolSetVar(_i,_n,_v)        picolSetVar2(_i, _n, _v, 0)
-#define picolSubst(_i,_t)            picolEval2(_i, _t, 0)
+#define picolEval(_i, _t)              picolEval2(_i, _t, 1)
+#define picolGetGlobalVar(_i, _n)      picolGetVar2(_i, _n, 1)
+#define picolGetVar(_i, _n)            picolGetVar2(_i, _n, 0)
+#define picolSetBoolResult(_i, x)      picolSetFmtResult(_i, "%d", !!x)
+#define picolSetGlobalVar(_i, _n, _v)  picolSetVar2(_i, _n, _v, 1)
+#define picolSetIntResult(_i, x)       picolSetFmtResult(_i, "%d", x)
+#define picolSetVar(_i, _n, _v)        picolSetVar2(_i, _n, _v, 0)
+#define picolSubst(_i, _t)             picolEval2(_i, _t, 0)
 
 /* prototypes */
 
@@ -2204,23 +2208,29 @@ char* picolArrStat(picolArray* ap, char* buf, size_t buf_size) {
         }
         count[depth]++;
     }
-    PICOL_SNPRINTF(buf,
-                   buf_size,
-                   "%d entries in table, %d buckets",
-                   ap->size,
-                   buckets);
+    PICOL_SNPRINTF(
+        buf,
+        buf_size,
+        "%d entries in table, %d buckets",
+        ap->size,
+        buckets
+    );
     for (j=0; j<10; j++) {
-        PICOL_SNPRINTF(tmp,
-                       sizeof(tmp),
-                       "\nnumber of buckets with %d entries: %d",
-                       j,
-                       count[j]);
+        PICOL_SNPRINTF(
+            tmp,
+            sizeof(tmp),
+            "\nnumber of buckets with %d entries: %d",
+            j,
+            count[j]
+        );
         strncat(buf, tmp, buf_size - strlen(tmp));
     }
-    PICOL_SNPRINTF(tmp,
-                   sizeof(tmp),
-                   "\nnumber of buckets with 10 or more entries: %d",
-                   count[10]);
+    PICOL_SNPRINTF(
+        tmp,
+        sizeof(tmp),
+        "\nnumber of buckets with 10 or more entries: %d",
+        count[10]
+    );
     strncat(buf, tmp, buf_size - strlen(tmp));
     return buf;
 }
@@ -3668,12 +3678,14 @@ int picol_Math(picolInterp* interp, int argc, char** argv, void* pd) {
         PICOL_ARITY(argc==3);
         if (b > (int)sizeof(int)*8 - 1) {
             char buf[PICOL_MAX_STR];
-            PICOL_SNPRINTF(buf,
-                           sizeof(buf),
-                           "can't shift integer left by more than %d bit(s) "
-                           "(%d given)",
-                           (int)(sizeof(int)*8 - 1),
-                           b);
+            PICOL_SNPRINTF(
+                buf,
+                sizeof(buf),
+                "can't shift integer left by more than %d bit(s) "
+                "(%d given)",
+                (int)(sizeof(int)*8 - 1),
+                b
+            );
             return picolErr(interp, buf);
         }
         c = a << b;
