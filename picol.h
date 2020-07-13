@@ -378,16 +378,18 @@ PICOL_COMMAND(while);
     PICOL_COMMAND(array);
 
     picolArray* picolArrCreate(picolInterp *interp, char *name);
-    int         picolArrDestroy(picolInterp* interp, char* name);
-    int         picolArrDestroy1(picolArray* ap);
-    char*       picolArrGet(picolArray *ap, char* pat, char* buf, int mode);
-    picolVar*   picolArrGet1(picolArray* ap, char* key);
+    int         picolArrDestroy(picolArray* ap);
+    int         picolArrDestroyByName(picolInterp* interp, char* name);
+    int         picolArrGetAll(picolArray *ap, char* pat, char* buf,
+                               size_t buf_size, int mode);
+    picolVar*   picolArrGetKey(picolArray* ap, char* key);
     picolArray* picolArrFindByName(picolInterp* interp, char* name, int create,
-                                   char* key_dest);
+                                   char* key_dest, size_t key_dest_size);
     int         picolArrUnset(picolArray* ap, char* key);
-    int         picolArrUnset1(picolInterp *interp, char *name);
+    int         picolArrUnsetByName(picolInterp *interp, char *name);
     picolVar*   picolArrSet(picolArray* ap, char* key, char* value);
-    picolVar*   picolArrSet1(picolInterp *interp, char *name, char *value);
+    picolVar*   picolArrSetByName(picolInterp *interp, char *name,
+                                  char *value);
     char*       picolArrStat(picolArray *ap, char* buf, size_t buf_size);
     int         picolHash(char* key, int modul);
 #endif
@@ -776,7 +778,7 @@ picolVar* picolGetVar2(picolInterp* interp, char* name, int glob) {
             }
             /* overwrite closing paren */
             *cp = '\0';
-            v = picolArrGet1(ap, buf2);
+            v = picolArrGetKey(ap, buf2);
             if (v == NULL) {
                 if ((global || interp->callframe->parent == NULL)
                         && PICOL_EQ(buf, "env")) {
@@ -787,7 +789,7 @@ picolVar* picolGetVar2(picolInterp* interp, char* name, int glob) {
                     strcpy(buf, "::env(");
                     strcat(buf, buf2);
                     strcat(buf, ")");
-                    return picolArrSet1(interp, buf, cp2);
+                    return picolArrSetByName(interp, buf, cp2);
                 } else {
                     return NULL;
                 }
@@ -821,7 +823,7 @@ int picolSetVar2(picolInterp* interp, char* name, char* val, int glob) {
         /* nonexistent variable */
 #if PICOL_FEATURE_ARRAYS
         if (strchr(name, '(')) {
-            if (picolArrSet1(interp, name, val) == NULL) {
+            if (picolArrSetByName(interp, name, val) == NULL) {
                 return picolErr1(interp,
                                  "can't set \"%s\": variable isn't array",
                                  name);
@@ -1556,10 +1558,10 @@ int picolUnsetVar(picolInterp* interp, char* name) {
     int found = 0;
 #if PICOL_FEATURE_ARRAYS
     picolArray* ap;
-    ap = picolArrFindByName(interp, name, 0, NULL);
+    ap = picolArrFindByName(interp, name, 0, NULL, 0);
     if (ap != NULL) {
         /* The variable is an array. */
-        picolArrDestroy1(ap);
+        picolArrDestroy(ap);
     }
 #endif
     cf = interp->callframe;
@@ -1954,20 +1956,20 @@ picolArray* picolArrCreate(picolInterp* interp, char* name) {
 
     return ap;
 }
-int picolArrDestroy(picolInterp* interp, char* name) {
+int picolArrDestroyByName(picolInterp* interp, char* name) {
     picolArray* ap;
     int success = 1;
-    ap = picolArrFindByName(interp, name, 0, NULL);
+    ap = picolArrFindByName(interp, name, 0, NULL, 0);
     if (ap == NULL) {
         return -1;
     }
     if (!picolValidPtrRemove(interp, (void*)ap)) {
         success = 0;
     }
-    success &= picolArrDestroy1(ap);
+    success &= picolArrDestroy(ap);
     return success;
 }
-int picolArrDestroy1(picolArray* ap) {
+int picolArrDestroy(picolArray* ap) {
     picolVar* v, *next;
     int i;
     for (i = 0; i < PICOL_ARR_BUCKETS; i++) {
@@ -1986,8 +1988,13 @@ int picolArrDestroy1(picolArray* ap) {
     PICOL_FREE(ap);
     return 1;
 }
-picolArray* picolArrFindByName(picolInterp* interp, char* name, int create,
-                               char* key_dest) {
+picolArray* picolArrFindByName(
+    picolInterp* interp,
+    char* name,
+    int create,
+    char* key_dest,
+    size_t key_dest_size
+) {
     char buf[PICOL_MAX_STR], *cp;
     picolArray* ap;
     picolVar*   v;
@@ -2023,24 +2030,40 @@ picolArray* picolArrFindByName(picolInterp* interp, char* name, int create,
     }
     return ap;
 }
-char* picolArrGet(picolArray* ap, char* pat, char* buf, int mode) {
-    int j;
+int picolArrGetAll(
+    picolArray* ap,
+    char* pat,
+    char* buf,
+    size_t buf_size,
+    int mode
+) {
+    int j; size_t len = 0;
     picolVar* v;
     for (j = 0; j < PICOL_ARR_BUCKETS; j++) {
         for (v = ap->table[j]; v != NULL; v = v->next) {
             if (picolMatch(pat, v->name) > 0) {
                 /* mode==1: array names */
+                size_t part_len = strlen(v->name);
+                if (len + part_len > buf_size) { return PICOL_ERR; }
+                len += part_len;
+
                 PICOL_LAPPEND_X(buf, v->name);
+
                 if (mode==2) {
                     /* array get */
+                    size_t part_len = strlen(v->val);
+                    if (len + part_len > buf_size) { return PICOL_ERR; }
+                    len += part_len;
+
                     PICOL_LAPPEND_X(buf, v->val);
                 }
             }
         }
     }
-    return buf;
+
+    return PICOL_OK;
 }
-picolVar* picolArrGet1(picolArray* ap, char* key) {
+picolVar* picolArrGetKey(picolArray* ap, char* key) {
     int hash = picolHash(key, PICOL_ARR_BUCKETS), found = 0;
     picolVar* pos, *v;
 
@@ -2081,9 +2104,9 @@ int picolArrUnset(picolArray* ap, char* key) {
 
     return 1;
 }
-int picolArrUnset1(picolInterp* interp, char* name) {
+int picolArrUnsetByName(picolInterp* interp, char* name) {
     char buf[PICOL_MAX_STR];
-    picolArray* ap = picolArrFindByName(interp, name, 0, buf);
+    picolArray* ap = picolArrFindByName(interp, name, 0, buf, sizeof(buf));
     if (ap == NULL) {
         return -1;
     }
@@ -2111,9 +2134,9 @@ picolVar* picolArrSet(picolArray* ap, char* key, char* value) {
 
     return v;
 }
-picolVar* picolArrSet1(picolInterp* interp, char* name, char* value) {
+picolVar* picolArrSetByName(picolInterp* interp, char* name, char* value) {
     char buf[PICOL_MAX_STR];
-    picolArray* ap = picolArrFindByName(interp, name, 1, buf);
+    picolArray* ap = picolArrFindByName(interp, name, 1, buf, sizeof(buf));
     if (ap == NULL) {
         return NULL;
     }
@@ -2203,7 +2226,11 @@ PICOL_COMMAND(array) {
         } else if (argc != 3) {
             return picolErr(interp, "usage: array get|names|size a");
         }
-        picolSetResult(interp, picolArrGet(ap, pat, buf, mode));
+
+        if (picolArrGetAll(ap, pat, buf, sizeof(buf), mode) != PICOL_OK) {
+            return picolErr(interp, PICOL_ERROR_TOO_LONG);
+        }
+        picolSetResult(interp, buf);
     } else if (PICOL_SUBCMD("set")) {
         PICOL_ARITY2(argc == 4, "array set arrayName list");
         if (v == NULL) {
@@ -4359,7 +4386,7 @@ PICOL_COMMAND(unset) {
     if (strchr(argv[1], '(')) {
         picolArray* ap;
         char key[PICOL_MAX_STR];
-        ap = picolArrFindByName(interp, argv[1], 0, key);
+        ap = picolArrFindByName(interp, argv[1], 0, key, sizeof(key));
         if (ap != NULL) {
             /* The array exists. */
             if (picolArrUnset(ap, key) > 0) {
