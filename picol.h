@@ -304,7 +304,7 @@ typedef struct picolArray {
 
 /* prototypes */
 
-char* picolList(char* buf, int argc, char** argv);
+int   picolList(char* buf, size_t buf_size, int argc, char** argv);
 int   picolNeedsBraces(char* str);
 char* picolParseList(char* start, char* trg);
 char* picolStrFirstTrailing(char* str, char chr);
@@ -930,14 +930,16 @@ int picolRegisterCmd(picolInterp* interp, char* name, picol_Func f, void* pd) {
     interp->commands = c;
     return PICOL_OK;
 }
-char* picolList(char* buf, int argc, char** argv) {
-    int a;
-    /* The caller is responsible for supplying a large enough buffer. */
+int picolList(char* buf, size_t buf_size, int argc, char** argv) {
+    int a; size_t len = 0;
     buf[0] = '\0';
-    for (a=0; a<argc; a++) {
+    for (a = 0; a < argc; a++) {
+        size_t part_len = strlen(argv[a]);
+        if (part_len + len > buf_size) { return PICOL_ERR; }
         PICOL_LAPPEND_X(buf, argv[a]);
+        len += part_len;
     }
-    return buf;
+    return PICOL_OK;
 }
 char* picolParseList(char* start, char* trg) {
     char* cp = start;
@@ -1126,7 +1128,10 @@ int picolEval2(picolInterp* interp, char* t, int mode) { /*------------ EVAL! */
             t = NULL;
             if (mode == 0) {
                 /* do a quasi-subst only */
-                rc = picolSetResult(interp, picolList(buf, argc, argv));
+                rc = picolList(buf, sizeof(buf), argc, argv);
+                if (rc == PICOL_OK) {
+                    rc = picolSetResult(interp, buf);
+                }
                 /* not an error if rc == PICOL_OK */
                 goto err;
             }
@@ -1177,7 +1182,11 @@ int picolEval2(picolInterp* interp, char* t, int mode) { /*------------ EVAL! */
                     goto err;
                 }
 
-                interp->current = strdup(picolList(buf, argc, argv));
+                rc = picolList(buf, sizeof(buf), argc, argv);
+                if (rc != PICOL_OK) {
+                    goto err;
+                }
+                interp->current = strdup(buf);
 
 #if PICOL_FEATURE_PUTS
                 if (interp->debug) {
@@ -1189,8 +1198,15 @@ int picolEval2(picolInterp* interp, char* t, int mode) { /*------------ EVAL! */
                 rc = c->func(interp, argc, argv, c->privdata);
 #if PICOL_FEATURE_PUTS
                 if (interp->debug) {
-                    fprintf(stderr, "> %d: {%s} -> {%s}\n", interp->level,
-                            picolList(buf, argc, argv), interp->result);
+                    if (picolList(buf, sizeof(buf), argc, argv) != PICOL_OK) {
+                        goto err;
+                    }
+                    fprintf(
+                        stderr, "> %d: {%s} -> {%s}\n",
+                        interp->level,
+                        buf,
+                        interp->result
+                    );
                     fflush(stderr);
                 }
 #endif
@@ -1495,7 +1511,12 @@ int picolCallProc(picolInterp* interp, int argc, char** argv, void* pd) {
             *p = '\0';
         }
         if (PICOL_EQ(start, "args") && done) {
-            picolSetVar(interp, start, picolList(buf, argc-a-1, argv+a+1));
+            int rc = picolList(buf, sizeof(buf), argc - a - 1, argv + a + 1);
+            if (rc != PICOL_OK) {
+                /* TODO: Handle the error correctly. */
+                goto arityerr;
+            }
+            picolSetVar(interp, start, buf);
             a = argc-1;
             break;
         }
@@ -1512,10 +1533,12 @@ int picolCallProc(picolInterp* interp, int argc, char** argv, void* pd) {
     if (a != argc-1) {
         goto arityerr;
     }
-    cf->command = strdup(picolList(buf, argc, argv));
-    errcode     = picolEval(interp, body);
-    if (errcode == PICOL_RETURN) {
-        errcode = PICOL_OK;
+    if (picolList(buf, sizeof(buf), argc, argv) == PICOL_OK) {
+        cf->command = strdup(buf);
+        errcode     = picolEval(interp, body);
+        if (errcode == PICOL_RETURN) {
+            errcode = PICOL_OK;
+        }
     }
     /* remove the called proc's callframe on success */
     picolDropCallFrame(interp);
@@ -3430,7 +3453,10 @@ int picolLsort(picolInterp* interp, int argc, char** argv, void* pd) {
     } else {
         qsort(av, ac, sizeof(char*), picolQsortCompStr);
     }
-    picolSetResult(interp, picolList(buf, ac, av));
+    if (picolList(buf, sizeof(buf), ac, av) != PICOL_OK) {
+        return PICOL_ERR;
+    }
+    picolSetResult(interp, buf);
     return PICOL_OK;
 }
 PICOL_COMMAND(lsort) {
