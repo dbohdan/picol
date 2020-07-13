@@ -410,7 +410,7 @@ PICOL_COMMAND(while);
     PICOL_COMMAND(read);
     PICOL_COMMAND(source);
 
-    int picolFileUtil(picolInterp *interp, int argc, char **argv, void *pd);
+    int picol_FileUtil(picolInterp *interp, int argc, char **argv, void *pd);
 #endif
 #if PICOL_FEATURE_PUTS
     PICOL_COMMAND(puts);
@@ -432,7 +432,7 @@ int picolIsDirectory(char* path);
 int picolIsInt(char* str);
 int picolLmap(picolInterp* interp, char* vars, char* list, char* body,
               int accumulate);
-int picolLsort(picolInterp *interp, int argc, char **argv, void *pd);
+int picol_Lsort(picolInterp *interp, int argc, char **argv, void *pd);
 int picolMatch(char* pat, char* str);
 int picol_Math(picolInterp *interp, int argc, char **argv, void *pd);
 int picolParseBrace(picolParser *p);
@@ -2661,7 +2661,7 @@ PICOL_COMMAND(file) {
     return PICOL_OK;
 }
 #if PICOL_FEATURE_IO
-int picolFileUtil(picolInterp* interp, int argc, char** argv, void* pd) {
+int picol_FileUtil(picolInterp* interp, int argc, char** argv, void* pd) {
     FILE* fp = NULL;
     PICOL_ARITY(argc == 2 || (PICOL_EQ(argv[0], "seek") && argc == 3));
     /* The command may be:
@@ -2694,7 +2694,7 @@ int picolFileUtil(picolInterp* interp, int argc, char** argv, void* pd) {
     } else if (PICOL_EQ(argv[0], "tell")) {
         picolSetIntResult(interp, ftell(fp));
     } else {
-        return picolErr(interp, "bad use of picolFileUtil()");
+        return picolErr(interp, "bad use of picol_FileUtil()");
     }
     return PICOL_OK;
 }
@@ -3478,7 +3478,7 @@ int picolQsortCompInt(const void* a, const void* b) {
     int diff = atoi(*(const char**)a)-atoi(*(const char**)b);
     return (diff > 0 ? 1 : diff < 0 ? -1 : 0);
 }
-int picolLsort(picolInterp* interp, int argc, char** argv, void* pd) {
+int picol_Lsort(picolInterp* interp, int argc, char** argv, void* pd) {
     char buf[PICOL_MAX_STR] = "";
     char** av = argv+1;
     int ac = argc-1, a;
@@ -3507,7 +3507,7 @@ int picolLsort(picolInterp* interp, int argc, char** argv, void* pd) {
     return PICOL_OK;
 }
 PICOL_COMMAND(lsort) {
-    /* Dispatch to the helper function picolLsort. */
+    /* Dispatch to the helper function picol_Lsort. */
     char buf[PICOL_MAX_STR] = "_l ";
     PICOL_ARITY2(
         argc == 2 || argc == 3,
@@ -4566,7 +4566,7 @@ void picolRegisterCoreCmds(picolInterp* interp) {
     picolRegisterCmd(interp, "while",    picol_while, NULL);
     picolRegisterCmd(interp, "!",        picol_not, NULL);
     picolRegisterCmd(interp, "~",        picol_bitwise_not, NULL);
-    picolRegisterCmd(interp, "_l",       picolLsort, NULL);
+    picolRegisterCmd(interp, "_l",       picol_Lsort, NULL);
 #if PICOL_FEATURE_ARRAYS
     picolRegisterCmd(interp, "array",    picol_array, NULL);
 #endif
@@ -4578,19 +4578,19 @@ void picolRegisterCoreCmds(picolInterp* interp) {
 #endif
 #if PICOL_FEATURE_IO
     picolRegisterCmd(interp, "cd",       picol_cd, NULL);
-    picolRegisterCmd(interp, "close",    picolFileUtil, NULL);
-    picolRegisterCmd(interp, "eof",      picolFileUtil, NULL);
+    picolRegisterCmd(interp, "close",    picol_FileUtil, NULL);
+    picolRegisterCmd(interp, "eof",      picol_FileUtil, NULL);
     picolRegisterCmd(interp, "exec",     picol_exec, NULL);
     picolRegisterCmd(interp, "exit",     picol_exit, NULL);
-    picolRegisterCmd(interp, "flush",    picolFileUtil, NULL);
+    picolRegisterCmd(interp, "flush",    picol_FileUtil, NULL);
     picolRegisterCmd(interp, "gets",     picol_gets, NULL);
     picolRegisterCmd(interp, "open",     picol_open, NULL);
     picolRegisterCmd(interp, "pwd",      picol_pwd, NULL);
     picolRegisterCmd(interp, "rawexec",  picol_exec, NULL);
     picolRegisterCmd(interp, "read",     picol_read, NULL);
-    picolRegisterCmd(interp, "seek",     picolFileUtil, NULL);
+    picolRegisterCmd(interp, "seek",     picol_FileUtil, NULL);
     picolRegisterCmd(interp, "source",   picol_source, NULL);
-    picolRegisterCmd(interp, "tell",     picolFileUtil, NULL);
+    picolRegisterCmd(interp, "tell",     picol_FileUtil, NULL);
 #endif
 #if PICOL_FEATURE_PUTS
     picolRegisterCmd(interp, "puts",     picol_puts, NULL);
