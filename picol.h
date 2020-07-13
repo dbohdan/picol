@@ -429,7 +429,7 @@ int picolErr(picolInterp *interp, char* str);
 #define picolErr1 picolErrFmt
 int picolErrFmt(picolInterp *interp, char* format, char* arg);
 int picolEval2(picolInterp *interp, char *t, int mode);
-size_t picolExpandLC(char* destination, char* source, size_t num);
+size_t picolExpandLC(char* dest, size_t num, char* source);
 int picol_EqNe(picolInterp* interp, int argc, char** argv, void* pd);
 int picolGetToken(picolInterp *interp, picolParser *p);
 int picol_InNi(picolInterp *interp, int argc, char **argv, void *pd);
@@ -450,7 +450,7 @@ int picolParseVar(picolParser *p);
 int picolQsortCompInt(const void* a, const void *b);
 int picolQsortCompStr(const void* a, const void *b);
 int picolQsortCompStrDecr(const void* a, const void *b);
-int picolQuoteForShell(char* dest, int argc, char** argv);
+int picolQuoteForShell(char* dest, size_t dest_size, int argc, char** argv);
 int picolRegisterCmd(picolInterp *interp, char *name, picol_Func f, void *pd);
 int picolReplace(char* str, size_t str_size, char* from, char* to, int nocase);
 int picolScanInt(char* str, int base);
@@ -467,7 +467,7 @@ picolInterp* picolCreateInterp(void);
 picolInterp* picolCreateInterp2(int register_core_cmds, int randomize);
 picolVar *picolGetVar2(picolInterp *interp, char *name, int glob);
 void picolDropCallFrame(picolInterp *interp);
-void picolEscape(char *str);
+void picolEscape(char *str, size_t str_size);
 void picolInitInterp(picolInterp *interp);
 void picolInitParser(picolParser *p, char *text);
 void* picolScanPtr(char* str);
@@ -1018,7 +1018,7 @@ char* picolParseList(char* start, char* target, size_t target_size) {
 
     return cp;
 }
-void picolEscape(char* str) {
+void picolEscape(char* str, size_t str_size) {
     char buf[PICOL_MAX_STR], *cp, *cp2;
     int ichar;
     for (cp = str, cp2 = buf; *cp; cp++) {
@@ -1058,13 +1058,13 @@ void picolEscape(char* str) {
         } else *cp2++ = *cp;
     }
     *cp2 = '\0';
-    strcpy(str, buf);
+    strncpy(str, buf, str_size);
 }
-size_t picolExpandLC(char* destination, char* source, size_t num) {
+size_t picolExpandLC(char* dest, size_t num, char* source) {
     /* Copy the string source to destination while substituting a single space
        for \<newline><whitespace> line continuation sequences. Return the number
        of characters copied to destination. */
-    char* dest = destination;
+    char* cp = dest;
     char* src = source;
     size_t i;
     for (i = 0; i < num; i++) {
@@ -1078,15 +1078,15 @@ size_t picolExpandLC(char* destination, char* source, size_t num) {
                 src++;
                 i++;
             }
-            *dest = ' ';
-            dest++;
+            *cp = ' ';
+            cp++;
             if (i == num) break;
         }
-        *dest = *src;
+        *cp = *src;
         src++;
-        dest++;
+        cp++;
     }
-    return dest - destination;
+    return cp - dest;
 }
 #define PICOL_EVAL_BUF_SIZE (PICOL_MAX_STR*2)
 int picolEval2(picolInterp* interp, char* t, int mode) { /*------------ EVAL! */
@@ -1106,7 +1106,7 @@ int picolEval2(picolInterp* interp, char* t, int mode) { /*------------ EVAL! */
         tlen = p.end < p.start ? 0 : p.end - p.start + 1;
         t = PICOL_MALLOC(tlen + 1);
         if (p.type == PICOL_PT_STR || p.type == PICOL_PT_VAR) {
-            tlen = picolExpandLC(t, p.start, tlen);
+            tlen = picolExpandLC(t, tlen, p.start);
         } else {
             memcpy(t, p.start, tlen);
         }
@@ -1139,7 +1139,7 @@ int picolEval2(picolInterp* interp, char* t, int mode) { /*------------ EVAL! */
             t = strdup(interp->result);
         } else if (p.type == PICOL_PT_ESC) {
             if (strchr(t, '\\')) {
-                picolEscape(t);
+                picolEscape(t, tlen);
             }
         } else if (p.type == PICOL_PT_SEP) {
             prevtype = p.type;
@@ -1806,7 +1806,7 @@ int picolReplace(
     strncpy(str, result, str_size);
     return count;
 }
-int picolQuoteForShell(char* dest, int argc, char** argv) {
+int picolQuoteForShell(char* dest, size_t dest_size, int argc, char** argv) {
     char command[PICOL_MAX_STR] = "\0";
     int j;
     unsigned int k;
@@ -1894,7 +1894,7 @@ int picolQuoteForShell(char* dest, int argc, char** argv) {
     PICOL_ADDCHAR('\0');
 #endif
 #undef PICOL_ADDCHAR
-    memcpy(dest, command, strlen(command));
+    strncpy(dest, command, dest_size);
     return 0;
 }
 /* ------------------------------------------- Commands in alphabetical order */
@@ -2464,7 +2464,7 @@ PICOL_COMMAND(exec) {
             }
         }
     } else { /* exec */
-        if (picolQuoteForShell(command, argc, argv) == -1) {
+        if (picolQuoteForShell(command, sizeof(command), argc, argv) == -1) {
             return picolErr(interp, PICOL_ERROR_TOO_LONG);
         }
     }
