@@ -1106,6 +1106,8 @@ test lsort.5     {lsort  {10 3 5 2}} -> {10 2 3 5}
 test lsort.6     {lsort -integer {10 3 2 5}} -> {2 3 5 10}
 test lsort.7     {lsort -unique {cc a dd cc b}} -> {a b cc dd}
 test lsort.8     {lsort -unique} -> -unique
+test lsort.9     {lsort -integer {9 zap foo bar 1 5}} -> {expected integer but got "zap"}
+test lsort.10    {lsort -integer {0xff 0b100 -5}} -> {-5 0b100 0xff}
 
 test max.1       {max 0} -> 0
 test max.2       {max 0 1} -> 1

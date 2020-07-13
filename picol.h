@@ -190,6 +190,16 @@
         if (needbraces) {PICOL_APPEND(dst, "}");} \
     } while (0)
 
+#define PICOL_LAPPEND_BREAK(dst, src, too_long) \
+    { \
+        int needbraces = picolNeedsBraces(src); \
+        if (*dst != '\0') {PICOL_APPEND_BREAK(dst, " ", too_long);} \
+        if (needbraces) {PICOL_APPEND_BREAK(dst, "{", too_long);} \
+        PICOL_APPEND_BREAK(dst, src, too_long); \
+        if (needbraces) {PICOL_APPEND_BREAK(dst, "}", too_long);} \
+    }
+
+
 /* This is the unchecked version, for functions without access to 'interp'. */
 #define PICOL_LAPPEND_X(dst,src) \
     do { \
@@ -438,7 +448,7 @@ int picol_EqNe(picolInterp* interp, int argc, char** argv, void* pd);
 int picolGetToken(picolInterp *interp, picolParser *p);
 int picol_InNi(picolInterp *interp, int argc, char **argv, void *pd);
 int picolIsDirectory(char* path);
-int picolIsInt(char* str);
+int picolIsInt(const char* str);
 int picolLmap(picolInterp* interp, char* vars, char* list, char* body,
               int accumulate);
 int picol_Lsort(picolInterp *interp, int argc, char **argv, void *pd);
@@ -457,7 +467,7 @@ int picolQsortCompStrDecr(const void* a, const void *b);
 int picolQuoteForShell(char* dest, size_t dest_size, int argc, char** argv);
 int picolRegisterCmd(picolInterp *interp, char *name, picol_Func f, void *pd);
 int picolReplace(char* str, size_t str_size, char* from, char* to, int nocase);
-int picolScanInt(char* str, int base);
+int picolScanInt(const char* str, int base);
 int picolSetFmtResult(picolInterp* interp, char* fmt, int result);
 int picolSetIntVar(picolInterp *interp, char *name, int value);
 int picolSetResult(picolInterp *interp, char *s);
@@ -1375,8 +1385,8 @@ int picolIsDirectory(char* path) {
         return (errno == ENOENT ? -2 : -1);
     }
 }
-int picolIsInt(char* str) {
-    char* cp = str;
+int picolIsInt(const char* str) {
+    const char* cp = str;
     int base = 10, rem = strlen(str);
 
     if (rem == 0) return 0;
@@ -1423,7 +1433,7 @@ int picolIsInt(char* str) {
 
     return base;
 }
-int picolScanInt(char* str, int base) {
+int picolScanInt(const char* str, int base) {
     int sign = 1;
     if (*str == '-') {
         str++; sign = -1;
@@ -1433,7 +1443,7 @@ int picolScanInt(char* str, int base) {
     } else {
         str += 2;
     }
-    return sign*strtol(str, NULL, base);
+    return sign * strtol(str, NULL, base);
 }
 void* picolScanPtr(char* str) {
     void* p = NULL;
@@ -3563,36 +3573,62 @@ int picolQsortCompStrDecr(const void* a, const void* b) {
     return -strcmp(*(const char**)a, *(const char**)b);
 }
 int picolQsortCompInt(const void* a, const void* b) {
-    int diff = atoi(*(const char**)a)-atoi(*(const char**)b);
+    int base, diff, int_a, int_b;
+    const char* cp = *(const char**)a;
+
+    base = picolIsInt(cp);
+    if (base < 1) { return 0; }
+    int_a = picolScanInt(cp, base);
+
+    cp = *(const char**)b;
+
+    base = picolIsInt(cp);
+    if (base < 1) { return 0; }
+    int_b = picolScanInt(cp, base);
+
+    diff = int_a - int_b;
     return (diff > 0 ? 1 : diff < 0 ? -1 : 0);
 }
 int picol_Lsort(picolInterp* interp, int argc, char** argv, void* pd) {
     char buf[PICOL_MAX_STR] = "";
-    char** av = argv+1;
-    int ac = argc-1, a;
-    if (argc<2) {
+    char** av = argv + 1;
+    int ac = argc - 1, i;
+    if (argc < 2) {
         return picolSetResult(interp, "");
     }
-    if (argc>2 && PICOL_EQ(argv[1], "-decreasing")) {
+    if (argc > 2 && PICOL_EQ(argv[1], "-decreasing")) {
         qsort(++av, --ac, sizeof(char*), picolQsortCompStrDecr);
-    } else if (argc>2 && PICOL_EQ(argv[1], "-integer")) {
-        qsort(++av, --ac, sizeof(char*), picolQsortCompInt);
+    } else if (argc > 2 && PICOL_EQ(argv[1], "-integer")) {
+        av++; ac--;
+
+        for (i = 0; i < ac; i++) {
+            int base = picolIsInt(av[i]);
+            if (base < 1) {
+                return picolErrFmt(
+                    interp,
+                    "expected integer but got \"%s\"",
+                    av[i]
+                );
+            }
+        }
+
+        qsort(av, ac, sizeof(char*), picolQsortCompInt);
     } else if (argc>2 && PICOL_EQ(argv[1], "-unique")) {
         qsort(++av, --ac, sizeof(char*), picolQsortCompStr);
-        for (a=0; a<ac; a++) {
-            if (a==0 || !PICOL_EQ(av[a], av[a-1])) {
-                PICOL_LAPPEND(buf, av[a]);
+        for (i = 0; i < ac; i++) {
+            if (i == 0 || !PICOL_EQ(av[i], av[i - 1])) {
+                PICOL_LAPPEND(buf, av[i]);
             }
         }
         return picolSetResult(interp, buf);
     } else {
         qsort(av, ac, sizeof(char*), picolQsortCompStr);
     }
+
     if (picolList(buf, sizeof(buf), ac, av) != PICOL_OK) {
         return PICOL_ERR;
     }
-    picolSetResult(interp, buf);
-    return PICOL_OK;
+    return picolSetResult(interp, buf);
 }
 PICOL_COMMAND(lsort) {
     /* Dispatch to the helper function picol_Lsort. */
