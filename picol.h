@@ -177,9 +177,9 @@
     PICOL_SCAN_INT(a, argv[p]);step;}} while (0)
 
 #define PICOL_FOREACH(_v, _p, _s) \
-    for(_p = picolParseList(_s, _v, sizeof(_v)); \
+    for(_p = picolListHead(_s, _v, sizeof(_v)); \
         _p; \
-        _p = picolParseList(_p, _v, sizeof(_v)))
+        _p = picolListHead(_p, _v, sizeof(_v)))
 
 #define PICOL_LAPPEND(dst, src) \
     do { \
@@ -323,7 +323,7 @@ typedef struct picolArray {
 
 int   picolList(char* buf, size_t buf_size, int argc, char** argv);
 int   picolNeedsBraces(const char* str);
-char* picolParseList(char* start, char* target, size_t target_size);
+char* picolListHead(char* start, char* target, size_t target_size);
 char* picolStrFirstTrailing(char* str, char chr);
 char* picolStrRev(char* str);
 char* picolToLower(char* str);
@@ -973,7 +973,7 @@ int picolList(char* buf, size_t buf_size, int argc, char** argv) {
 /* Returns the next character after the end of the first element in the
    list. */
 #define PICOL_LIST_NESTING 32
-char* picolParseList(char* start, char* target, size_t target_size) {
+char* picolListHead(char* start, char* target, size_t target_size) {
     char* cp = start;
     char q[PICOL_LIST_NESTING];
     size_t qi = 0, ti = 0;
@@ -2017,7 +2017,7 @@ PICOL_COMMAND(apply) {
     char* procdata[2], *cp;
     char buf[PICOL_MAX_STR], buf2[PICOL_MAX_STR];
     PICOL_ARITY2(argc >= 2, "apply {argl body} ?arg ...?");
-    cp = picolParseList(argv[1], buf, sizeof(buf));
+    cp = picolListHead(argv[1], buf, sizeof(buf));
     if (cp == NULL) {
         return picolErrFmt(
             interp,
@@ -2025,7 +2025,7 @@ PICOL_COMMAND(apply) {
             argv[1]
         );
     }
-    picolParseList(cp, buf2, sizeof(buf2));
+    picolListHead(cp, buf2, sizeof(buf2));
     procdata[0] = buf;
     procdata[1] = buf2;
     return picolCallProc(interp, argc-1, argv+1, (void*)procdata);
@@ -2348,7 +2348,7 @@ PICOL_COMMAND(array) {
             ap = picolArrCreate(interp, argv[2]);
         }
         PICOL_FOREACH(buf, cp, argv[3]) {
-            cp = picolParseList(cp, buf2, sizeof(buf2));
+            cp = picolListHead(cp, buf2, sizeof(buf2));
             if (!cp) {
                 return picolErr(interp,
                                 "list must have an even number of elements");
@@ -2846,14 +2846,14 @@ int picolLmap(picolInterp* interp, char* vars, char* list, char* body,
     if (*list == '\0') {
         return PICOL_OK; /* empty data list */
     }
-    varp = picolParseList(vars, buf2, sizeof(buf2));
-    cp   = picolParseList(list, buf, sizeof(buf));
+    varp = picolListHead(vars, buf2, sizeof(buf2));
+    cp   = picolListHead(list, buf, sizeof(buf));
     while (cp || varp) {
         set_rc = picolSetVar(interp, buf2, buf);
         if (set_rc != PICOL_OK) {
             return set_rc;
         }
-        varp = picolParseList(varp, buf2, sizeof(buf2));
+        varp = picolListHead(varp, buf2, sizeof(buf2));
         if (varp == NULL) {                        /* end of var list reached */
             rc = picolEval(interp, body);
             if (rc == PICOL_ERR) {
@@ -2865,14 +2865,14 @@ int picolLmap(picolInterp* interp, char* vars, char* list, char* body,
                     PICOL_LAPPEND(result, interp->result);
                 }
                 /* cycle back to start */
-                varp = picolParseList(vars, buf2, sizeof(buf2));
+                varp = picolListHead(vars, buf2, sizeof(buf2));
             }
             done = 1;
         } else {
             done = 0;
         }
         if (cp != NULL) {
-            cp = picolParseList(cp, buf, sizeof(buf));
+            cp = picolListHead(cp, buf, sizeof(buf));
         }
         if (cp == NULL && done) {
             break;
@@ -3309,9 +3309,9 @@ PICOL_COMMAND(join) {
         with = argv[2];
     }
     for (
-        cp = picolParseList(argv[1], buf, sizeof(buf));
+        cp = picolListHead(argv[1], buf, sizeof(buf));
         cp;
-        cp = picolParseList(cp, buf, sizeof(buf))
+        cp = picolListHead(cp, buf, sizeof(buf))
     ) {
         PICOL_APPEND(buf2, buf);
         cp2 = buf2 + strlen(buf2);
@@ -3382,9 +3382,9 @@ PICOL_COMMAND(lindex) {
         }
     }
     for (
-        cp = picolParseList(argv[1], buf, sizeof(buf));
+        cp = picolListHead(argv[1], buf, sizeof(buf));
         cp;
-        cp = picolParseList(cp, buf, sizeof(buf)), n++
+        cp = picolListHead(cp, buf, sizeof(buf)), n++
     ) {
         if (n == idx) {
             return picolSetResult(interp, buf);
@@ -4329,7 +4329,7 @@ PICOL_COMMAND(string) {
             char* mp = charMap;
 
             PICOL_FOREACH(from, mp, charMap) {
-                mp = picolParseList(mp, to, sizeof(to));
+                mp = picolListHead(mp, to, sizeof(to));
 
                 if (mp == NULL) {
                     return picolErr(interp, "char map list unbalanced");
@@ -4469,7 +4469,7 @@ PICOL_COMMAND(switch) {
             if (fallthrough ||
                 PICOL_EQ(buf, argv[1]) ||
                 PICOL_EQ(buf, "default")) {
-                cp = picolParseList(cp, buf, sizeof(buf));
+                cp = picolListHead(cp, buf, sizeof(buf));
                 if (cp == NULL) {
                     return picolErr(interp,
                                     "switch: list must have an even number");
