@@ -771,7 +771,7 @@ picolVar* picolGetVar2(picolInterp* interp, char* name, int glob) {
                 return NULL;
             }
             /* copy the key that starts after the opening paren */
-            strcpy(buf2, cp +1);
+            strncpy(buf2, cp + 1, sizeof(buf2));
             cp = strchr(buf2, ')');
             if (cp == NULL) {
                 return NULL;
@@ -787,8 +787,8 @@ picolVar* picolGetVar2(picolInterp* interp, char* name, int glob) {
                         return NULL;
                     }
                     strcpy(buf, "::env(");
-                    strcat(buf, buf2);
-                    strcat(buf, ")");
+                    strncat(buf, buf2, sizeof(buf) - strlen(buf2));
+                    strncat(buf, ")", sizeof(buf) - 1);
                     return picolArrSetByName(interp, buf, cp2);
                 } else {
                     return NULL;
@@ -984,7 +984,7 @@ char* picolParseList(char* start, char* trg) {
                 offset = 1;
                 cp++;
             }
-            strncpy(trg, start, cp-start-offset);
+            strncpy(trg, start, cp - start - offset);
             trg[cp-start-offset] = '\0';
             while (isspace(*cp)) {
                 cp++;
@@ -1284,7 +1284,7 @@ int picolCondition(picolInterp* interp, char* str) {
         if (rc != PICOL_OK) {
             return rc;
         }
-        strcpy(substBuf, interp->result);
+        strncpy(substBuf, interp->result, sizeof(substBuf));
 
         /* Check whether the format suits [expr]. */
         strcpy(buf, "llength");
@@ -1304,7 +1304,7 @@ int picolCondition(picolInterp* interp, char* str) {
             if (picolGetCmd(interp, argv[1])) {
                 /* Translate to Polish :-) */
                 /* E.g., {1 > 2} -> {> 1 2} */
-                strcpy(buf, argv[1]);
+                strncpy(buf, argv[1], sizeof(buf));
                 PICOL_LAPPEND(buf, argv[0]);
                 PICOL_LAPPEND(buf, argv[2]);
 
@@ -1805,7 +1805,7 @@ int picolQuoteForShell(char* dest, int argc, char** argv) {
             if (offset + length >= sizeof(command) - 1) {
                 return -1;
             }
-            strcat(command, argv[j]);
+            strncat(command, argv[j], sizeof(command) - strlen(argv[j]));
             offset += length;
         } else {
             PICOL_ADDCHAR('"');
@@ -1914,7 +1914,7 @@ PICOL_COMMAND(append) {
     PICOL_ARITY2(argc > 1, "append varName ?value value ...?");
     v = picolGetVar(interp, argv[1]);
     if (v != NULL) {
-        strcpy(buf, v->val);
+        strncpy(buf, v->val, sizeof(buf));
     }
     for (a = 2; a < argc; a++) {
         PICOL_APPEND(buf, argv[a]);
@@ -2006,7 +2006,7 @@ picolArray* picolArrFindByName(
     picolVar*   v;
     cp = strchr(name, '(');
     if (cp == NULL) {
-        strcpy(buf, name);
+        strncpy(buf, name, sizeof(buf));
     } else {
         strncpy(buf, name, cp - name);
         buf[cp - name] = '\0';
@@ -2025,14 +2025,14 @@ picolArray* picolArrFindByName(
         return NULL;
     }
     if (key_dest != NULL) {
-        strcpy(buf, cp + 1);
+        strncpy(buf, cp + 1, sizeof(buf));
         cp = strchr(buf, ')');
         if (cp == NULL) {
             return NULL; /*picolErr1(interp, "bad array syntax %x", name);*/
         }
         /* overwrite closing paren */
         *cp = '\0';
-        strcpy(key_dest, buf);
+        strncpy(key_dest, buf, key_dest_size);
     }
     return ap;
 }
@@ -2180,13 +2180,13 @@ char* picolArrStat(picolArray* ap, char* buf, size_t buf_size) {
                        "\nnumber of buckets with %d entries: %d",
                        j,
                        count[j]);
-        strcat(buf, tmp);
+        strncat(buf, tmp, buf_size - strlen(tmp));
     }
     PICOL_SNPRINTF(tmp,
                    sizeof(tmp),
                    "\nnumber of buckets with 10 or more entries: %d",
                    count[10]);
-    strcat(buf, tmp);
+    strncat(buf, tmp, buf_size - strlen(tmp));
     return buf;
 }
 PICOL_COMMAND(array) {
@@ -2578,13 +2578,13 @@ PICOL_COMMAND(file) {
         }
 #endif /* PICOL_FEATURE_IO */
     } else if (PICOL_SUBCMD("join")) {
-        strcpy(buf, argv[2]);
+        strncpy(buf, argv[2], sizeof(buf));
         for (a=3; a<argc; a++) {
             if (PICOL_EQ(argv[a], "")) {
                 continue;
             }
             if (picolMatch("/*", argv[a]) || picolMatch("?:/*", argv[a])) {
-                strcpy(buf, argv[a]);
+                strncpy(buf, argv[a], sizeof(buf));
             } else {
                 if (!PICOL_EQ(buf, "") && !picolMatch("*/", buf)) {
                     PICOL_APPEND(buf, "/");
@@ -3186,7 +3186,7 @@ PICOL_COMMAND(lappend) {
     picolVar* v;
     PICOL_ARITY2(argc >= 2, "lappend varName ?value value ...?");
     if ((v = picolGetVar(interp, argv[1]))) {
-        strcpy(buf, v->val);
+        strncpy(buf, v->val, sizeof(buf));
     }
     for (a = 2; a < argc; a++) {
         PICOL_LAPPEND(buf, argv[a]);
@@ -4371,7 +4371,7 @@ PICOL_COMMAND(try) {
                          argv[6]);
     }
     body_rc = picolEval(interp, argv[1]);
-    strcpy(body_result, interp->result);
+    strncpy(body_result, interp->result, sizeof(body_result));
     /* Run the error handler if we were given one and there was an error. */
     if ((argc == 6 || argc == 8) && body_rc == PICOL_ERR) {
         int set_rc = picolSetVar(interp, argv[4], interp->result);
@@ -4379,7 +4379,7 @@ PICOL_COMMAND(try) {
             return set_rc;
         }
         handler_rc = picolEval(interp, argv[5]);
-        strcpy(handler_result, interp->result);
+        strncpy(handler_result, interp->result, sizeof(handler_result));
     }
     /* Run the "finally" script. If it fails, return its result. */
     if (argc == 4 || argc == 8) {
@@ -4459,7 +4459,7 @@ PICOL_COMMAND(variable) {
     PICOL_ARITY2(argc>1, "variable ?name value...? name ?value?");
     for (a = 1; a < argc && rc == PICOL_OK; a++) {
         strcpy(buf, "global ");
-        strcat(buf, argv[a]);
+        strncat(buf, argv[a], sizeof(buf) - strlen(argv[a]));
         rc = picolEval(interp, buf);
         if (rc == PICOL_OK && a < argc-1) {
             rc = picolSetGlobalVar(interp, argv[a], argv[a+1]);
