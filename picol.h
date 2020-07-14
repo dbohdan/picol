@@ -896,7 +896,7 @@ picolResult picolSetVar2(
         c->vars = v;
         interp->callframe = localc;
     }
-    v->val = (val ? strdup(val) : NULL);
+    v->val = (val == NULL ? NULL : strdup(val));
     return PICOL_OK;
 }
 picolResult picolSetIntVar(picolInterp* interp, const char* name, int value) {
@@ -1582,7 +1582,7 @@ picolBool picolValidPtr(picolInterp* interp, int type, void* ptr) {
     return PICOL_FALSE;
 }
 picolResult picolValidPtrRemove(picolInterp* interp, void* ptr) {
-    picolPtr* p = interp->validptrs, *prev = NULL;
+    picolPtr *p = interp->validptrs, *prev = NULL;
 
     if (p == NULL) {
         return PICOL_ERR;
@@ -1594,11 +1594,10 @@ picolResult picolValidPtrRemove(picolInterp* interp, void* ptr) {
     if (p == NULL) {
         return PICOL_ERR;
     } else {
-        picolPtr* nextnext = (p->next == NULL ? NULL : p->next->next);
         if (prev == NULL) {
-            interp->validptrs = nextnext;
+            interp->validptrs = p->next;
         } else {
-            prev->next = nextnext;
+            prev->next = p->next;
         }
         PICOL_FREE(p);
         return PICOL_OK;
