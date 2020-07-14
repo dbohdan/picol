@@ -268,7 +268,7 @@ typedef struct picolVar {
 } picolVar;
 
 struct picolInterp; /* forward declaration */
-typedef picolResult (*picol_Func)(
+typedef picolResult (*picolFunc)(
     struct picolInterp *interp,
     int argc,
     const char *argv[],
@@ -277,7 +277,7 @@ typedef picolResult (*picol_Func)(
 
 typedef struct picolCmd {
     char*            name;
-    picol_Func       func;
+    picolFunc       func;
     void*            privdata;
     struct picolCmd* next;
 } picolCmd;
@@ -475,7 +475,7 @@ int picolQsortCompStrDecr(const void* a, const void *b);
 picolResult picolQuoteForShell(char* dest, size_t dest_size, int argc,
                        const char** argv);
 picolResult picolRegisterCmd(picolInterp *interp, const char *name,
-                             picol_Func f, void *pd);
+                             picolFunc f, void *pd);
 picolResult picolReplace(char* str, size_t str_size, char* from, char* to,
                          int nocase);
 int picolScanInt(const char* str, int base);
@@ -974,7 +974,7 @@ picolCmd* picolGetCmd(picolInterp* interp, const char* name) {
 picolResult picolRegisterCmd(
     picolInterp* interp,
     const char* name,
-    picol_Func f,
+    picolFunc f,
     void* pd
 ) {
     picolCmd* c = picolGetCmd(interp, name);
