@@ -4231,8 +4231,8 @@ PICOL_COMMAND(set) {
     }
 }
 picolResult picolSource(picolInterp* interp, const char* filename) {
-    char buf[PICOL_SOURCE_BUF_SIZE];
-    char prev[PICOL_MAX_STR];
+    char buf[PICOL_SOURCE_BUF_SIZE] = "";
+    char prev[PICOL_MAX_STR] = "";
     int rc;
     picolVar* pv;
 
