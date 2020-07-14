@@ -473,7 +473,7 @@ int picolQsortCompInt(const void* a, const void *b);
 int picolQsortCompStr(const void* a, const void *b);
 int picolQsortCompStrDecr(const void* a, const void *b);
 picolResult picolQuoteForShell(char* dest, size_t dest_size, int argc,
-                       const char** argv);
+                               const char** argv);
 picolResult picolRegisterCmd(picolInterp *interp, const char *name,
                              picolFunc f, void *pd);
 picolResult picolReplace(char* str, size_t str_size, char* from, char* to,
@@ -491,6 +491,7 @@ picolBool picolWildEq(const char* pat, const char* str, int n);
 picolCmd *picolGetCmd(picolInterp *interp, const char *name);
 picolInterp* picolCreateInterp(void);
 picolInterp* picolCreateInterp2(int register_core_cmds, int randomize);
+/* Currently you can't destroy interps. */
 picolVar *picolGetVar2(picolInterp *interp, const char *name, int global);
 void picolDropCallFrame(picolInterp *interp);
 void picolEscape(char *str, size_t str_size);
@@ -505,7 +506,7 @@ void picolRegisterCoreCmds(picolInterp *interp);
 
 #ifdef PICOL_IMPLEMENTATION
 
-/* ---------------------------====-------------------------- parser functions */
+/* --------------------------------------------------------- parser functions */
 void picolInitParser(picolParser* p, const char* text) {
     p->text  = p->pos = text;
     p->len   = strlen(text);
@@ -1649,7 +1650,7 @@ picolResult picolCallProc(
         if (PICOL_EQ(start, "args") && done) {
             int rc = picolList(buf, sizeof(buf), argc - a - 1, argv + a + 1);
             if (rc != PICOL_OK) {
-                /* TODO: Handle the error correctly. */
+                /* TODO: Handle this error separately. */
                 goto arityerr;
             }
             picolSetVar(interp, start, buf);
