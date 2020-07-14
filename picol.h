@@ -2646,12 +2646,13 @@ PICOL_COMMAND(exec) {
 #endif
 #if PICOL_FEATURE_IO
 PICOL_COMMAND(exit) {
-    int rc = 0;
-    PICOL_ARITY2(argc <= 2, "exit ?returnCode?");
-    if (argc==2) {
-        rc = atoi(argv[1]) & 0xFF;
+    int code = 0;
+    PICOL_ARITY2(argc == 1 || argc == 2, "exit ?returnCode?");
+    if (argc == 2) {
+        PICOL_SCAN_INT(code, argv[1]);
+        code &= 0xFF;
     }
-    exit(rc);
+    exit(code);
 }
 #endif
 PICOL_COMMAND(expr) {

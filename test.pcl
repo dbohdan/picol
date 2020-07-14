@@ -435,6 +435,8 @@ if {$test_config(io)} {
     }
 }
 
+test exit.1 {exit eh} -> {expected integer but got "eh"}
+
 test expand.0 {{*}{}} -> {} ;# empty command
 test expand.1 {list a {*}[list b c d] e} -> {a b c d e}
 test expand.2 {list a {*}[list b c d]}   -> {a b c d}
