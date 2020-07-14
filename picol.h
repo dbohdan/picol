@@ -1615,8 +1615,8 @@ picolResult picolCallProc(
     int a = 0, done = 0, errcode = PICOL_OK;
 
     if (cf == NULL) {
-        printf("could not allocate callframe\n");
-        exit(1);
+        fprintf(stderr, "could not allocate callframe\n");
+        return PICOL_ERR;
     }
 
     cf->vars = NULL;
