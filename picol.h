@@ -456,7 +456,7 @@ picolResult picol_InNi(picolInterp *interp, int argc, const char **argv, void *p
 picolBool picolIsDirectory(const char* path);
 int picolIsInt(const char* str);
 picolResult picolLmap(picolInterp* interp, const char* vars, const char* list,
-              const char* body, int accumulate);
+                      const char* body, int accumulate);
 picolResult picol_Lsort(picolInterp *interp, int argc, const char **argv,
                         void *pd);
 int picolMatch(const char* pat, const char* str);
@@ -483,7 +483,7 @@ picolResult picolSetFmtResult(picolInterp* interp, const char* fmt, int result);
 picolResult picolSetIntVar(picolInterp *interp, const char *name, int value);
 picolResult picolSetResult(picolInterp *interp, const char *s);
 picolResult picolSetVar2(picolInterp *interp, const char *name, const char *val,
-                 int glob);
+                         int global);
 picolResult picolSource(picolInterp *interp, const char *filename);
 int picolStrCompare(const char* a, const char* b, size_t len, int nocase);
 picolResult picolUnsetVar(picolInterp* interp, const char* name);
@@ -491,7 +491,7 @@ picolBool picolWildEq(const char* pat, const char* str, int n);
 picolCmd *picolGetCmd(picolInterp *interp, const char *name);
 picolInterp* picolCreateInterp(void);
 picolInterp* picolCreateInterp2(int register_core_cmds, int randomize);
-picolVar *picolGetVar2(picolInterp *interp, const char *name, int glob);
+picolVar *picolGetVar2(picolInterp *interp, const char *name, int global);
 void picolDropCallFrame(picolInterp *interp);
 void picolEscape(char *str, size_t str_size);
 void picolInitInterp(picolInterp *interp);
@@ -779,16 +779,16 @@ picolResult picolErrFmt(
 
     return picolErr(interp, buf);
 }
-picolVar* picolGetVar2(picolInterp* interp, const char* name, int glob) {
+picolVar* picolGetVar2(picolInterp* interp, const char* name, int global) {
     picolVar* v = interp->callframe->vars;
-    int global = PICOL_COLONED(name);
-    if (global || glob) {
+    int coloned = PICOL_COLONED(name);
+    if (coloned || global) {
         picolCallFrame* c = interp->callframe;
         while (c->parent) {
             c = c->parent;
         }
         v = c->vars;
-        if (global) {
+        if (coloned) {
             name += 2; /* skip the "::" */
         }
     }
@@ -825,7 +825,7 @@ picolVar* picolGetVar2(picolInterp* interp, const char* name, int glob) {
             *cp = '\0';
             v = picolArrGetKey(ap, buf2);
             if (v == NULL) {
-                if ((global || interp->callframe->parent == NULL)
+                if ((coloned || interp->callframe->parent == NULL)
                         && PICOL_EQ(buf, "env")) {
                     cp2 = getenv(buf2);
                     if (cp2 == NULL) {
@@ -854,12 +854,12 @@ picolResult picolSetVar2(
     picolInterp* interp,
     const char* name,
     const char* val,
-    int glob
+    int global
 ) {
     picolVar*       v = picolGetVar(interp, name);
     picolCallFrame* c = interp->callframe, *localc = c;
-    int global = PICOL_COLONED(name);
-    if (glob||global) v = picolGetGlobalVar(interp, name);
+    int coloned = PICOL_COLONED(name);
+    if (global || coloned) v = picolGetGlobalVar(interp, name);
 
     if (v != NULL) {
         /* existing variable case */
@@ -884,8 +884,8 @@ picolResult picolSetVar2(
             }
         }
 #endif
-        if (glob || global) {
-            if (global) name += 2;
+        if (global || coloned) {
+            if (coloned) name += 2;
             while (c->parent) {
                 c = c->parent;
             }
