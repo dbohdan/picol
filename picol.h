@@ -1296,7 +1296,7 @@ picolResult picolEval2(
                         goto err;
                     }
                     total_len += arg_len;
-               }
+                }
                 if (total_len >= PICOL_EVAL_BUF_SIZE - 1) {
                     rc = picolErr(interp,
                                   "script too long to parse "
@@ -1369,6 +1369,8 @@ picolResult picolEval2(
                 PICOL_FREE(t);
                 t = NULL;
                 p.expand = 0;
+            } else {
+                PICOL_FREE(t);
             }
         } else if (p.expand) {
             /* slice in the words separately */
@@ -2120,9 +2122,7 @@ picolResult picolArrDestroyByName(picolInterp* interp, const char* name) {
         return PICOL_ERR;
     }
 
-    if (PICOL_OK != picolValidPtrRemove(interp, (void*)ap)) {
-        res = PICOL_ERR;
-    }
+    res = picolValidPtrRemove(interp, (void*)ap);
     res |= picolArrDestroy(ap);
     return res;
 }
