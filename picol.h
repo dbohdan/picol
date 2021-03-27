@@ -1585,9 +1585,6 @@ picolBool picolValidPtr(picolInterp* interp, int type, void* ptr) {
 picolResult picolValidPtrRemove(picolInterp* interp, void* ptr) {
     picolPtr *p = interp->validptrs, *prev = NULL;
 
-    if (p == NULL) {
-        return PICOL_ERR;
-    }
     while (p != NULL && p->ptr != ptr) {
         prev = p;
         p = p->next;
