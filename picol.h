@@ -493,6 +493,7 @@ int picolStrCompare(const char* a, const char* b, size_t len, int nocase);
 picolResult picolUnsetVar(picolInterp* interp, const char* name);
 picolBool picolWildEq(const char* pat, const char* str, int n);
 picolCmd *picolGetCmd(picolInterp *interp, const char *name);
+void picolFreeInterp(picolInterp *interp);
 picolInterp* picolCreateInterp(void);
 picolInterp* picolCreateInterp2(int register_core_cmds, int randomize);
 /* Currently you can't destroy interps. */
@@ -1603,6 +1604,13 @@ picolResult picolValidPtrRemove(picolInterp* interp, void* ptr) {
         } else {
             prev->next = p->next;
         }
+
+        if (p->ptr && p->type == PICOL_PTR_ARRAY) {
+            picolArrDestroy(p->ptr);
+        }
+        if (p->ptr && p->type == PICOL_PTR_INTERP) {
+            picolFreeInterp(p->ptr);
+        }
         PICOL_FREE(p);
         return PICOL_OK;
     }
@@ -1700,6 +1708,15 @@ picolResult picolUnsetVar(picolInterp* interp, const char* name) {
     if (ap != NULL) {
         /* The variable is an array. */
         picolArrDestroy(ap);
+        picolPtr* ptr = interp->validptrs;
+        while (ptr) {
+            if (ptr->ptr == ap) {
+                ptr->ptr = NULL;
+                break;
+            } else {
+                ptr = ptr->next;
+            }
+        }
     }
 #endif
     cf = interp->callframe;
@@ -4959,6 +4976,53 @@ void picolRegisterCoreCmds(picolInterp* interp) {
 #if PICOL_FEATURE_PUTS
     picolRegisterCmd(interp, "puts",     picol_puts, NULL);
 #endif
+}
+void picolFreeInterp(picolInterp* interp) {
+    picolCmd* command = interp->commands;
+    picolPtr* ptr = interp->validptrs;
+    picolCallFrame* call = interp->callframe;
+
+    while (command) {
+        picolCmd* next = command->next;
+        PICOL_FREE(command->name);
+        char **procdata = command->privdata;
+        if (procdata) {
+            PICOL_FREE(procdata[0]);
+            PICOL_FREE(procdata[1]);
+            PICOL_FREE(procdata);
+        }
+        PICOL_FREE(command);
+        command = next;
+    }
+
+    while (call) {
+        picolCallFrame* next = call->parent;
+        picolVar* var = call->vars;
+        while (var) {
+            picolVar* next = var->next;
+            picolUnsetVar(interp, var->name);
+            var = next;
+        }
+        PICOL_FREE(call->command);
+        PICOL_FREE(call);
+        call = next;
+    }
+
+    while (ptr) {
+        picolPtr* next = ptr->next;
+        if (ptr->ptr && ptr->type == PICOL_PTR_ARRAY) {
+            picolArrDestroy(ptr->ptr);
+        }
+        if (ptr->ptr && ptr->type == PICOL_PTR_INTERP) {
+            picolFreeInterp(ptr->ptr);
+        }
+        PICOL_FREE(ptr);
+        ptr = next;
+    }
+
+    PICOL_FREE(interp->current);
+    PICOL_FREE(interp->result);
+    PICOL_FREE(interp);
 }
 picolInterp* picolCreateInterp(void) {
     return picolCreateInterp2(1, 1);
