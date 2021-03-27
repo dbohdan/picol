@@ -61,8 +61,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 #include <time.h>
+#if PICOL_FEATURE_IO
+#include <sys/stat.h>
+#endif
 
 #define PICOL_PATCHLEVEL "0.4.0"
 
@@ -453,7 +455,9 @@ size_t picolExpandLC(char* dest, size_t num, const char* source);
 picolResult picol_EqNe(picolInterp* interp, int argc, const char** argv, void* pd);
 picolResult picolGetToken(picolInterp *interp, picolParser *p);
 picolResult picol_InNi(picolInterp *interp, int argc, const char **argv, void *pd);
+#if PICOL_FEATURE_IO
 picolBool picolIsDirectory(const char* path);
+#endif
 int picolIsInt(const char* str);
 picolResult picolLmap(picolInterp* interp, const char* vars, const char* list,
                       const char* body, int accumulate);
@@ -1464,6 +1468,7 @@ picolResult picolCondition(picolInterp* interp, const char* str) {
         return picolErr(interp, "NULL condition");
     }
 }
+#if PICOL_FEATURE_IO
 picolBool picolIsDirectory(const char* path) {
     struct stat path_stat;
     if (stat(path, &path_stat) == 0) {
@@ -1473,6 +1478,7 @@ picolBool picolIsDirectory(const char* path) {
         return (errno == ENOENT ? -2 : -1);
     }
 }
+#endif
 int picolIsInt(const char* str) {
     const char* cp = str;
     int base = 10, rem = strlen(str);
