@@ -2633,10 +2633,10 @@ PICOL_COMMAND(exec) {
     }
 
     length = strlen(output);
-    if (output[length - 1] == '\r') {
+    if (length && output[length - 1] == '\r') {
         length--;
     }
-    if (output[length - 1] == '\n') {
+    if (length && output[length - 1] == '\n') {
         length--;
     }
     output[length] = '\0';
