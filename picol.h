@@ -1721,7 +1721,7 @@ picolResult picolUnsetVar(picolInterp* interp, const char* name) {
     }
 
     return found ? PICOL_OK : PICOL_ERR;
-};
+}
 picolBool picolWildEq(const char* pat, const char* str, int n) {
     /* Check if the first n characters of str match the pattern pat where
        a '?' in pat matches any character. */
