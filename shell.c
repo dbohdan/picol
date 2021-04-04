@@ -161,5 +161,6 @@ int main(int argc, char** argv) {
             }
         }
     }
+    picolFreeInterp(interp);
     return rc & 0xFF;
 }
