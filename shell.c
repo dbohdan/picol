@@ -23,7 +23,7 @@
 
 /* History is currently only available on *nix. */
 #define PICOL_SHELL_HISTORY_FILE ".picolsh_history"
-#define PICOL_SHELL_HISTORY_LEN 100
+#define PICOL_SHELL_HISTORY_LEN 1000
 
 #define PICOL_SHELL_INIT_FILE_UNIX ".picolshrc"
 #define PICOL_SHELL_INIT_FILE_WINDOWS "picolshrc.pcl"
