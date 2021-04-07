@@ -1675,9 +1675,11 @@ picolResult picolValidPtrRemove(picolInterp* interp, void* ptr) {
             prev->next = p->next;
         }
 
+#if PICOL_FEATURE_ARRAYS
         if (p->ptr && p->type == PICOL_PTR_ARRAY) {
             picolArrDestroy(p->ptr);
         }
+#endif
         if (p->ptr && p->type == PICOL_PTR_INTERP) {
             picolFreeInterp(p->ptr);
         }
@@ -2776,11 +2778,13 @@ PICOL_COMMAND(expr) {
             return picolSetResult(interp, argv[1]); /* single scalar */
         }
     }
-    if (!picolAppend(buf, PICOL_BUFFER_SIZE(buf), argv[2])) { /* operator first - Polish notation */
+    if (!picolAppend(buf, PICOL_BUFFER_SIZE(buf), argv[2])) {
+        /* operator first - Polish notation */
         PICOL_BUFFER_DESTROY(buf);
         return picolErr(interp, PICOL_ERROR_TOO_LONG);
     }
-    if (!picolLAppend(buf, PICOL_BUFFER_SIZE(buf), argv[1])) { /* {a + b + c} -> {+ a b c} */
+    if (!picolLAppend(buf, PICOL_BUFFER_SIZE(buf), argv[1])) {
+        /* {a + b + c} -> {+ a b c} */
         PICOL_BUFFER_DESTROY(buf);
         return picolErr(interp, PICOL_ERROR_TOO_LONG);
     }
@@ -3082,7 +3086,11 @@ picolResult picolLmap(
                 break;
             } else { /* rc == PICOL_OK || rc == PICOL_CONTINUE */
                 if (accumulate && rc != PICOL_CONTINUE) {
-                    if (!picolLAppend(result, PICOL_BUFFER_SIZE(result), interp->result)) {
+                    if (!picolLAppend(
+                            result,
+                            PICOL_BUFFER_SIZE(result),
+                            interp->result
+                        )) {
                         rc = picolErr(interp, PICOL_ERROR_TOO_LONG);
                         goto ret;
                     }
@@ -5194,9 +5202,11 @@ void picolFreeInterp(picolInterp* interp) {
 
     while (ptr) {
         picolPtr* next = ptr->next;
+#if PICOL_FEATURE_ARRAYS
         if (ptr->ptr && ptr->type == PICOL_PTR_ARRAY) {
             picolArrDestroy(ptr->ptr);
         }
+#endif
         if (ptr->ptr && ptr->type == PICOL_PTR_INTERP) {
             picolFreeInterp(ptr->ptr);
         }
