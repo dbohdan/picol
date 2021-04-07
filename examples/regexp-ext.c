@@ -16,6 +16,9 @@ void eval_and_report(picolInterp* interp, char* command) {
 
 int main(int argc, char** argv) {
     picolInterp* interp = picolCreateInterp();
+    PICOL_UNUSED(argc);
+    PICOL_UNUSED(argv);
+    
     picolRegisterCmd(interp, "regexp", picol_regexp, NULL);
     eval_and_report(interp, "regexp {***++} foo");
     eval_and_report(interp, "regexp bar foo");

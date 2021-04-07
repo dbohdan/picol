@@ -17,6 +17,8 @@ command. */
 
 PICOL_COMMAND(square) {
     int n;
+    PICOL_UNUSED(pd);
+ 
     PICOL_ARITY2(argc == 2, "square number");
     PICOL_SCAN_INT(n, argv[1]);
     picolSetIntResult(interp, n * n);
@@ -31,6 +33,9 @@ void report_error(picolInterp* interp, int rc) {
 
 int main(int argc, char** argv) {
     int rc = 0;
+    PICOL_UNUSED(argc);
+    PICOL_UNUSED(argv);
+ 
     /* Create an interpreter with no core commands. Do not call srand(). */
     picolInterp* interp = picolCreateInterp2(0, 0);
     /* Manually register only one built-in. */

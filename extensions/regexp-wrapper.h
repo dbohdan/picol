@@ -10,6 +10,8 @@ PICOL_COMMAND(regexp) {
     int result;
     const char* err;
     char match[PICOL_MAX_STR];
+    PICOL_UNUSED(pd);
+
     PICOL_ARITY2(argc >= 3, "regexp exp string ?matchVar? ?subMatchVar ...?");
     p = reg_comp(argv[1], 0, &err);
     if (p == NULL) {

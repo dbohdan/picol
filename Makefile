@@ -1,4 +1,4 @@
-CFLAGS ?= -Wall
+CFLAGS ?= -Wall -Wextra
 
 all: picolsh picolsh-linenoise
 
