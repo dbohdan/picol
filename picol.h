@@ -465,7 +465,7 @@ picolResult picolValidPtrAdd(picolInterp *interp, int type, void* ptr);
 picolResult picolValidPtrRemove(picolInterp *interp, void* ptr);
 picolResult picolCallProc(picolInterp *interp, int argc, const char **argv, void *pd);
 picolBool picolAppend(char *dst, int dstSize, const char *src);
-picolBool picolLAppend(char *dst, int dstSize, const char *src);
+picolBool picolLappend(char *dst, int dstSize, const char *src);
 picolResult picolConcat(char* buf, size_t buf_size, int argc, const char** argv);
 picolResult picolCondition(picolInterp *interp, const char* str);
 picolResult picolErr(picolInterp *interp, const char* str);
@@ -732,7 +732,7 @@ picolBool picolAppend(char *dst, int dstSize, const char *src) {
     strcat(dst, src);
     return PICOL_TRUE;
 }
-picolBool picolLAppend(char *dst, int dstSize, const char *src) {
+picolBool picolLappend(char *dst, int dstSize, const char *src) {
     int needbraces = picolNeedsBraces(src);
     int notEmptyDestination = *dst != '\0' ? 1 : 0;
     int requiredSize = needbraces * 2 + notEmptyDestination + strlen(src);
@@ -1478,7 +1478,7 @@ picolResult picolCondition(picolInterp* interp, const char* str) {
 
         /* Check whether the format suits [expr]. */
         strcpy(buf, "llength");
-        if (!picolLAppend(buf, PICOL_BUFFER_SIZE(buf), substBuf)) {
+        if (!picolLappend(buf, PICOL_BUFFER_SIZE(buf), substBuf)) {
             rc = picolErr(interp, PICOL_ERROR_TOO_LONG);
             goto ret;
         }
@@ -1498,11 +1498,11 @@ picolResult picolCondition(picolInterp* interp, const char* str) {
                 /* Translate to Polish :-) */
                 /* E.g., {1 > 2} -> {> 1 2} */
                 strncpy(buf, argv[1], PICOL_BUFFER_SIZE(buf));
-                if (!picolLAppend(buf, PICOL_BUFFER_SIZE(buf), argv[0])) {
+                if (!picolLappend(buf, PICOL_BUFFER_SIZE(buf), argv[0])) {
                     goto ret;
                     rc = picolErr(interp, PICOL_ERROR_TOO_LONG);
                 }
-                if (!picolLAppend(buf, PICOL_BUFFER_SIZE(buf), argv[2])) {
+                if (!picolLappend(buf, PICOL_BUFFER_SIZE(buf), argv[2])) {
                     goto ret;
                     rc = picolErr(interp, PICOL_ERROR_TOO_LONG);
                 }
@@ -2783,7 +2783,7 @@ PICOL_COMMAND(expr) {
         PICOL_BUFFER_DESTROY(buf);
         return picolErr(interp, PICOL_ERROR_TOO_LONG);
     }
-    if (!picolLAppend(buf, PICOL_BUFFER_SIZE(buf), argv[1])) {
+    if (!picolLappend(buf, PICOL_BUFFER_SIZE(buf), argv[1])) {
         /* {a + b + c} -> {+ a b c} */
         PICOL_BUFFER_DESTROY(buf);
         return picolErr(interp, PICOL_ERROR_TOO_LONG);
@@ -2793,7 +2793,7 @@ PICOL_COMMAND(expr) {
             PICOL_BUFFER_DESTROY(buf);
             return picolErr(interp, "need equal operators");
         }
-        if (!picolLAppend(buf, PICOL_BUFFER_SIZE(buf), argv[a])) {
+        if (!picolLappend(buf, PICOL_BUFFER_SIZE(buf), argv[a])) {
             PICOL_BUFFER_DESTROY(buf);
             return picolErr(interp, PICOL_ERROR_TOO_LONG);
         }
@@ -3086,7 +3086,7 @@ picolResult picolLmap(
                 break;
             } else { /* rc == PICOL_OK || rc == PICOL_CONTINUE */
                 if (accumulate && rc != PICOL_CONTINUE) {
-                    if (!picolLAppend(
+                    if (!picolLappend(
                             result,
                             PICOL_BUFFER_SIZE(result),
                             interp->result
