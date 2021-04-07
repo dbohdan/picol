@@ -18,7 +18,9 @@
 #define PICOL_MAX_STR          4096
 #define PICOL_SOURCE_BUF_SIZE  (PICOL_MAX_STR*64)
 
-#define PICOL_USE_SMALL_STACK  1
+#ifndef PICOL_SMALL_STACK
+#    define PICOL_SMALL_STACK  1
+#endif
 
 #ifdef _MSC_VER
 #    define PICOL_MAX_LEVEL    10
@@ -69,9 +71,9 @@
 #include <sys/stat.h>
 #endif
 
-#define PICOL_PATCHLEVEL "0.4.0"
+#define PICOL_PATCHLEVEL "0.5.0"
 
-#if PICOL_USE_SMALL_STACK
+#if PICOL_SMALL_STACK
 #    define PICOL_BUFFER_CREATE(name, size)                  \
         char *name = PICOL_CALLOC((size), sizeof(char));       \
         int name##_SIZE = (size) * sizeof(char)
