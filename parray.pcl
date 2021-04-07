@@ -10,5 +10,3 @@ proc parray arr {
      puts "[format %-${maxl}s ${arr}(${key})] = [uplevel 1 set ${arr}(${key})]"
    }
 }
-array set a {foo 1 bar 2 grill 3 a_long_key 4} ;# for testing
-
