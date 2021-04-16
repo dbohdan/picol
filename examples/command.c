@@ -48,5 +48,7 @@ int main(int argc, char** argv) {
     report_error(interp, rc);
     rc = picolEval(interp, "puts [square 5]"); /* Correct usage. */
     report_error(interp, rc);
+    picolFreeInterp(interp);
+    
     return rc & 0xFF;
 }

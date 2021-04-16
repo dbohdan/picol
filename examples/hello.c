@@ -12,5 +12,8 @@ int main(int argc, char** argv) {
     if (rc != PICOL_OK) {
         printf("[%d] %s\n", rc, interp->result);
     }
+
+    picolFreeInterp(interp);
+
     return rc & 0xFF;
 }

@@ -71,7 +71,7 @@
 #include <sys/stat.h>
 #endif
 
-#define PICOL_PATCHLEVEL "0.5.1"
+#define PICOL_PATCHLEVEL "0.6.0"
 
 #if PICOL_SMALL_STACK
 #    define PICOL_BUFFER_CREATE(name, size)                  \
@@ -301,9 +301,10 @@ typedef picolResult (*picolFunc)(
 
 typedef struct picolCmd {
     char*            name;
-    picolFunc       func;
+    picolFunc        func;
     void*            privdata;
     struct picolCmd* next;
+    unsigned char    isproc;
 } picolCmd;
 
 typedef struct picolCallFrame {
@@ -4426,7 +4427,7 @@ PICOL_COMMAND(rename) {
     }
 
     if (toFree != NULL) {
-        if (toFree->privdata != NULL) {
+        if (toFree->isproc && toFree->privdata != NULL) {
             char **privdata = toFree->privdata;
             PICOL_FREE(privdata[0]);
             PICOL_FREE(privdata[1]);
@@ -5329,7 +5330,7 @@ void picolFreeInterp(picolInterp* interp) {
         picolCmd* next = command->next;
         PICOL_FREE(command->name);
         char **procdata = command->privdata;
-        if (procdata) {
+        if (command->isproc && procdata) {
             PICOL_FREE(procdata[0]);
             PICOL_FREE(procdata[1]);
             PICOL_FREE(procdata);

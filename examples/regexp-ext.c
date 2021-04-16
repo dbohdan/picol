@@ -28,5 +28,7 @@ int main(int argc, char** argv) {
         interp,
         "puts \"     match: $match\nsubmatches: [list $sub1 $sub2 $sub3]\""
     );
+    picolFreeInterp(interp);
+    
     return 0;
 }
