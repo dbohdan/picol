@@ -1,7 +1,7 @@
 CFLAGS ?= -Wall -Wextra
 PREFIX ?= /usr/local
 
-all: picolsh picolsh-linenoise
+all: picolsh picolsh-big-stack picolsh-linenoise
 
 picolsh: shell.c picol.h
 	$(CC) shell.c -o $@ $(CFLAGS) -DPICOL_SHELL_LINENOISE=0
@@ -47,4 +47,7 @@ install-bin: picolsh-linenoise
 install-include: picol.h
 	install -m 0644 $< $(PREFIX)/include
 
-.PHONY: all clean examples examples-test install install-bin install-include test
+upx: all
+	upx -9 picolsh picolsh-big-stack picolsh-linenoise
+
+.PHONY: all clean examples examples-test install install-bin install-include test upx
