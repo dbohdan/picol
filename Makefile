@@ -1,4 +1,5 @@
 CFLAGS ?= -Wall -Wextra
+PREFIX ?= /usr/local
 
 all: picolsh picolsh-linenoise
 
@@ -40,4 +41,10 @@ clean:
 	-rm -f examples/regexp-ext examples/regexp-ext.exe regexp-ext.obj
 	-rm -f vendor/linenoise.o
 
-.PHONY: all clean examples examples-test test
+install: install-bin install-include
+install-bin: picolsh-linenoise
+	install $< $(PREFIX)/bin/picolsh
+install-include: picol.h
+	install -m 0644 $< $(PREFIX)/include
+
+.PHONY: all clean examples examples-test install install-bin install-include test
