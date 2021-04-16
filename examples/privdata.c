@@ -29,12 +29,23 @@ int main(int argc, char** argv) {
     PICOL_UNUSED(argv);
  
     picolInterp* interp = picolCreateInterp();
+    
+    rc = picolEval(interp, "proc store x {}; rename store {}");
+    report_error(interp, rc);
+    
     picolRegisterCmd(interp, "store", picol_store, &storage);
+    picolRegisterCmd(interp, "store2", picol_store, &storage);
+    picolRegisterCmd(interp, "store3", picol_store, &storage);
+    
     rc = picolEval(interp, "puts [store]");
     report_error(interp, rc);
     rc = picolEval(interp, "store 108");
     report_error(interp, rc);
-    rc = picolEval(interp, "puts [store]");
+    rc = picolEval(interp, "puts [store2]");
+    report_error(interp, rc);
+    rc = picolEval(interp, "proc store2 x {}");
+    report_error(interp, rc);
+    rc = picolEval(interp, "rename store3 {}");
     report_error(interp, rc);
 
     picolFreeInterp(interp);

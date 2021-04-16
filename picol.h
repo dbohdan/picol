@@ -286,12 +286,13 @@ typedef struct picolParser {
 } picolParser;
 
 typedef struct picolVar {
+    struct picolVar* next;
     char*  name;
     char*  val;
-    struct picolVar* next;
 } picolVar;
 
 struct picolInterp; /* forward declaration */
+
 typedef picolResult (*picolFunc)(
     struct picolInterp *interp,
     int argc,
@@ -300,11 +301,13 @@ typedef picolResult (*picolFunc)(
 );
 
 typedef struct picolCmd {
-    char*            name;
-    picolFunc        func;
-    void*            privdata;
-    struct picolCmd* next;
-    unsigned char    isproc;
+    struct picolCmd*      next;
+    char*                 name;
+    picolFunc             func;
+    unsigned char         isproc; /* is this command a procedure? */
+    /* Picol manages private data for procs.  Managing private data for native
+       commands is left to the user. */
+    void*                 privdata;
 } picolCmd;
 
 typedef struct picolCallFrame {
@@ -313,10 +316,16 @@ typedef struct picolCallFrame {
     struct picolCallFrame* parent; /* parent is NULL at top level */
 } picolCallFrame;
 
+typedef struct picolProc {
+    int               rc; /* reference count */
+    char*             args;
+    char*             body;
+} picolProc;
+
 typedef struct picolPtr {
+    struct picolPtr*  next;
     void*             ptr;
     int               type;
-    struct picolPtr*  next;
 } picolPtr;
 
 typedef struct picolInterp {
@@ -518,17 +527,18 @@ int picolStrCompare(const char* a, const char* b, size_t len, int nocase);
 picolResult picolUnsetVar(picolInterp* interp, const char* name);
 picolBool picolWildEq(const char* pat, const char* str, int n);
 picolCmd *picolGetCmd(picolInterp *interp, const char *name);
-void picolFreeInterp(picolInterp *interp);
 picolInterp* picolCreateInterp(void);
 picolInterp* picolCreateInterp2(int register_core_cmds, int randomize);
-/* Currently you can't destroy interps. */
 picolVar *picolGetVar2(picolInterp *interp, const char *name, int global);
 void picolDropCallFrame(picolInterp *interp);
 void picolEscape(char *str, size_t str_size);
+void picolFreeCmd(picolCmd *cmd);
+void picolFreeInterp(picolInterp *interp);
 void picolInitInterp(picolInterp *interp);
 void picolInitParser(picolParser *p, const char *text);
 void* picolScanPtr(const char* str);
 void picolRegisterCoreCmds(picolInterp *interp);
+picolResult picolRenameCmd(picolInterp *interp, const char *from, const char *to);
 
 #endif /* PICOL_H */
 
@@ -1023,6 +1033,23 @@ void picolInitInterp(picolInterp* interp) {
     interp->callframe->command = NULL;
     interp->callframe->parent = NULL;
 }
+void picolFreeCmd(picolCmd* cmd) {
+    if (cmd == NULL) return;
+
+    if (cmd->isproc) {
+        picolProc *procdata = cmd->privdata;
+        procdata->rc--;
+
+        if (procdata->rc == 0) {
+            PICOL_FREE(procdata->args);
+            PICOL_FREE(procdata->body);
+            PICOL_FREE(procdata);
+        }
+    }
+
+    PICOL_FREE(cmd->name);
+    PICOL_FREE(cmd);
+}
 picolCmd* picolGetCmd(picolInterp* interp, const char* name) {
     picolCmd* c;
     for (c = interp->commands; c; c = c->next) {
@@ -1041,12 +1068,47 @@ picolResult picolRegisterCmd(
         return picolErrFmt(interp, "command \"%s\" already defined", name);
     }
     c = PICOL_MALLOC(sizeof(picolCmd));
+    c->next     = interp->commands;
     c->name     = strdup(name);
     c->func     = f;
+    c->isproc   = f == &picolCallProc;
     c->privdata = pd;
-    c->next     = interp->commands;
     interp->commands = c;
     return PICOL_OK;
+}
+picolResult picolRenameCmd(
+    picolInterp* interp,
+    const char* from,
+    const char* to
+) {
+    int found = 0, deleting = 0;
+    picolCmd* c, *last = NULL, *toFree = NULL;
+
+    deleting = PICOL_EQ(to, "");
+
+    for (c = interp->commands; c; last = c, c=c->next) {
+        if (PICOL_EQ(c->name, from)) {
+            if (last == NULL && deleting) {
+                /* Delete the first command. */
+                interp->commands = c->next;
+                toFree = c;
+            } else if (deleting) {
+                 /* Delete an nth command. */
+                last->next = c->next;
+                toFree = c;
+            } else {
+                /* Rename a command. We only free() the name. */
+                PICOL_FREE(c->name);
+                c->name = strdup(to);
+            }
+            found = 1;
+            break;
+        }
+    }
+
+    picolFreeCmd(toFree);
+
+    return found ? PICOL_OK : PICOL_ERR;
 }
 picolResult picolList(char* buf, size_t buf_size, int argc, const char** argv) {
     int a; size_t len = 0;
@@ -1346,8 +1408,7 @@ picolResult picolEval2(
                 total_len = 0;
                 for (i = 0; i < argc; i++) {
                     int arg_len = strlen(argv[i]);
-                    if (c->func == &picolCallProc &&
-                        arg_len >= PICOL_MAX_STR - 1) {
+                    if (c->isproc && arg_len >= PICOL_MAX_STR - 1) {
                         rc = picolErrFmt(
                             interp,
                             "proc argument too long: \"%s\"",
@@ -1697,7 +1758,8 @@ picolResult picolCallProc(
     const char** argv,
     void* pd
 ) {
-    char** x = pd, *alist = x[0], *body = x[1], *p = strdup(alist), *tofree;
+    picolProc* x = pd;
+    char *alist = x->args, *body = x->body, *p = strdup(alist), *tofree;
     PICOL_BUFFER_CREATE(buf, PICOL_MAX_STR);
     picolCallFrame* cf = PICOL_MALLOC(sizeof(picolCallFrame));
     int a = 0, done = 0, errcode = PICOL_OK;
@@ -2177,7 +2239,7 @@ PICOL_COMMAND(append) {
     return picolSetResult(interp, buf);
 }
 PICOL_COMMAND(apply) {
-    char* procdata[2];
+    picolProc procdata;
     char buf[PICOL_MAX_STR], buf2[PICOL_MAX_STR];
     const char* cp;
     PICOL_UNUSED(pd);
@@ -2192,9 +2254,9 @@ PICOL_COMMAND(apply) {
         );
     }
     picolListHead(cp, buf2, sizeof(buf2));
-    procdata[0] = buf;
-    procdata[1] = buf2;
-    return picolCallProc(interp, argc-1, argv+1, (void*)procdata);
+    procdata.args = buf;
+    procdata.body = buf2;
+    return picolCallProc(interp, argc-1, argv+1, &procdata);
 }
 /*--------------------------------------------------------------- Array stuff */
 #if PICOL_FEATURE_ARRAYS
@@ -3482,11 +3544,13 @@ PICOL_COMMAND(info) {
         }
         for (; c; c = c->next) {
             if (PICOL_EQ(c->name, argv[2])) {
-                char** privdata = c->privdata;
-                if (privdata != NULL) {
+                picolProc* procdata = c->privdata;
+                if (procdata != NULL) {
                     return picolSetResult(
                         interp,
-                        privdata[(PICOL_EQ(argv[1], "args") ? 0 : 1)]
+                        PICOL_EQ(argv[1], "args")
+                            ? procdata->args
+                            : procdata->body
                     );
                 } else {
                     return picolErrFmt(
@@ -3499,7 +3563,7 @@ PICOL_COMMAND(info) {
         }
     } else if (PICOL_SUBCMD("commands") || procs) {
         for (; c; c = c->next)
-            if ((!procs||c->privdata) && (picolMatch(pat, c->name) > 0)) {
+            if ((!procs||c->isproc) && (picolMatch(pat, c->name) > 0)) {
                 PICOL_LAPPEND(buf, c->name);
             }
         picolSetResult(interp, buf);
@@ -3578,6 +3642,10 @@ PICOL_COMMAND(interp) {
         c = picolGetCmd(src, argv[5]);
         if (c == NULL) {
             return picolErr(interp, "can only alias existing commands");
+        }
+        if (c->isproc) {
+            picolProc* procdata = c->privdata;
+            procdata->rc++;
         }
         picolRegisterCmd(trg, argv[3], c->func, c->privdata);
         return picolSetResult(interp, argv[3]);
@@ -4253,8 +4321,8 @@ PICOL_COMMAND(open) {
     if (fp == NULL) {
         return picolErrFmt(interp, "could not open %s", argv[1]);
     }
-    PICOL_SNPRINTF(fp_str, sizeof(fp_str), "%p", (void*)fp);
     picolValidPtrAdd(interp, PICOL_PTR_CHAN, (void*)fp);
+    PICOL_SNPRINTF(fp_str, sizeof(fp_str), "%p", (void*)fp);
     return picolSetResult(interp, fp_str);
 }
 #endif
@@ -4266,30 +4334,19 @@ PICOL_COMMAND(pid) {
     return picolSetIntResult(interp, PICOL_GETPID());
 }
 PICOL_COMMAND(proc) {
-    char **procdata = NULL;
-    picolCmd *c;
+    picolProc* procdata = NULL;
     PICOL_UNUSED(pd);
 
     PICOL_ARITY2(argc == 4, "proc name args body");
-    c = picolGetCmd(interp, argv[1]);
-    if (c != NULL) {
-        procdata = c->privdata;
-    }
-    if (procdata == NULL) {
-        procdata = PICOL_MALLOC(sizeof(char*)*2);
-        if (c != NULL) {
-            c->privdata = procdata;
-            c->func = picolCallProc; /* may override C-coded commands */
-        }
-    } else {
-        PICOL_FREE(procdata[0]);
-        PICOL_FREE(procdata[1]);
-    }
-    procdata[0] = strdup(argv[2]); /* arguments list */
-    procdata[1] = strdup(argv[3]); /* procedure body */
-    if (c == NULL) {
-        picolRegisterCmd(interp, argv[1], picolCallProc, procdata);
-    }
+    picolRenameCmd(interp, argv[1], "");
+
+    procdata = PICOL_MALLOC(sizeof(picolProc));
+    procdata->rc = 1;
+    procdata->args = strdup(argv[2]);
+    procdata->body = strdup(argv[3]);
+
+    picolRegisterCmd(interp, argv[1], picolCallProc, procdata);
+
     return PICOL_OK;
 }
 #if PICOL_FEATURE_PUTS
@@ -4399,45 +4456,13 @@ PICOL_COMMAND(read) {
 }
 #endif /* PICOL_FEATURE_IO */
 PICOL_COMMAND(rename) {
-    int found = 0, deleting = 0;
-    picolCmd* c, *last = NULL, *toFree = NULL;
+    int deleting = 0;
     PICOL_UNUSED(pd);
 
     PICOL_ARITY2(argc == 3, "rename oldName newName");
     deleting = PICOL_EQ(argv[2], "");
 
-    for (c = interp->commands; c; last = c, c=c->next) {
-        if (PICOL_EQ(c->name, argv[1])) {
-            if (last == NULL && deleting) {
-                /* Delete the first command. */
-                interp->commands = c->next;
-                toFree = c;
-            } else if (deleting) {
-                 /* Delete an nth command. */
-                last->next = c->next;
-                toFree = c;
-            } else {
-                /* Rename a command. We only free() the name. */
-                PICOL_FREE(c->name);
-                c->name = strdup(argv[2]);
-            }
-            found = 1;
-            break;
-        }
-    }
-
-    if (toFree != NULL) {
-        if (toFree->isproc && toFree->privdata != NULL) {
-            char **privdata = toFree->privdata;
-            PICOL_FREE(privdata[0]);
-            PICOL_FREE(privdata[1]);
-            PICOL_FREE(privdata);
-        }
-        PICOL_FREE(toFree->name);
-        PICOL_FREE(toFree);
-    }
-
-    if (!found) {
+    if (picolRenameCmd(interp, argv[1], argv[2]) != PICOL_OK) {
         return picolErrFmt(
             interp,
             deleting
@@ -4447,7 +4472,7 @@ PICOL_COMMAND(rename) {
         );
     }
 
-    return PICOL_OK;
+    return picolSetResult(interp, "");
 }
 PICOL_COMMAND(return) {
     PICOL_UNUSED(pd);
@@ -5328,14 +5353,7 @@ void picolFreeInterp(picolInterp* interp) {
 
     while (command) {
         picolCmd* next = command->next;
-        PICOL_FREE(command->name);
-        char **procdata = command->privdata;
-        if (command->isproc && procdata) {
-            PICOL_FREE(procdata[0]);
-            PICOL_FREE(procdata[1]);
-            PICOL_FREE(procdata);
-        }
-        PICOL_FREE(command);
+        picolFreeCmd(command);
         command = next;
     }
 

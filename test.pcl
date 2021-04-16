@@ -809,8 +809,10 @@ proc call {} {
 test if.38      {set ::calls 0; if {[call]} {}; return $::calls} -> 1
 test if.39      {set ::calls 0; if {![call]} {}; return $::calls} -> 1
 test if.40      {set ::calls 0; if {[call] > 108} {}; return $::calls} -> 1
-unset calls
-rename call {}
+catch {
+    unset calls
+    rename call {}
+}
 
 if $test_config(picol) {
     test in.1   {set a 0; if {"c" in "a b c d"} {set a 1}} -> 1
@@ -841,7 +843,7 @@ test info.level.2 {proc f {} {info level}; f} -> 2
 test info.level.3 {proc f {x y} {info level 0}; f foo bar} -> {f foo bar}
 test info.level.4 {uplevel 1 {info level 0}} -> {bad level "0"}
 if $test_config(picol) {
-    set result {g3 fac f test}
+    set result {f g3 fac test}
     if {$test_config(io)} {
         lappend result unknown
     }
@@ -860,6 +862,29 @@ if {$test_config(interp)} {
     test interp.6    {interp eval 12345678 {lindex BAM!}} -> {could not find interpreter "12345678"}
     test interp.7    {catch interp} -> 1
     test interp.8    {interp foo} ->* {bad option "foo"*}
+    test interp.9    {
+        proc foo {} {}
+        interp alias {} bar {} foo
+        interp alias {} baz {} foo
+        rename bar {}
+        rename baz {}
+        rename foo {}
+    } -> {}
+    test interp.10   {
+        interp alias {} bar {} set
+        interp alias {} baz {} set
+        rename bar {}
+        rename baz {}
+    } -> {}
+    test interp.11   {
+        proc foo {} {}
+        interp alias {} bar {} foo
+        interp alias {} baz {} foo
+        rename foo qux
+        rename bar {}
+        rename baz {}
+        rename qux {}
+    } -> {}
 }
 
 test join.1      {join {a b c d} ##}  -> a##b##c##d
@@ -1192,6 +1217,7 @@ if {$test_config(io)} {
     test seek.1  {seek $::f 0; tell $::f} -> 0
     test seek.2  {seek $::f 2; gets $::f} -> llo
     test seek.3  {seek 12345678 0xFF} -> {can not find channel named "12345678"}
+    catch { close $f }
 }
 
 test set.1       {set x 42}                -> 42
