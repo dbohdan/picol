@@ -47,6 +47,13 @@ int main(int argc, char** argv) {
     report_error(interp, rc);
     rc = picolEval(interp, "rename store3 {}");
     report_error(interp, rc);
+    rc = picolEval(
+        interp,
+        "interp alias {} store-alias {} store; puts [store-alias]"
+    );
+    report_error(interp, rc);
+    rc = picolEval(interp, "rename store-alias {}; puts [store]");
+    report_error(interp, rc);
 
     picolFreeInterp(interp);
 
