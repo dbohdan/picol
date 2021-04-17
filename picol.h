@@ -23,6 +23,7 @@
 #define PICOL_CONFIGURATION
 
 #define PICOL_MAX_STR          4096
+#define PICOL_EVAL_BUF_SIZE    (PICOL_MAX_STR*2)
 #define PICOL_SOURCE_BUF_SIZE  (PICOL_MAX_STR*64)
 
 #ifndef PICOL_SMALL_STACK
@@ -1307,7 +1308,6 @@ size_t picolExpandLC(char* dest, size_t num, const char* source) {
     }
     return cp - dest;
 }
-#define PICOL_EVAL_BUF_SIZE (PICOL_MAX_STR*2)
 picolResult picolEval2(
     picolInterp* interp,
     const char* script,
@@ -1549,7 +1549,6 @@ err:
     PICOL_BUFFER_DESTROY(buf);
     return rc;
 }
-#undef PICOL_EVAL_BUF_SIZE
 picolResult picolCondition(picolInterp* interp, const char* str) {
     if (str != NULL) {
         PICOL_BUFFER_CREATE(substBuf, PICOL_MAX_STR);
