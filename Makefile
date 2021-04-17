@@ -43,9 +43,9 @@ clean:
 
 install: install-bin install-include
 install-bin: picolsh-linenoise
-	install $< $(PREFIX)/bin/picolsh
+	install $< $(DESTDIR)$(PREFIX)/bin/picolsh
 install-include: picol.h
-	install -m 0644 $< $(PREFIX)/include
+	install -m 0644 $< $(DESTDIR)$(PREFIX)/include
 
 upx: all
 	upx -9 picolsh picolsh-big-stack picolsh-linenoise
