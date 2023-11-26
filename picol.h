@@ -79,7 +79,7 @@
 #include <sys/stat.h>
 #endif
 
-#define PICOL_PATCHLEVEL "0.6.0"
+#define PICOL_PATCHLEVEL "0.6.1"
 
 #if PICOL_SMALL_STACK
 #    define PICOL_BUFFER_CREATE(name, size)                  \
@@ -150,7 +150,7 @@
 #            define PICOL_CAN_USE_CLOCK_GETTIME 0
 #        endif
 #    endif
-#else
+#elif !defined(PICOL_TCL_PLATFORM_PLATFORM)
 #    define PICOL_TCL_PLATFORM_PLATFORM         PICOL_TCL_PLATFORM_UNKNOWN
 #    define PICOL_TCL_PLATFORM_PLATFORM_STRING  "unknown"
 #endif
@@ -1925,7 +1925,7 @@ picolBool picolWildEq(const char* pat, const char* str, int n) {
         }
         escaped = 0;
     }
-    return (n == 0 || *pat == *str || (!escaped && *pat == '?'));
+    return (picolBool)(n == 0 || *pat == *str || (!escaped && *pat == '?'));
 }
 int picolMatch(const char* pat, const char* str) {
     /* An incomplete implementation of [string match].  It only handles these
