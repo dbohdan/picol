@@ -1,8 +1,0 @@
-language: c
-addons:
-  apt:
-    packages:
-      - tcl
-script:
-- make test
-- make examples-test
