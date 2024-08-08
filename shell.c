@@ -11,19 +11,18 @@
 #include "extensions/regexp-wrapper.h"
 
 #if PICOL_TCL_PLATFORM_PLATFORM == PICOL_TCL_PLATFORM_UNIX
-    #ifndef PICOL_SHELL_LINENOISE
-        #define PICOL_SHELL_LINENOISE 1
-        #include "vendor/linenoise.h"
+    #ifndef PICOL_SHELL_LINE_EDIT
+        #define PICOL_SHELL_LINE_EDIT 1
+        #include "vendor/bestline.h"
     #endif
 #else
-    #define PICOL_SHELL_LINENOISE 0
+    #define PICOL_SHELL_LINE_EDIT 0
 #endif
 
 /* --- Configuration --- */
 
 /* History is currently only available on *nix. */
 #define PICOL_SHELL_HISTORY_FILE ".picolsh_history"
-#define PICOL_SHELL_HISTORY_LEN 1000
 
 #define PICOL_SHELL_INIT_FILE_UNIX ".picolshrc"
 #define PICOL_SHELL_INIT_FILE_WINDOWS "picolshrc.pcl"
@@ -82,7 +81,7 @@ int main(int argc, char** argv) {
        values. */
     picolEval(interp, "array set env {}");
     if (argc == 1) { /* No arguments - interactive mode. */
-        #if PICOL_SHELL_LINENOISE
+        #if PICOL_SHELL_LINE_EDIT
             char history_file_path[PICOL_MAX_STR] = "";
         #endif
 
@@ -100,28 +99,26 @@ int main(int argc, char** argv) {
             interp->current = NULL; /* Prevent a misleading error traceback. */
         }
 
-        #if PICOL_SHELL_LINENOISE
-            linenoiseSetMultiLine(1);
-            linenoiseHistorySetMaxLen(PICOL_SHELL_HISTORY_LEN);
+        #if PICOL_SHELL_LINE_EDIT
             rc = home_dir_path(
                 history_file_path,
                 sizeof(history_file_path),
                 "/" PICOL_SHELL_HISTORY_FILE
             );
             if (rc == PICOL_OK) {
-                linenoiseHistoryLoad(history_file_path);
+                bestlineHistoryLoad(history_file_path);
             }
         #endif
 
         while (1) {
-            #if PICOL_SHELL_LINENOISE
-                char* line = linenoise(PICOL_SHELL_PROMPT);
+            #if PICOL_SHELL_LINE_EDIT
+                char* line = bestline(PICOL_SHELL_PROMPT);
                 if (line == NULL) {
                     break;
                 }
                 strncpy(buf, line, sizeof(buf));
-                linenoiseHistoryAdd(buf);
-                linenoiseFree(line);
+                bestlineHistoryAdd(buf);
+                bestlineFree(line);
             #else
                 printf(PICOL_SHELL_PROMPT);
                 fflush(stdout);
@@ -136,8 +133,8 @@ int main(int argc, char** argv) {
             }
         }
 
-        #if PICOL_SHELL_LINENOISE
-            linenoiseHistorySave(history_file_path);
+        #if PICOL_SHELL_LINE_EDIT
+            bestlineHistorySave(history_file_path);
         #endif
    } else if (argc == 3 && PICOL_EQ(argv[1], "-e")) { /* A script in argv[2]. */
         set_interp_argv(interp, 1, argc, argv);
